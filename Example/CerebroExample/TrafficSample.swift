@@ -30,12 +30,12 @@ enum TrafficSample: CaseIterable, Sendable {
     }
 
     private func sendRequest() async throws -> String {
-        let (_, response) = try await Self.session.data(from: URL(string: "https://httpbin.org/get")!)
+        let (_, response) = try await Self.session.data(from: Self.url("https://httpbin.org/get"))
         return Self.summary(of: response)
     }
 
     private func exchangeWebSocketMessage() async throws -> String {
-        let task = Self.session.webSocketTask(with: URL(string: "wss://ws.postman-echo.com/raw")!)
+        let task = Self.session.webSocketTask(with: try Self.url("wss://ws.postman-echo.com/raw"))
         task.resume()
         defer { task.cancel(with: .normalClosure, reason: nil) }
 
@@ -52,13 +52,18 @@ enum TrafficSample: CaseIterable, Sendable {
         var message = Google_Protobuf_Struct()
         message.fields["greeting"] = Google_Protobuf_Value(stringValue: "hello from Cerebro")
 
-        var request = URLRequest(url: URL(string: "https://httpbin.org/post")!)
+        var request = URLRequest(url: try Self.url("https://httpbin.org/post"))
         request.httpMethod = "POST"
         request.setValue("application/x-protobuf", forHTTPHeaderField: "Content-Type")
         request.httpBody = try message.serializedData()
 
         let (_, response) = try await Self.session.data(for: request)
         return Self.summary(of: response)
+    }
+
+    private static func url(_ string: String) throws -> URL {
+        guard let url = URL(string: string) else { throw URLError(.badURL) }
+        return url
     }
 
     private static func summary(of response: URLResponse) -> String {

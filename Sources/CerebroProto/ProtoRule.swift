@@ -8,8 +8,10 @@ import Cerebro
 
 /// Ties traffic to a protobuf message type. Plan 3 adds the matcher, direction and framing.
 public struct ProtoRule: Sendable {
+    /// The message type that decodes matching traffic.
     public let messageType: any SwiftProtobuf.Message.Type
 
+    /// Creates a rule for a message type.
     public init(messageType: any SwiftProtobuf.Message.Type) {
         self.messageType = messageType
     }

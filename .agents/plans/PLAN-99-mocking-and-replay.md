@@ -1,6 +1,6 @@
 # PLAN-99 — Response mocking and replay (reference only, never implemented wholesale)
 
-Work deliberately left for later. When an item is scheduled, promote it into a new numbered plan file with the standard format, remove its row here, and log the decision in `memory/decisions.md`. Do not implement anything from this file directly.
+Work deliberately left for later. When an item is scheduled, promote it into a new numbered plan file with the standard format, and remove its row here. Do not implement anything from this file directly.
 
 | Idea | Notes |
 |---|---|

@@ -20,6 +20,25 @@ env:
   DESTINATION: platform=iOS Simulator,name=iPhone 17
 
 jobs:
+  format:
+    name: swift-format
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check formatting, crash paths and public docs
+        run: xcrun swift-format lint --strict --recursive Sources Tests Example
+
+  swiftlint:
+    name: SwiftLint
+    runs-on: ubuntu-latest
+    # A contributor tool, so it stays out of Package.swift and Cerebro.podspec.
+    # The container pins the version and installs nothing.
+    container: ghcr.io/realm/swiftlint:0.62.2
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check code quality
+        run: swiftlint lint --strict --reporter github-actions-logging
+
   package:
     name: SPM build and tests
     runs-on: macos-26

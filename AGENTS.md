@@ -4,7 +4,7 @@ Instructions for every coding agent in this repository. `CLAUDE.md` imports this
 
 Cerebro is a debug-only Swift package that captures an iOS app's HTTP, WebSocket and NWConnection traffic and shows it in an in-app dashboard. It targets iOS 16+ and ships through Swift Package Manager, a Git-sourced CocoaPod and XCFrameworks.
 
-The full specification is the [Cerebro spec](https://claude.ai/artifact/Vao3XbYhftkMkmScDSkoVg). What an agent needs day to day lives in `.agents/`. Where the spec and `.agents/memory/decisions.md` differ, the decision log wins, because it is newer.
+The full specification is the [Cerebro spec](https://claude.ai/artifact/Vao3XbYhftkMkmScDSkoVg). What an agent needs day to day lives in `.agents/`. Where the spec and `.agents/context/notes.md` differ, the notes win, because they are newer.
 
 ## First priority: zero code change
 
@@ -19,12 +19,9 @@ Users choose one of three install options, and all three are first-class: SPM, C
 3. `.agents/context/project-structure.md`: where files go
 4. `.agents/rules/git.md`: branches, commits, PR flow (non-negotiable)
 5. `.agents/rules/coding.md`: code conventions and boundaries
-6. The top of `.agents/memory/progress.md`: plan status and recent activity
+6. `.agents/context/notes.md`: where we differ from the spec, and what was already measured
 7. The active plan file in `.agents/plans/`, if there is one (the status table says which)
 
-`.agents/memory/decisions.md` is the decision log. Search it for the module or topic you are touching before making or changing a design call, and never reverse a logged decision silently.
-
-`.agents/memory/history.md` archives older sessions. Search it by module, plan number or file name when the history of what you're touching matters.
 
 ## Current plan
 
@@ -46,6 +43,15 @@ xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme Cerebro-Pa
 xcodebuild build -project Example/CerebroExample.xcodeproj -scheme CerebroExample \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 
+# Lint: formatting, crash paths and public docs (ships with Xcode)
+xcrun swift-format lint --strict --recursive Sources Tests Example
+
+# Lint: code quality (a contributor tool: brew install swiftlint)
+swiftlint lint --strict
+
+# Enable the pre-commit hook once per clone
+git config core.hooksPath .githooks
+
 # CocoaPods: compiles every subspec as one module
 pod lib lint Cerebro.podspec
 
@@ -62,10 +68,13 @@ Scripts/build-xcframework.sh
 - Strict concurrency is on everywhere, and warnings are errors in `Cerebro.xcodeproj`.
 - The dashboard is programmatic UIKit in its own window. It never swallows the host app's touches or touches its navigation stack.
 
+Every change also follows that file's design principles: DRY, KISS, YAGNI, the architecture, and Swift best practices.
+
 ## Working rules
 
 - Implement exactly one plan file at a time, in order. Do not start a plan whose gate is not cleared.
 - If a plan file explicitly overrides a rule in `.agents/rules/`, the plan file wins for that plan only.
-- After completing any task, update `.agents/memory/progress.md`. After any non-trivial decision not covered by a plan, append it to `.agents/memory/decisions.md` with the date and reasoning.
+- Add to `.agents/context/notes.md` only what the code, the spec and the rules can't tell you: a change from the spec, or a measurement worth keeping. Edit it in place, and delete what stops mattering.
+- Delete a plan's file in the PR that finishes it.
 - Never modify plan files without being asked. Ask the owner when a plan is ambiguous instead of guessing.
 - Project skills live in `.claude/skills/`, and `.agents/skills` is a symlink to that directory so every agent finds the same ones: `build-and-test`, `podspec-lint`, `build-xcframework`, `release`, `new-plan`, `context-sync`. Create or edit a skill only in `.claude/skills/`. Run `build-and-test` before every PR.

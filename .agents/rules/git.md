@@ -18,7 +18,7 @@ A plan file may declare an explicit, scoped exception to these rules. The plan f
 4. Run the `build-and-test` skill. It must pass.
 5. Push and open a PR into `develop`. The body says what the plan delivered, any deviations and why, and the test evidence.
 6. CI must be green. The owner reviews and merges. Never self-merge.
-7. Update `.agents/memory/progress.md` in the same PR.
+7. In the same PR, delete the plan file, tick the plan in `.agents/plans/README.md`, and update `.agents/context/notes.md` if the plan changed the spec.
 
 ## Commits
 

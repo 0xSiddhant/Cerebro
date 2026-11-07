@@ -40,6 +40,15 @@ Decoding lives in `CerebroProto`, so apps that don't use protobuf never link it.
 
 When no proto decoder is registered, the tab is hidden, since it could only ever be empty.
 
+### Proto decoding stays at capture
+
+It's the heaviest pipeline step, about 34 ms for a 0.9 MB message on an Apple M1 Mac in a Release build, but it can't wait until a request is opened. Decoded keys must be redacted before storage, and undecoded bytes can't be. So it follows PLAN-01's rules this way:
+
+1. It runs on the background pipeline, so it never delays a request or a frame.
+2. A body over the stored-body cap isn't decoded, because a truncated message can't be. It shows as hex, marked as truncated, or as withheld when JSON keys are configured.
+3. The collapsible tree is built when a request is opened, from JSON that is already redacted.
+4. When redaction changes a decoded body, its raw bytes aren't kept, so the hex view can't reveal what was removed.
+
 ### Only apps that decode protobuf write code for it
 
 They pass their rules to `Cerebro.start`, as the spec says. Finding generated rules at runtime would save that one argument but add a lookup by name in all three install options, so it fails the same trade-off as auto-start. A Pod is one module, so those apps use `import Cerebro` rather than `import CerebroProto`.
@@ -112,7 +121,8 @@ They pass their rules to `Cerebro.start`, as the spec says. Finding generated ru
 **Rules and decoding (`Sources/CerebroProto/`)**
 - [ ] Replace the `ProtoRule` placeholder with the matcher, direction, message type and optional framing
 - [ ] Replace the `registering` placeholder with rule registration at start
-- [ ] Decoder plugin for HTTP bodies and binary frames, producing pretty-printed JSON
+- [ ] Decoder plugin for HTTP bodies and binary frames, producing JSON on the background pipeline
+- [ ] Skip decoding above the stored-body cap, and drop raw bytes when redaction changes a decoded body
 - [ ] Prefix strip for gRPC-web's 5-byte header and custom socket headers
 - [ ] Mark `application/x-protobuf`, `application/protobuf` and `application/grpc` bodies as "proto, no rule"
 - [ ] Show unmatched payloads as hex
@@ -135,12 +145,12 @@ They pass their rules to `Cerebro.start`, as the spec says. Finding generated ru
 - [ ] Apply `traffic_map.json` through the plugin, plus one rule in code, so both paths are tested
 
 **Dashboard (`Sources/Cerebro/UI/`)**
-- [ ] Collapsible JSON tree in the Log Inspector
+- [ ] Collapsible JSON tree in the Log Inspector, built when a request is opened
 - [ ] Proto Config tab: active mappings, URL matcher → message type, with their source and match counts
 - [ ] Hide the tab when no proto decoder is registered
 
 **Console**
-- [ ] Decoded proto appears when logging is set to full
+- [ ] Decoded proto appears, pretty-printed, when logging is set to full
 
 ## Acceptance criteria
 
@@ -155,7 +165,10 @@ They pass their rules to `Cerebro.start`, as the spec says. Finding generated ru
 9. The Proto Config tab is hidden in an app with no proto decoder registered.
 10. The generator runs through the plugin for SPM and through the binary in a Run Script phase.
 11. An app that links only `Cerebro` doesn't link SwiftProtobuf.
-12. The `build-and-test` skill passes in all channels.
+12. Proto decoding never delays a request or a frame, and never runs on the main thread.
+13. A body over the stored-body cap isn't decoded, and shows as truncated hex, or as withheld when JSON keys are configured.
+14. A redacted value can't be recovered from a decoded body's hex view.
+15. The `build-and-test` skill passes in all channels.
 
 ## Test checklist
 
@@ -164,6 +177,8 @@ They pass their rules to `Cerebro.start`, as the spec says. Finding generated ru
 - [ ] Rule order
 - [ ] Prefix stripping
 - [ ] Content-type detection
+- [ ] Bodies over the cap skip decoding
+- [ ] Raw bytes are dropped when redaction changes a decoded body
 - [ ] Generator: parsing, name resolution, unknown names, `version` handling
 
 **Integration**

@@ -28,6 +28,10 @@ Each session is one JSON Lines file in the app's Caches directory, appended as e
 
 Persisted sessions stay in the app's Caches directory, already redacted.
 
+### Disk writes stay off the request path
+
+Each completed request is appended on a background queue, so file I/O never delays a request. Each append still happens per request, not in batches, or a crash could lose completed requests. Writes store what the store holds, so caps, truncation and withheld bodies carry over.
+
 ### The host app owns notifications
 
 The host app owns the notification delegate and permission, so it forwards taps with one call. The trigger is off by default.
@@ -46,7 +50,7 @@ The host app owns the notification delegate and permission, so it forwards taps 
 - [ ] Delegate-proxy engine for background URLSessions, feeding the existing pipeline
 
 **Store (`Sources/CerebroCore/Store/`)**
-- [ ] Append each completed request to a JSON Lines file in Caches
+- [ ] Append each completed request to a JSON Lines file in Caches, on a background queue
 - [ ] Keep the configured number of sessions, replaced at each launch
 - [ ] Restore the previous session on launch
 
@@ -67,19 +71,21 @@ The host app owns the notification delegate and permission, so it forwards taps 
 5. One previous session is kept by default, and the count is configurable.
 6. No file on disk holds a redacted value in raw form.
 7. A forwarded notification tap opens the dashboard, and nothing happens with the trigger off.
-8. Merging `develop` into `main` releases `v1.0.0` with all its binaries.
-9. The `build-and-test` skill passes in all channels.
+8. Disk writes never delay a request and never run on the main thread.
+9. Merging `develop` into `main` releases `v1.0.0` with all its binaries.
+10. The `build-and-test` skill passes in all channels.
 
 ## Test checklist
 
 **Unit**
 - [ ] JSON Lines append and restore, including a truncated last line after a crash
 - [ ] Session rotation
-- [ ] Redaction before write
+- [ ] Redaction before write, including withheld bodies
 
 **Integration**
 - [ ] A background download and upload are captured
 - [ ] Restore after a relaunch
+- [ ] Writes stay off the main thread
 
 **Manual**
 - [ ] Crash the Example app and read the previous session

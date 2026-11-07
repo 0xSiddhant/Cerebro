@@ -70,7 +70,24 @@ URLSession already decompresses standard HTTP responses, so Cerebro reports comp
 
 ### The pipeline order is fixed, and the decoder slot exists now
 
-The chain is decompress → proto decode → pretty-print → redact, and every step is optional. Decompression comes first so proto decoding always receives plain bytes. Decoders are plugins registered at start, so the core stays free of dependencies and PLAN-03 plugs in without changing it.
+At capture the chain is decompress → proto decode → redact, and every step is optional. Decompression comes first so proto decoding always receives plain bytes. Pretty-printing moves out of this chain, under "Performance comes from design" below. Decoders are plugins registered at start, so the core stays free of dependencies and PLAN-03 plugs in without changing it.
+
+### Performance comes from design
+
+The engine stays in Swift. A worst-case run on a body of about 1 MB, on an Apple M1 Mac in a Release build, took 7 ms for zlib decompression, 34 ms for JSON parsing and pretty-printing, and 34 ms for protobuf decoding to JSON. Decompression and JSON already run in Apple's native libraries, so C would gain little and add risk. These four rules matter more:
+
+1. **The pipeline never delays a request.** Capture callbacks hand off to a background queue and return, so the app gets its response at full speed.
+2. **Processing stops at the cap.** Capture stops buffering a body at the stored-body cap, decompression stops once its output passes the cap, and a body over the cap skips parsing. This also protects against a small compressed body that expands enormously.
+3. **Pretty-printing happens on open.** The Log Inspector formats a body when a request is opened, and console `full` formats it when logging. Most captured requests are never opened, so most never pay for it.
+4. **Dashboard updates are batched.** The store publishes changes at a fixed interval rather than once per request, so a burst of traffic can't flood the main thread.
+
+⚠️ Rules 2 and 3 skip parsing, but redacting configured JSON keys needs a parse, and redaction must run before storage. So:
+
+- With JSON keys configured, a JSON body under the cap is still parsed at capture, and the stored "raw" body is the redacted one.
+- With JSON keys configured, a body that looks like JSON but can't be parsed, because it's over the cap or malformed, can't be redacted. Cerebro stores no text for it and marks it as withheld.
+- With no JSON keys configured, which is the default, nothing needs parsing at capture.
+
+Only that first case parses a body at capture. Pretty-printing stays on open in all of them, since it formats text that is already redacted.
 
 ### Storage caps
 
@@ -118,11 +135,13 @@ The dashboard has four tabs: HTTP, Sockets, Proto Config and System Info. The sp
 - [ ] Register it with `URLProtocol.registerClass` in `start`, and unregister it in `stop`
 - [ ] Run each request through Cerebro's own internal session, and keep that session from being captured
 - [ ] Read upload bodies from the body stream
+- [ ] Stop buffering a body at the cap, and keep counting its size
+- [ ] Pass the response to the app first, then hand the transaction to the pipeline on a background queue
 
 **Models and store (`Sources/CerebroCore/Models/`, `Sources/CerebroCore/Store/`)**
 - [ ] Transaction model holding every field below
 - [ ] Actor-backed ring buffer with both caps; download task bodies are not stored
-- [ ] Observer so the dashboard updates live
+- [ ] Observer that batches updates, so the dashboard stays live through a burst
 
 | Part | Fields |
 |---|---|
@@ -135,9 +154,10 @@ The dashboard has four tabs: HTTP, Sockets, Proto Config and System Info. The sp
 
 **Pipeline (`Sources/CerebroCore/Pipeline/`)**
 - [ ] Chain of optional steps, with a decoder plugin slot
-- [ ] Decompression per the table above
-- [ ] Pretty JSON
+- [ ] Decompression per the table above, stopping once the output passes the cap
+- [ ] Pretty JSON on demand, for the Log Inspector and console `full`
 - [ ] Default redaction of `Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie`, plus the configurable names, keys and parameters
+- [ ] Parse at capture only when JSON keys are configured, and withhold a JSON body that can't be parsed
 - [ ] Console output at the three levels
 
 **Dashboard (`Sources/Cerebro/Triggers/`, `Sources/Cerebro/UI/`)**
@@ -146,7 +166,7 @@ The dashboard has four tabs: HTTP, Sockets, Proto Config and System Info. The sp
 - [ ] Shake hook that shows or hides the trigger
 - [ ] Tab bar shell with the HTTP tab; PLAN-02 to PLAN-04 add the other three
 - [ ] HTTP tab: request list with colour-coded status badges (2xx, 4xx, 5xx), search and filters
-- [ ] Log Inspector: headers, query parameters, body (raw or pretty JSON), timings, connection details
+- [ ] Log Inspector: headers, query parameters, body (raw, or pretty JSON formatted when opened), timings, connection details, and the withheld and truncated markers
 - [ ] MVVM view models for both screens
 
 ## Acceptance criteria
@@ -159,14 +179,22 @@ The dashboard has four tabs: HTTP, Sockets, Proto Config and System Info. The sp
 6. Touches outside Cerebro's views reach the host app, and the host's navigation stack is untouched.
 7. The trigger taps, drags, snaps and shows its error badge. Shake toggles it and can be turned off. `Cerebro.present()` opens the dashboard.
 8. The three console levels behave as specified.
-9. The `build-and-test` skill passes in all channels.
+9. The app receives each response without waiting for the pipeline, and no pipeline step runs on the main thread.
+10. Memory stays bounded for a response far larger than the cap, and for a small compressed body that expands far past it.
+11. A burst of requests doesn't stall the dashboard or the host app's UI.
+12. With no JSON keys configured and console logging below `full`, a captured body is not parsed or formatted until it's opened.
+13. With JSON keys configured, a JSON body that can't be parsed stores no text and shows as withheld.
+14. The `build-and-test` skill passes in all channels.
 
 ## Test checklist
 
 **Unit**
 - [ ] Ring buffer eviction and body truncation
 - [ ] Decompression of gzip and zlib, magic-byte detection, and flagging of zstd and brotli
+- [ ] Decompression stops at the cap, including a small input that expands far past it
 - [ ] Pretty JSON, including invalid JSON
+- [ ] Bodies over the cap and malformed bodies are withheld with JSON keys configured, and stored truncated without them
+- [ ] Many store changes in a burst produce one batched update
 - [ ] Redaction of headers, JSON keys and query parameters
 - [ ] Pipeline order, with steps skipped
 - [ ] Release gate, including parsing `get-task-allow` from a sample profile
@@ -176,9 +204,11 @@ The dashboard has four tabs: HTTP, Sockets, Proto Config and System Info. The sp
 - [ ] A request through `URLSession.shared` is captured, and `stop` ends that capture
 - [ ] An upload's body is read from its stream
 - [ ] A cancelled request records as cancelled, not failed
+- [ ] The response reaches the app before the pipeline runs, and the pipeline stays off the main thread
 
 **Manual, on a device or simulator**
 - [ ] Touch pass-through, trigger dragging and shake in the Example app
 - [ ] Dashboard over a host app with its own navigation stack
 - [ ] Release gate on a real device: on when development-signed, off when Ad Hoc signed
+- [ ] Profile a burst of large responses on a real device, since the timings above came from a Mac. If one step causes a visible problem, raise it with the owner before changing anything
 

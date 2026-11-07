@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "indentation": { "spaces": 4 },
+  "indentConditionalCompilationBlocks": false,
+  "lineLength": 120,
+  "rules": {
+    "AllPublicDeclarationsHaveDocumentation": true,
+    "NeverForceUnwrap": true,
+    "NeverUseForceTry": true,
+    "NeverUseImplicitlyUnwrappedOptionals": true
+  }
+}
