@@ -1,23 +1,34 @@
 ---
 name: release
-description: Cut a Cerebro release as a vX.Y.Z tag on main. Use when the owner says "release" or "cut vX.Y.Z".
+description: Release Cerebro by merging develop into main, after which release.yml tests, updates the version, tags and publishes. Use when the owner says "release", "cut a release" or "merge to main".
 ---
 
-# Release
+# Release: develop → main
 
-`.github/workflows/release.yml` runs on a `vX.Y.Z` tag. It fails if the tag doesn't match `s.version` in `Cerebro.podspec`, builds the XCFrameworks, and publishes a GitHub Release with them attached. The release notes come from `Scripts/release-notes.sh` and give that version's exact SPM and CocoaPods lines. This skill covers everything around that.
+A release happens when `develop` is merged into `main`. `.github/workflows/release.yml` does the rest. This skill covers only the preflight, the PR and confirming the result.
 
-Hard rules: tags go on `main` only. Never force-push. Never push to CocoaPods trunk. The owner merges PRs and approves the tag.
+The workflow:
 
-1. **Preflight** on a clean, current `main`: every plan in this release is `done` in `.agents/memory/progress.md`, and the `build-and-test` skill passes.
-2. **Context sync:** run the `context-sync` skill so the docs match the code being shipped.
-3. **Version bump** through a normal PR: `s.version` in `Cerebro.podspec`, and `MARKETING_VERSION` in `Cerebro.xcodeproj` and `Example/CerebroExample.xcodeproj`. Stop for the owner to merge.
-4. **Tag**, after the owner approves:
+1. Works out the version from the commits since the last tag with `Scripts/next-version.sh`. With no `feat`, `fix`, breaking commit or `Release-As` footer, it stops and nothing is released.
+2. Runs all of `ci.yml`. Any failure stops the release with nothing changed.
+3. Updates the version with `Scripts/set-version.sh` and builds the XCFrameworks.
+4. Commits `chore(release): vX.Y.Z`, tags `vX.Y.Z`, and pushes both together.
+5. Publishes the GitHub Release with the XCFrameworks and that version's install lines.
+6. Merges `main` back into `develop`.
 
-   ```sh
-   git checkout main && git pull
-   git tag vX.Y.Z
-   git push origin vX.Y.Z
-   ```
+Hard rules: never edit versions or create release tags by hand. Never force-push. Never push to CocoaPods trunk. The owner merges every PR.
 
-5. **Confirm:** the `Release` workflow succeeds, and the GitHub Release shows the install lines for this version and has `Cerebro`, `CerebroProto` and `SwiftProtobuf` `.xcframework.zip` assets. From PLAN-03 on it also needs the `cerebro-proto-gen` binary. Report the release URL.
+## Procedure
+
+1. **Preflight** on a clean, current `develop`: every plan in this release is `done` in `.agents/memory/progress.md`, and CI is green on `develop`.
+2. **Context sync:** run the `context-sync` skill so the docs match the code being shipped. Stop for the owner to merge.
+3. **Release PR:** open `develop` → `main`, titled `chore: release develop`, with a summary of what ships and the version `Scripts/next-version.sh` predicts. Stop for the owner to merge it with a merge commit, never a squash.
+4. **Confirm** after the merge: the `Release` workflow succeeds, the GitHub Release shows the install lines for this version and has `Cerebro`, `CerebroProto` and `SwiftProtobuf` `.xcframework.zip` assets, and `develop` contains the `chore(release)` commit. From PLAN-03 on it also needs the `cerebro-proto-gen` binary. Report the release URL.
+
+## When it needs a hand
+
+- **No release, and you expected one:** there was no `feat`, `fix` or breaking commit since the last tag. A `chore:` or `docs:` merge makes no release on purpose.
+- **Tests failed:** nothing changed. Fix it through a normal PR into `develop`, then merge `develop` into `main` again.
+- **Publishing failed after the push:** the tag exists without a release, and rerunning the job can't recreate the tag. Check out the tag, run `Scripts/build-xcframework.sh`, then run the workflow's `gh release create` command by hand.
+- **The back-merge failed:** bring `main` into `develop` through a PR.
+- **`main` or `develop` gets branch protection:** `GITHUB_TOKEN` can't push past it. Add a fine-grained PAT as the repo secret `RELEASE_TOKEN`, with Contents and Workflows read and write. The workflow uses it automatically.

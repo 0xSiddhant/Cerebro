@@ -1,6 +1,6 @@
 # Cerebro Plans — Index & Gates
 
-Implement strictly in order. One plan = one branch = one PR, except PLAN-00. Plans 0–5 lead to 1.0, and Plan 99 holds work deliberately left for later.
+Implement strictly in order. One plan = one branch from `develop` = one PR into `develop`, except PLAN-00. Plans 0–5 lead to 1.0, and Plan 99 holds work deliberately left for later.
 
 Zero code change is the first priority of every plan, and each must work the same in all three install options: SPM, CocoaPods and a downloaded XCFramework.
 

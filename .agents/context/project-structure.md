@@ -19,8 +19,9 @@ Cerebro/
 │   └── skills -> ../.claude/skills
 ├── .claude/skills/            # build-and-test, podspec-lint, build-xcframework,
 │                              # release, new-plan, context-sync
-├── .github/workflows/         # ci.yml on pushes and PRs; release.yml on tags
-├── Scripts/                   # build-xcframework.sh, release-notes.sh; build-generator.sh arrives in PLAN-03
+├── .github/workflows/         # ci.yml on PRs and develop; release.yml when develop merges into main
+├── Scripts/                   # build-xcframework.sh, next-version.sh, set-version.sh, release-notes.sh;
+│                              # build-generator.sh arrives in PLAN-03
 ├── Example/                   # example app using the package by local path
 │   └── traffic_map.json       # proto mappings; PLAN-03 wires it to the build plugin
 ├── Sources/

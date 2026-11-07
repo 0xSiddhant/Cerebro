@@ -67,4 +67,4 @@ Placeholders only: `Cerebro.start(_:)`, `Cerebro.stop()`, `Cerebro.present()`, `
 - [x] Example app run on a simulator
 - [x] Example sources run on a simulator through SPM, a pod pulled from a tag, and embedded XCFrameworks
 - [x] `exact:` resolved against a `v`-prefixed tag in a throwaway repo
-- [ ] GitHub Actions run on a real push, which needs the owner to push
+- [x] GitHub Actions run on a real push
