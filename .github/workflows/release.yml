@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  xcframeworks:
+    name: Attach XCFrameworks
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      # SPM and CocoaPods read this tag's source directly, so a stale podspec
+      # would ship a version that doesn't match its own install line.
+      - name: Check the tag matches the podspec
+        run: |
+          version="$(sed -n "s/^ *s\.version = '\(.*\)'/\1/p" Cerebro.podspec)"
+          test "v$version" = "$GITHUB_REF_NAME"
+      - name: Build XCFrameworks
+        run: Scripts/build-xcframework.sh
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Scripts/release-notes.sh "$GITHUB_REF_NAME" > build/release-notes.md
+          gh release create "$GITHUB_REF_NAME" \
+            build/xcframeworks/*.xcframework.zip \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file build/release-notes.md \
+            --generate-notes

@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Swift Package Manager
+/.build
+/Packages
+.swiftpm/configuration/registries.json
+.netrc
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# CocoaPods
+Pods/
+
+# Build output, including XCFrameworks
+/build
+*.xcframework
+*.xcframework.zip
+
+# Claude Code: skills are committed, local settings are not
+.claude/settings.local.json

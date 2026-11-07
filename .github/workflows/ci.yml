@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push makes a PR's running CI moot; a push to main always finishes.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  DESTINATION: platform=iOS Simulator,name=iPhone 17
+
+jobs:
+  package:
+    name: SPM build and tests
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      # The workspace is explicit because xcodebuild would otherwise pick Cerebro.xcodeproj.
+      - name: Test on an iOS simulator
+        run: |
+          xcodebuild test \
+            -workspace .swiftpm/xcode/package.xcworkspace \
+            -scheme Cerebro-Package \
+            -destination "$DESTINATION" \
+            -quiet
+
+  example:
+    name: Example app
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build for an iOS simulator
+        run: |
+          xcodebuild build \
+            -project Example/CerebroExample.xcodeproj \
+            -scheme CerebroExample \
+            -destination "$DESTINATION" \
+            -quiet
+
+  pod:
+    name: Pod build and lint
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - name: Lint every subspec
+        run: pod lib lint Cerebro.podspec
+
+  xcframework:
+    name: XCFrameworks
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and compile a client against them
+        run: Scripts/build-xcframework.sh

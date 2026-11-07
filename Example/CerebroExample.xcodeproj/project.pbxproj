@@ -1,0 +1,269 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7C1A00000000000000000011 /* Cerebro in Frameworks */ = {isa = PBXBuildFile; productRef = 7C1A00000000000000000021 /* Cerebro */; };
+		7C1A00000000000000000012 /* CerebroProto in Frameworks */ = {isa = PBXBuildFile; productRef = 7C1A00000000000000000022 /* CerebroProto */; };
+		7C1A00000000000000000013 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = 7C1A00000000000000000023 /* SwiftProtobuf */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		7C1A00000000000000000031 /* CerebroExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CerebroExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		7C1A00000000000000000041 /* CerebroExample */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CerebroExample;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7C1A00000000000000000051 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C1A00000000000000000011 /* Cerebro in Frameworks */,
+				7C1A00000000000000000012 /* CerebroProto in Frameworks */,
+				7C1A00000000000000000013 /* SwiftProtobuf in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		7C1A00000000000000000061 = {
+			isa = PBXGroup;
+			children = (
+				7C1A00000000000000000041 /* CerebroExample */,
+				7C1A00000000000000000062 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7C1A00000000000000000062 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7C1A00000000000000000031 /* CerebroExample.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7C1A00000000000000000071 /* CerebroExample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7C1A00000000000000000091 /* Build configuration list for PBXNativeTarget "CerebroExample" */;
+			buildPhases = (
+				7C1A00000000000000000072 /* Sources */,
+				7C1A00000000000000000051 /* Frameworks */,
+				7C1A00000000000000000073 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7C1A00000000000000000041 /* CerebroExample */,
+			);
+			name = CerebroExample;
+			packageProductDependencies = (
+				7C1A00000000000000000021 /* Cerebro */,
+				7C1A00000000000000000022 /* CerebroProto */,
+				7C1A00000000000000000023 /* SwiftProtobuf */,
+			);
+			productName = CerebroExample;
+			productReference = 7C1A00000000000000000031 /* CerebroExample.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7C1A00000000000000000081 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					7C1A00000000000000000071 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+				};
+			};
+			buildConfigurationList = 7C1A00000000000000000082 /* Build configuration list for PBXProject "CerebroExample" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 7C1A00000000000000000061;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7C1A000000000000000000A1 /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7C1A00000000000000000062 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7C1A00000000000000000071 /* CerebroExample */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7C1A00000000000000000073 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7C1A00000000000000000072 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		7C1A00000000000000000083 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		7C1A00000000000000000084 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		7C1A00000000000000000093 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.0xsiddhant.CerebroExample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7C1A00000000000000000094 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.0xsiddhant.CerebroExample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7C1A00000000000000000082 /* Build configuration list for PBXProject "CerebroExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7C1A00000000000000000083 /* Debug */,
+				7C1A00000000000000000084 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7C1A00000000000000000091 /* Build configuration list for PBXNativeTarget "CerebroExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7C1A00000000000000000093 /* Debug */,
+				7C1A00000000000000000094 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		7C1A000000000000000000A1 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7C1A00000000000000000021 /* Cerebro */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Cerebro;
+		};
+		7C1A00000000000000000022 /* CerebroProto */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CerebroProto;
+		};
+		7C1A00000000000000000023 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftProtobuf;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 7C1A00000000000000000081 /* Project object */;
+}
