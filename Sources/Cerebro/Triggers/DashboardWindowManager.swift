@@ -1,0 +1,92 @@
+import UIKit
+
+#if SWIFT_PACKAGE
+import CerebroCore
+#endif
+
+/// Owns Cerebro's window and everything in it. The dashboard is presented there, so it never touches
+/// the app's own view hierarchy or navigation stack.
+@MainActor
+final class DashboardWindowManager: NSObject {
+    private let store: TransactionStore
+    private let overlay = OverlayViewController()
+    private var window: PassthroughWindow?
+    private weak var previousKeyWindow: UIWindow?
+    private var wantsDashboard = false
+    private var badgeUpdates: Task<Void, Never>?
+
+    init(store: TransactionStore, isShakeGestureEnabled: Bool) {
+        self.store = store
+        super.init()
+        overlay.trigger.onTap = { [weak self] in self?.present() }
+        if isShakeGestureEnabled {
+            ShakeDetector.install { [weak self] in self?.toggleTrigger() }
+        }
+        badgeUpdates = Task { [weak self, store] in
+            for await transactions in await store.updates() {
+                self?.overlay.trigger.errorCount = transactions.filter(\.outcome.isError).count
+            }
+        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(sceneDidActivate),
+            name: UIScene.didActivateNotification,
+            object: nil
+        )
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        if let active = scenes.first(where: { $0.activationState == .foregroundActive }) {
+            attach(to: active)
+        }
+    }
+
+    func present() {
+        guard let window else {
+            wantsDashboard = true
+            return
+        }
+        guard overlay.presentedViewController == nil else { return }
+        // Text fields need a key window. The app gets it back when the dashboard closes.
+        previousKeyWindow = window.windowScene?.keyWindow
+        window.makeKey()
+        let dashboard = DashboardTabBarController(store: store) { [weak self] in
+            self?.previousKeyWindow?.makeKey()
+        }
+        dashboard.modalPresentationStyle = .fullScreen
+        overlay.present(dashboard, animated: true)
+    }
+
+    func remove() {
+        ShakeDetector.uninstall()
+        badgeUpdates?.cancel()
+        overlay.presentedViewController?.dismiss(animated: false)
+        previousKeyWindow?.makeKey()
+        window?.isHidden = true
+        window = nil
+    }
+
+    private func toggleTrigger() {
+        overlay.trigger.isHidden.toggle()
+    }
+
+    @objc private func sceneDidActivate(_ notification: Notification) {
+        if let scene = notification.object as? UIWindowScene {
+            attach(to: scene)
+        }
+    }
+
+    private func attach(to scene: UIWindowScene) {
+        if let window {
+            window.windowScene = scene
+        } else {
+            let window = PassthroughWindow(windowScene: scene)
+            window.windowLevel = .statusBar + 1
+            window.rootViewController = overlay
+            window.isHidden = false
+            self.window = window
+        }
+        if wantsDashboard {
+            wantsDashboard = false
+            present()
+        }
+    }
+}
