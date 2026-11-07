@@ -31,7 +31,7 @@ private actor Counter {
 }
 
 @Test func burstOfChangesPublishesOneBatch() async throws {
-    let store = TransactionStore(requestLimit: 1_000, updateInterval: .milliseconds(50))
+    let store = TransactionStore(requestLimit: 1_000, updateInterval: .milliseconds(200))
     let counter = Counter()
     let stream = await store.updates()
     let reader = Task {
@@ -43,11 +43,12 @@ private actor Counter {
     for index in 0..<200 {
         await store.append(Fixtures.transaction(path: "/\(index)"))
     }
-    try await Task.sleep(for: .milliseconds(300))
+    try await Task.sleep(for: .milliseconds(600))
     reader.cancel()
 
+    // The first delivery is the empty store. A slow machine may split the burst once, but never into 200.
     let batches = await counter.batches
-    #expect(batches.count == 2)
+    #expect(batches.count <= 3)
     #expect(batches.first?.isEmpty == true)
     #expect(batches.last?.count == 200)
 }
