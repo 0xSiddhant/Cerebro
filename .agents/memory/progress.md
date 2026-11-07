@@ -16,6 +16,10 @@ Update after every work session: status, branch or PR, notes. Statuses: `not-sta
 
 ## Recent activity (newest first)
 
+### 2026-11-07: UIKit only confirmed by measurement
+
+Nothing implemented: plan only. Measured a UIKit shell with SwiftUI content against pure UIKit. The hybrid took one or two frames longer on most actions, so the owner kept UIKit only. The plans already said so, and `decisions.md` has the numbers.
+
 ### 2026-11-07: pre-commit hook
 
 Added `.githooks/pre-commit`. It formats staged Swift files and lints what is being committed, so style problems show up before CI. Partially staged files are only linted, so unstaged work never gets staged. Enable it once per clone with `git config core.hooksPath .githooks`.
