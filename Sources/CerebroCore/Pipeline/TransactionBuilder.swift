@@ -56,20 +56,21 @@ struct TransactionBuilder: Sendable {
             contentType: response.mimeType,
             direction: .response
         )
+        let body: CapturedBody?
+        if let raw = exchange.responseBody {
+            body = processor.process(raw, context: context)
+        } else {
+            let byteCount = Int(exchange.metrics?.size.decodedBodyBytes ?? 0)
+            body = CapturedBody(content: .notStored, byteCount: byteCount, contentType: response.mimeType)
+        }
         return CapturedResponse(
             statusCode: response.statusCode,
             headers: redactor.redact(headers: fields),
-            body: exchange.responseBody.map { processor.process($0, context: context) }
-                ?? notStoredBody(byteCount: exchange.metrics?.size.decodedBodyBytes, contentType: response.mimeType),
+            body: body,
             mimeType: response.mimeType,
             contentEncoding: response.value(forHTTPHeaderField: "Content-Encoding"),
             endDate: exchange.endDate
         )
-    }
-
-    /// Download task bodies are never stored, so only their size is known.
-    private func notStoredBody(byteCount: Int64?, contentType: String?) -> CapturedBody {
-        CapturedBody(content: .notStored, byteCount: Int(byteCount ?? 0), contentType: contentType)
     }
 
     private func failure(from error: any Error) -> CapturedFailure {
