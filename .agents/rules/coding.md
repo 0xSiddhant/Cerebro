@@ -50,6 +50,14 @@ SPM builds `CerebroCore`, `Cerebro` and `CerebroProto` as separate modules. The 
 - Strict concurrency reports warnings in Swift 5 mode, so `Cerebro.xcodeproj` treats warnings as errors. Never pass that setting on the command line: it collides with `-suppress-warnings` on the SwiftProtobuf package.
 - Use the names the spec uses: `CustomURLProtocol`, `DashboardWindowManager`, `PassthroughWindow`, `MonitoredNWConnection`, `ExternalNetworkBridge`, `ProtoRule`.
 
+## Performance
+
+- Capture callbacks hand off to a background queue and return. The pipeline, disk writes and exports never run on the request path or the main thread.
+- Stop processing at the stored-body cap, in capture, decompression and parsing.
+- Format on open. Only the redaction of configured JSON keys and proto decoding parse at capture.
+- Batch updates to the dashboard. Disk appends are the exception: they stay per request, for the crash guarantee.
+- Don't reach for C or another language without a measured problem on a real device and a logged decision.
+
 ## Host app safety
 
 - Cerebro stays off in distribution builds unless the developer opts in at start. It decides at runtime from the app's signing, because a prebuilt XCFramework can't see the app's build configuration. While it's off, no swizzling runs and `MonitoredNWConnection` is a zero-cost pass-through.
@@ -58,7 +66,7 @@ SPM builds `CerebroCore`, `Cerebro` and `CerebroProto` as separate modules. The 
 
 ## Privacy
 
-- Redaction runs before anything is stored, so the dashboard, console, exports and disk never hold the raw value.
+- Redaction runs before anything is stored, so the dashboard, console, exports and disk never hold the raw value. A performance shortcut never overrides this: a body that can't be redacted is withheld, not stored.
 - No data leaves the device except the opt-in public IP lookup, and that call is excluded from the logs.
 - Export shows a warning before sharing.
 

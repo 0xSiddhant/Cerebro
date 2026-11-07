@@ -39,6 +39,7 @@ Read the whole draft and check each of these:
 - **Three builds:** does it work as several modules and as one? Check imports, access levels and name clashes.
 - **Host app safety:** what happens while Cerebro is off in Release? Is every new store capped?
 - **Privacy:** does any path store or export a value before redaction?
+- **Performance:** does new work stay off the request path and the main thread, stop at the cap, and format on open? Do live updates batch?
 - **Contradictions:** read each decision against the others and against the task list.
 - **Shown code:** does every signature match the places that use it?
 - **Overstated guarantees:** does "every request" really mean every request?

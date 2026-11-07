@@ -42,6 +42,15 @@ Whenever Cerebro is off, it must be a zero-cost pass-through to the real `NWConn
 
 Each frame's payload runs through the same decoders as HTTP bodies. Binary frames go through decompression and proto decoding, since that's where most unreadable payloads come from.
 
+### Frames follow PLAN-01's performance rules
+
+Sockets can send far more messages per second than an app makes requests, so these rules matter more here:
+
+1. Hooks and wrappers hand a frame to the background pipeline and return, so `send` and `receive` run at normal speed.
+2. Each frame's payload uses the stored-body cap, with the same withheld rule as HTTP bodies. The spec caps frames by count only, and 1,000 large binary frames could otherwise exhaust memory.
+3. A payload is pretty-printed when it's displayed, not when it's captured.
+4. The timeline updates in batches, so a fast stream can't flood the main thread.
+
 ## Public API
 
 | API | Purpose | Notes |
@@ -62,14 +71,14 @@ Each frame's payload runs through the same decoders as HTTP bodies. Binary frame
 **Models and store (`Sources/CerebroCore/Models/`, `Sources/CerebroCore/Store/`)**
 - [ ] Frame model: direction, type (text or binary), size, timestamp, decoded payload
 - [ ] Connection event model: open, close (code and reason), ping and pong, state changes, errors
-- [ ] Per-connection frame cap, and redaction before storage
+- [ ] Per-connection frame cap, the stored-body cap on each payload, and redaction before storage
 
 **Pipeline (`Sources/CerebroCore/Pipeline/`)**
-- [ ] Route frame payloads through the existing chain
+- [ ] Route frame payloads through the existing chain, on the background queue
 
 **Dashboard (`Sources/Cerebro/UI/`)**
 - [ ] Sockets tab: list of connections
-- [ ] Chat-style frame timeline, with outgoing in blue and incoming in gray
+- [ ] Chat-style frame timeline, with outgoing in blue and incoming in gray, batched updates, and payloads formatted when displayed
 
 **Example**
 - [ ] Route the app's `NWConnection` traffic through `MonitoredNWConnection`
@@ -84,7 +93,10 @@ Each frame's payload runs through the same decoders as HTTP bodies. Binary frame
 6. Frame 1,001 on a connection evicts the oldest.
 7. With Cerebro off, no hooks run and `MonitoredNWConnection` only forwards to the real connection.
 8. A compressed binary frame shows decompressed.
-9. The `build-and-test` skill passes in all channels.
+9. `send` and `receive` don't wait for the pipeline, and no pipeline step runs on the main thread.
+10. A frame over the stored-body cap is stored truncated and marked, or withheld when JSON keys are configured.
+11. A fast stream of frames doesn't stall the timeline or the host app's UI.
+12. The `build-and-test` skill passes in all channels.
 
 ## Test checklist
 
@@ -92,6 +104,7 @@ Each frame's payload runs through the same decoders as HTTP bodies. Binary frame
 - [ ] Frame cap and eviction
 - [ ] `ExternalNetworkBridge` events reach the store
 - [ ] Pipeline handling of text, binary and compressed frames
+- [ ] Stored-body cap on frame payloads
 
 **Integration**
 - [ ] A local echo exchange through a `URLSessionWebSocketTask` is captured
@@ -99,4 +112,5 @@ Each frame's payload runs through the same decoders as HTTP bodies. Binary frame
 
 **Manual**
 - [ ] Timeline colours and order in the Example app
+- [ ] A fast frame stream on a real device
 

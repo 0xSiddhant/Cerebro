@@ -16,6 +16,10 @@ Update after every work session: status, branch or PR, notes. Statuses: `not-sta
 
 ## Recent activity (newest first)
 
+### 2026-11-07: performance rules added to the plans
+
+Nothing implemented: plan only. Measured the pipeline's worst case, confirmed no C is needed, and added four performance rules to PLAN-01 to PLAN-05. Resolving them against redaction added the withheld-body rule and kept proto decoding at capture. The timings came from an Apple M1 Mac, so PLAN-01 profiles on a real device.
+
 ### 2026-11-07: develop branch and automated releases
 
 Created `develop`. Implementation now branches from it and returns through PRs, and merging `develop` into `main` is what releases. `release.yml` works out the version, runs all CI, then updates the version, builds, tags, publishes and merges back.

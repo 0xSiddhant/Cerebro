@@ -11,7 +11,7 @@ Host app            URLSession, WebSocket and NWConnection traffic
 Capture layer       URLProtocol, config injection, socket hooks, wrappers     (CerebroCore)
    │
    ▼
-Pipeline            decompress → decode proto → pretty-print → redact         ◀── Decoder plugins: CerebroProto, custom
+Pipeline            decompress → decode proto → redact, in the background     ◀── Decoder plugins: CerebroProto, custom
    │
    ▼
 Transaction store   actor-backed ring buffer with size caps                   ◀── Network info: path monitor, interfaces, public IP
@@ -31,7 +31,7 @@ Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (C
 | Chain of responsibility | The body pipeline | Order matters and every step is optional |
 | Plugin | Decoders registered at start | The core stays free of dependencies |
 | Actor-backed repository | Ring buffer store | Capture callbacks arrive on arbitrary threads |
-| Observer | Store → dashboard | Live updates while the dashboard is open |
+| Observer | Store → dashboard | Batched live updates while the dashboard is open |
 | MVVM | Dashboard view controllers | View logic can be tested without the UI |
 
 ## Capture sources
@@ -46,6 +46,17 @@ Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (C
 | Starscream, Socket.IO, others | `ExternalNetworkBridge` | One call per frame or event |
 
 WKWebView, AVPlayer streams and gRPC over SwiftNIO are out of reach, and the README says so.
+
+## Performance
+
+Speed comes from design, not language. The engine stays in Swift, because decompression and JSON already run in Apple's native libraries.
+
+1. The pipeline runs on a background queue and never delays a request or a frame.
+2. Processing stops at the stored-body cap.
+3. Bodies are pretty-printed when opened, not when captured.
+4. Dashboard updates are batched.
+
+Redaction still comes first. With JSON keys configured, a JSON body is parsed at capture, and one that can't be parsed stores no text and shows as withheld. Proto decoding stays at capture for the same reason.
 
 ## Where an app still writes code
 

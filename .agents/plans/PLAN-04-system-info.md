@@ -44,6 +44,10 @@ Session totals are the sum of captured requests, from metrics. Device interface 
 
 Download tasks and image loaders that use URLSession, like Kingfisher or SDWebImage, record size, duration, throughput and MIME type. In-flight downloads show live progress. Bodies are not stored.
 
+### Live numbers are batched, and exports stay off the main thread
+
+Download progress and session totals change constantly during a transfer, so they follow PLAN-01's batched updates. A HAR export can cover a whole session, so exports build on a background queue.
+
 ### Export is safe by construction
 
 Redaction runs before storage, so exports never hold a raw value. Export still shows a warning before sharing.
@@ -70,9 +74,10 @@ Redaction runs before storage, so exports never hold a raw value. Export still s
 - [ ] Copy a request as cURL
 - [ ] Export raw JSON payloads
 - [ ] Export the whole session as HAR
+- [ ] Build every export on a background queue
 
 **Dashboard (`Sources/Cerebro/UI/`)**
-- [ ] System Info tab: connection status and type, interfaces and IPs, connection quality, session byte totals
+- [ ] System Info tab: connection status and type, interfaces and IPs, connection quality, session byte totals, with batched updates
 - [ ] Share from the Log Inspector through the share sheet, with the warning first
 
 **Packaging**
@@ -88,7 +93,8 @@ Redaction runs before storage, so exports never hold a raw value. Export still s
 6. A request copies as a working cURL command, and a session exports as valid HAR.
 7. A redacted value never appears in any export.
 8. Every export shows a warning before sharing.
-9. The `build-and-test` skill passes in all channels.
+9. Live download progress and totals update in batches, and a large export doesn't block the main thread.
+10. The `build-and-test` skill passes in all channels.
 
 ## Test checklist
 
@@ -100,6 +106,7 @@ Redaction runs before storage, so exports never hold a raw value. Export still s
 **Integration**
 - [ ] Public IP call excluded from the logs
 - [ ] Download progress and metadata
+- [ ] A full-session export runs off the main thread
 
 **Manual, on a device**
 - [ ] Wi-Fi to cellular changes, Low Data Mode, cellular generation, VPN and proxy
