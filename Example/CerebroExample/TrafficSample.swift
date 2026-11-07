@@ -4,6 +4,9 @@ import SwiftProtobuf
 /// One kind of traffic Cerebro has to capture.
 enum TrafficSample: CaseIterable, Sendable {
     case urlSession
+    case sharedSession
+    case gzip
+    case serverError
     case webSocket
     case nwConnection
     case protobuf
@@ -13,6 +16,9 @@ enum TrafficSample: CaseIterable, Sendable {
     var title: String {
         switch self {
         case .urlSession: "URLSession"
+        case .sharedSession: "URLSession.shared"
+        case .gzip: "Gzip response"
+        case .serverError: "Server error"
         case .webSocket: "URLSessionWebSocketTask"
         case .nwConnection: "NWConnection"
         case .protobuf: "Protobuf over HTTP"
@@ -22,15 +28,18 @@ enum TrafficSample: CaseIterable, Sendable {
     /// Sends the traffic and returns a one-line result.
     func run() async throws -> String {
         switch self {
-        case .urlSession: try await sendRequest()
+        case .urlSession: try await sendRequest(to: "https://httpbin.org/get", through: Self.session)
+        case .sharedSession: try await sendRequest(to: "https://httpbin.org/anything/shared", through: .shared)
+        case .gzip: try await sendRequest(to: "https://httpbin.org/gzip", through: Self.session)
+        case .serverError: try await sendRequest(to: "https://httpbin.org/status/500", through: Self.session)
         case .webSocket: try await exchangeWebSocketMessage()
         case .nwConnection: try await NWConnectionExchange().run()
         case .protobuf: try await sendProtobuf()
         }
     }
 
-    private func sendRequest() async throws -> String {
-        let (_, response) = try await Self.session.data(from: Self.url("https://httpbin.org/get"))
+    private func sendRequest(to address: String, through session: URLSession) async throws -> String {
+        let (_, response) = try await session.data(from: Self.url(address))
         return Self.summary(of: response)
     }
 
