@@ -21,7 +21,7 @@ final class BodyViewerViewController: UIViewController {
     override func loadView() {
         textView.isEditable = false
         textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
-        textView.accessibilityIdentifier = "cerebro.body"
+        textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         view = textView
     }
 

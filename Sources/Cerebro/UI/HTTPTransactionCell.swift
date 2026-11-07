@@ -63,7 +63,6 @@ final class HTTPTransactionCell: UITableViewCell {
         detail.text = row.detail
         status.text = "  \(row.status)  "
         status.backgroundColor = Self.color(for: row.outcome)
-        accessibilityIdentifier = "cerebro.row.\(row.path)"
     }
 
     private static func color(for outcome: TransactionOutcome) -> UIColor {

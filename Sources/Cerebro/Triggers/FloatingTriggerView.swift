@@ -27,7 +27,6 @@ final class FloatingTriggerView: UIView {
         layer.shadowOffset = CGSize(width: 0, height: 3)
         isAccessibilityElement = true
         accessibilityLabel = "Cerebro"
-        accessibilityIdentifier = "cerebro.trigger"
         accessibilityTraits = .button
 
         icon.tintColor = .white
