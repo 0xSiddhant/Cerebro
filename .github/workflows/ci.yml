@@ -1,12 +1,14 @@
 name: CI
 
+# release.yml also calls this workflow, so a release only happens after all of it passes.
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches: [develop, main]
+  push:
+    branches: [develop]
+  workflow_call:
 
-# A new push makes a PR's running CI moot; a push to main always finishes.
+# A new push makes a PR's running CI moot; a push to a branch always finishes.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
