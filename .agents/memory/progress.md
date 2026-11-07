@@ -16,6 +16,12 @@ Update after every work session: status, branch or PR, notes. Statuses: `not-sta
 
 ## Recent activity (newest first)
 
+### 2026-11-07: pre-commit hook
+
+Added `.githooks/pre-commit`. It formats staged Swift files and lints what is being committed, so style problems show up before CI. Partially staged files are only linted, so unstaged work never gets staged. Enable it once per clone with `git config core.hooksPath .githooks`.
+
+Verified in a throwaway clone with real commits on git 2.33 and 2.50 and the Mac's bash 3.2: 31 scenarios, and 20 deliberately broken copies of the hook were all caught. Not verified: a Mac without `swift-format`, which was only simulated. Known limits: `git commit <path>` commits formatted code but leaves the old copy in the index, so run `git add` on that file. If formatting undoes the only staged change, git makes an empty commit.
+
 ### 2026-11-07: design principles and linting
 
 Made DRY, KISS, YAGNI, the architecture and Swift best practices binding in `coding.md`, with a review step in `build-and-test`. Added `swift-format` and SwiftLint to CI, and fixed the 20 findings they raised: missing public docs, three force unwraps in the Example app, and formatting. SwiftLint stays out of `Package.swift` and the podspec, so apps that use Cerebro never see it.

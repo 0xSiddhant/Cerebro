@@ -52,6 +52,9 @@ xcrun swift-format lint --strict --recursive Sources Tests Example
 # Lint: code quality (a contributor tool: brew install swiftlint)
 swiftlint lint --strict
 
+# Enable the pre-commit hook once per clone
+git config core.hooksPath .githooks
+
 # CocoaPods: compiles every subspec as one module
 pod lib lint Cerebro.podspec
 

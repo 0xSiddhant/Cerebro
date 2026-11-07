@@ -21,6 +21,7 @@ Cerebro/
 │   └── skills -> ../.claude/skills
 ├── .claude/skills/            # build-and-test, podspec-lint, build-xcframework,
 │                              # release, new-plan, context-sync
+├── .githooks/                 # pre-commit hook; a contributor tool, enabled once per clone
 ├── .github/workflows/         # ci.yml on PRs and develop; release.yml when develop merges into main
 ├── Scripts/                   # build-xcframework.sh, next-version.sh, set-version.sh, release-notes.sh;
 │                              # build-generator.sh arrives in PLAN-03

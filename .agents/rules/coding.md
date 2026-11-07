@@ -95,6 +95,7 @@ CI fails on any finding from either tool, and each check has one owner.
 - `swift-format` owns formatting, force unwraps, force tries and public docs. It ships with Xcode, and `.swift-format` configures it.
 - SwiftLint owns code quality, such as complexity limits, weak delegates and simpler standard library use. `.swiftlint.yml` configures it.
 - SwiftLint is a contributor tool. Never add it to `Package.swift` or `Cerebro.podspec`, because apps that use Cerebro must not resolve, download or run it. CI pins its version with a container.
+- The `.githooks/pre-commit` hook formats staged files and lints what is being committed. CI remains the gate. It's a contributor tool that never reaches apps using Cerebro.
 
 ## Performance
 
