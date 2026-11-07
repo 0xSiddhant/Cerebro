@@ -40,6 +40,7 @@ Read the whole draft and check each of these:
 - **Host app safety:** what happens while Cerebro is off in Release? Is every new store capped?
 - **Privacy:** does any path store or export a value before redaction?
 - **Performance:** does new work stay off the request path and the main thread, stop at the cap, and format on open? Do live updates batch?
+- **Design principles:** is anything speculative, a second path where one exists, or an abstraction with one user? Check against `.agents/rules/coding.md`.
 - **Contradictions:** read each decision against the others and against the task list.
 - **Shown code:** does every signature match the places that use it?
 - **Overstated guarantees:** does "every request" really mean every request?

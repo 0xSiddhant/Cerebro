@@ -2,7 +2,7 @@
 
 Implement strictly in order. One plan = one branch from `develop` = one PR into `develop`, except PLAN-00. Plans 0–5 lead to 1.0, and Plan 99 holds work deliberately left for later.
 
-Zero code change is the first priority of every plan, and each must work the same in all three install options: SPM, CocoaPods and a downloaded XCFramework.
+Zero code change is the first priority of every plan, and each must work the same in all three install options: SPM, CocoaPods and a downloaded XCFramework. Every plan also follows the design principles in `rules/coding.md`: DRY, KISS, YAGNI, the architecture, and Swift best practices.
 
 Each plan follows the same format: goal → gate → scope → decisions & reasoning → public API → task checklist → acceptance criteria → test checklist → open questions. The `new-plan` skill has the detail.
 

@@ -46,6 +46,12 @@ xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme Cerebro-Pa
 xcodebuild build -project Example/CerebroExample.xcodeproj -scheme CerebroExample \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 
+# Lint: formatting, crash paths and public docs (ships with Xcode)
+xcrun swift-format lint --strict --recursive Sources Tests Example
+
+# Lint: code quality (a contributor tool: brew install swiftlint)
+swiftlint lint --strict
+
 # CocoaPods: compiles every subspec as one module
 pod lib lint Cerebro.podspec
 
@@ -61,6 +67,8 @@ Scripts/build-xcframework.sh
 - `CerebroCore` never imports UIKit or SwiftProtobuf.
 - Strict concurrency is on everywhere, and warnings are errors in `Cerebro.xcodeproj`.
 - The dashboard is programmatic UIKit in its own window. It never swallows the host app's touches or touches its navigation stack.
+
+Every change also follows that file's design principles: DRY, KISS, YAGNI, the architecture, and Swift best practices.
 
 ## Working rules
 

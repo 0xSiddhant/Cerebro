@@ -12,6 +12,7 @@
 | UI | Programmatic UIKit in a `PassthroughWindow` | Full control over windows and touches; nothing to load from bundles |
 | Proto decoding | SwiftProtobuf 1.27.0 up to, not including, 2.0.0 | Apps with `.pb.swift` files already link it; 1.27.0 is the first version where `Message` is `Sendable` |
 | Tests | Swift Testing on an iOS simulator | The package is iOS-only |
+| Linting | `swift-format` from Xcode, and SwiftLint 0.62.2 in a CI container | Rules nothing enforces get skipped. Neither tool reaches apps that use Cerebro |
 | Distribution | SPM, a Git-sourced CocoaPod, or a downloaded XCFramework, all first-class | The user picks; CocoaPods is Git-sourced because trunk goes read-only on December 2, 2026 |
 | CI | GitHub Actions on `macos-26` | Has Xcode 26, CocoaPods and the `iPhone 17` simulator |
 | Versioning | SemVer, tags `vX.Y.Z`, worked out from Conventional Commits by `release.yml` | Versions can't drift, and `1.0.0` takes a deliberate `Release-As` footer |

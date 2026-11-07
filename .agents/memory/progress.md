@@ -16,6 +16,10 @@ Update after every work session: status, branch or PR, notes. Statuses: `not-sta
 
 ## Recent activity (newest first)
 
+### 2026-11-07: design principles and linting
+
+Made DRY, KISS, YAGNI, the architecture and Swift best practices binding in `coding.md`, with a review step in `build-and-test`. Added `swift-format` and SwiftLint to CI, and fixed the 20 findings they raised: missing public docs, three force unwraps in the Example app, and formatting. SwiftLint stays out of `Package.swift` and the podspec, so apps that use Cerebro never see it.
+
 ### 2026-11-07: performance rules added to the plans
 
 Nothing implemented: plan only. Measured the pipeline's worst case, confirmed no C is needed, and added four performance rules to PLAN-01 to PLAN-05. Resolving them against redaction added the withheld-body rule and kept proto decoding at capture. The timings came from an Apple M1 Mac, so PLAN-01 profiles on a real device.
