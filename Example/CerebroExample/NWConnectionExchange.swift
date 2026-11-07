@@ -33,13 +33,15 @@ final class NWConnectionExchange: @unchecked Sendable {
     private func sendRequest() {
         let request = Data("HEAD / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n".utf8)
 
-        connection.send(content: request, completion: .contentProcessed { error in
-            if let error {
-                self.finish(.failure(error))
-            } else {
-                self.receiveResponse()
-            }
-        })
+        connection.send(
+            content: request,
+            completion: .contentProcessed { error in
+                if let error {
+                    self.finish(.failure(error))
+                } else {
+                    self.receiveResponse()
+                }
+            })
     }
 
     private func receiveResponse() {
