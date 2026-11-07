@@ -14,9 +14,8 @@ Cerebro/
 ├── .swiftlint.yml             # code quality; a contributor tool, never a dependency
 ├── .swiftpm/xcode/            # package workspace, so xcodebuild can reach the package
 ├── .agents/
-│   ├── context/               # architecture, tech stack, this file
-│   ├── memory/                # progress, decisions, history
-│   ├── plans/                 # plan index, one file per plan, completed/
+│   ├── context/               # architecture, tech stack, this file, notes
+│   ├── plans/                 # plan index, one file per open plan
 │   ├── rules/                 # git.md, coding.md
 │   └── skills -> ../.claude/skills
 ├── .claude/skills/            # build-and-test, podspec-lint, build-xcframework,

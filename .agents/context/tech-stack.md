@@ -1,4 +1,4 @@
-# Tech Stack (decided: do not swap without a logged decision)
+# Tech Stack (decided: do not swap without the owner's approval)
 
 | Concern | Choice | Why |
 |---|---|---|

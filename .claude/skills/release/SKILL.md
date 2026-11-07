@@ -20,7 +20,7 @@ Hard rules: never edit versions or create release tags by hand. Never force-push
 
 ## Procedure
 
-1. **Preflight** on a clean, current `develop`: every plan in this release is `done` in `.agents/memory/progress.md`, and CI is green on `develop`.
+1. **Preflight** on a clean, current `develop`: every plan in this release is ticked in `.agents/plans/README.md`, and CI is green on `develop`.
 2. **Context sync:** run the `context-sync` skill so the docs match the code being shipped. Stop for the owner to merge.
 3. **Release PR:** open `develop` → `main`, titled `chore: release develop`, with a summary of what ships and the version `Scripts/next-version.sh` predicts. Stop for the owner to merge it with a merge commit, never a squash.
 4. **Confirm** after the merge: the `Release` workflow succeeds, the GitHub Release shows the install lines for this version and has `Cerebro`, `CerebroProto` and `SwiftProtobuf` `.xcframework.zip` assets, and `develop` contains the `chore(release)` commit. From PLAN-03 on it also needs the `cerebro-proto-gen` binary. Report the release URL.

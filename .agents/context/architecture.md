@@ -1,6 +1,6 @@
 # Cerebro Architecture
 
-This is the target design from the specification. `.agents/memory/progress.md` says what exists so far.
+This is the target design from the specification. `.agents/plans/README.md` says what exists so far.
 
 Cerebro is a layered, one-way pipeline: traffic is captured, decoded, stored, then shown. Zero code change is the first priority, so the host app touches one small facade and, in most apps, only one line of it.
 

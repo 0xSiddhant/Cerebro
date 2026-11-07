@@ -45,7 +45,7 @@ Every change follows these, and the `build-and-test` skill reviews each diff aga
 - `Cerebro` holds the public facade, triggers and dashboard UI.
 - `CerebroProto` is the only module that uses SwiftProtobuf. Apps that don't use protobuf must never link it.
 - There is no Objective-C or C target and no `+load`. Unsafe pointers appear only at C API boundaries such as `getifaddrs`.
-- SwiftProtobuf is the only dependency. Adding another needs a logged decision.
+- SwiftProtobuf is the only dependency. Adding another needs the owner's approval.
 
 ## One source tree, three builds
 
@@ -103,7 +103,7 @@ CI fails on any finding from either tool, and each check has one owner.
 - Stop processing at the stored-body cap, in capture, decompression and parsing.
 - Format on open. Only the redaction of configured JSON keys and proto decoding parse at capture.
 - Batch updates to the dashboard. Disk appends are the exception: they stay per request, for the crash guarantee.
-- Don't reach for C or another language without a measured problem on a real device and a logged decision.
+- Don't reach for C or another language without a measured problem on a real device and the owner's approval.
 
 ## Host app safety
 

@@ -14,8 +14,7 @@ description: Audit and update Cerebro's .agents knowledge files against the actu
    - folders against `project-structure.md`
    - commands against what actually runs
    - public API against `README.md`
-3. Update the files to match. The code wins, unless the difference breaks a logged decision. Report that as a regression instead of documenting it.
-4. Real decision drift gets a new dated row in `.agents/memory/decisions.md`. Never edit or delete existing rows.
-5. Don't touch plan files. They are historical specs.
-6. Move every `progress.md` activity entry dated before the latest release tag into `history.md`, newest first, text unchanged.
-7. Put a divergence table in the PR body: file, claim, reality, action taken.
+3. Update the files to match. The code wins, unless the difference breaks something in `.agents/context/notes.md`. Report that as a regression instead of documenting it.
+4. Update `.agents/context/notes.md`: fix its status, add any new change from the spec, and delete what stopped mattering. Keep it short.
+5. Don't touch plan files.
+6. Put a divergence table in the PR body: file, claim, reality, action taken.
