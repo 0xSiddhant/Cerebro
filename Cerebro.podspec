@@ -21,7 +21,8 @@ Pod::Spec.new do |s|
 
   s.subspec 'Core' do |core|
     core.source_files = 'Sources/CerebroCore/**/*.swift'
-    core.frameworks = 'Foundation', 'Network'
+    core.frameworks = 'Foundation', 'Network', 'Security'
+    core.libraries = 'compression'
   end
 
   s.subspec 'UI' do |ui|
