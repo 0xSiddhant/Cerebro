@@ -52,7 +52,5 @@ final class HTTPCaptureEngine: Sendable {
         guard removed else { return }
         URLProtocol.unregisterClass(CustomURLProtocol.self)
         SessionConfigurationInjector.exchangeGetters()
-        standardSession.invalidate()
-        ephemeralSession.invalidate()
     }
 }

@@ -140,7 +140,7 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
         responseBody?.append(data)
     }
 
-    /// Hands the decision to the app's session. If it follows the redirect it stops this load and starts
+    /// Hands the decision to the app's session. If it follows the redirect, it stops this load and starts
     /// a new one, and if it refuses, the 3xx that keeps arriving here is what it delivers.
     func wasRedirected(to newRequest: URLRequest, by response: HTTPURLResponse) {
         self.response = response

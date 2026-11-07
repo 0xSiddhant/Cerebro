@@ -2,6 +2,9 @@ import Foundation
 
 /// The real network session behind captured requests, and the one place its callbacks arrive.
 ///
+/// It's never invalidated. A request can pass `canInit` just as Cerebro stops, and creating a task on
+/// an invalidated session throws an exception that would crash the app.
+///
 /// Safety for `@unchecked Sendable`: `tasks` is only touched on `queue`, which is serial and is also
 /// the session's delegate queue.
 final class CaptureSession: NSObject, @unchecked Sendable {
@@ -36,10 +39,6 @@ final class CaptureSession: NSObject, @unchecked Sendable {
         }
         tasks[task.taskIdentifier] = owner
         return task
-    }
-
-    func invalidate() {
-        session.finishTasksAndInvalidate()
     }
 }
 
