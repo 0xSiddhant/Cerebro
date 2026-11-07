@@ -7,7 +7,7 @@ description: Audit and update Cerebro's .agents knowledge files against the actu
 
 `.agents/context/*.md` and `.agents/rules/*.md` must describe the code as it exists, not as it was planned.
 
-1. Work on a branch, `chore/context-sync-<date>`. It lands through a PR.
+1. Work on a branch from `develop`, `chore/context-sync-<date>`. It lands through a PR into `develop`.
 2. Diff each file's claims against reality:
    - modules and dependencies against `Package.swift`, `Cerebro.podspec` and `Cerebro.xcodeproj`
    - the SwiftProtobuf range against `Package.swift` and the podspec, and its pin against `Package.resolved`

@@ -14,5 +14,5 @@
 | Tests | Swift Testing on an iOS simulator | The package is iOS-only |
 | Distribution | SPM, a Git-sourced CocoaPod, or a downloaded XCFramework, all first-class | The user picks; CocoaPods is Git-sourced because trunk goes read-only on December 2, 2026 |
 | CI | GitHub Actions on `macos-26` | Has Xcode 26, CocoaPods and the `iPhone 17` simulator |
-| Versioning | SemVer, tags `vX.Y.Z` | |
+| Versioning | SemVer, tags `vX.Y.Z`, worked out from Conventional Commits by `release.yml` | Versions can't drift, and `1.0.0` takes a deliberate `Release-As` footer |
 | License | MIT | |

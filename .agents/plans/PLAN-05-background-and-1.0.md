@@ -6,11 +6,11 @@ Close the last capture gap, keep the previous session readable after a relaunch 
 
 ## Gate
 
-PLAN-04 merged. Single PR on `plan/5-background-and-1.0`, with the `v1.0.0` tag after it merges.
+PLAN-04 merged. Single PR on `plan/5-background-and-1.0`. Its `Release-As: 1.0.0` commit makes the next `develop` → `main` merge release `v1.0.0`.
 
 ## Scope
 
-**In:** the delegate-proxy capture engine for background URLSessions, the on-disk session store with previous-session restore, the previous-session view, the notification redirect trigger, complete README and docs, and the `v1.0.0` tag.
+**In:** the delegate-proxy capture engine for background URLSessions, the on-disk session store with previous-session restore, the previous-session view, the notification redirect trigger, complete README and docs, and the `v1.0.0` release.
 
 **Out:** mocking and replay (PLAN-99). Compile-time removal in Release, which was rejected.
 
@@ -56,7 +56,7 @@ The host app owns the notification delegate and permission, so it forwards taps 
 
 **Release**
 - [ ] README and docs complete: setup, configuration, what Cerebro can't capture
-- [ ] Run the `release` skill for `v1.0.0`
+- [ ] Add a commit with a `Release-As: 1.0.0` footer, then run the `release` skill
 
 ## Acceptance criteria
 
@@ -67,7 +67,7 @@ The host app owns the notification delegate and permission, so it forwards taps 
 5. One previous session is kept by default, and the count is configurable.
 6. No file on disk holds a redacted value in raw form.
 7. A forwarded notification tap opens the dashboard, and nothing happens with the trigger off.
-8. The `v1.0.0` tag produces a GitHub Release with all its binaries.
+8. Merging `develop` into `main` releases `v1.0.0` with all its binaries.
 9. The `build-and-test` skill passes in all channels.
 
 ## Test checklist

@@ -2,11 +2,11 @@
 
 Update after every work session: status, branch or PR, notes. Statuses: `not-started` · `in-progress` · `in-review` · `blocked` · `done`.
 
-**Current state: PLAN-00 is done. PLAN-01 is next and has no open questions.**
+**Current state: PLAN-00 is done and released as `v0.1.0`. PLAN-01 is next and has no open questions.**
 
 | Plan | Title | Status | Branch / PR | Notes |
 |---|---|---|---|---|
-| PLAN-00 | Repository setup | done | `main` (initial commit only) | GitHub Actions hasn't run yet, because it needs a push |
+| PLAN-00 | Repository setup | done | `main` (initial commit only) | Released as `v0.1.0` |
 | PLAN-01 | HTTP capture and base dashboard | not-started | `plan/1-http-capture` | |
 | PLAN-02 | WebSockets, NWConnection and the Sockets tab | not-started | `plan/2-sockets` | |
 | PLAN-03 | Protobuf decoding and the Proto Config tab | not-started | `plan/3-proto` | |
@@ -15,6 +15,16 @@ Update after every work session: status, branch or PR, notes. Statuses: `not-sta
 | PLAN-99 | Response mocking and replay | not-started | | Scoped when the plan is written |
 
 ## Recent activity (newest first)
+
+### 2026-11-07: develop branch and automated releases
+
+Created `develop`. Implementation now branches from it and returns through PRs, and merging `develop` into `main` is what releases. `release.yml` works out the version, runs all CI, then updates the version, builds, tags, publishes and merges back.
+
+Verified locally: 17 version scenarios, and a rehearsal of the workflow's git steps against a local bare repo, including `develop` moving mid-release. Not verified: `release.yml` hasn't run on GitHub. Its first full run will be the first `feat` or `fix` to reach `main`.
+
+### 2026-11-07: v0.1.0 released
+
+CI passed on the first push. `v0.1.0` was tagged by hand, before the automation existed, and has empty placeholders for capture. The Example sources ran on a simulator from public GitHub through all three install options.
 
 ### 2026-11-07: owner's answers applied to the plans
 
