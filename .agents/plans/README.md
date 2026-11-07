@@ -9,7 +9,7 @@ Each plan follows the same format: goal → gate → scope → decisions & reaso
 | # | Plan | Branch | Gate to start |
 |---|---|---|---|
 | ✅ 00 | Repository setup: SPM, CocoaPods, XCFrameworks, CI, Example app, agent files | `main`, initial commit only | Owner reviews the git rules before the commit |
-| 01 | [HTTP capture and base dashboard](PLAN-01-http-capture.md) | `plan/1-http-capture` | PLAN-00 done |
+| ✅ 01 | HTTP capture and base dashboard | `plan/1-http-capture` | PLAN-00 done |
 | 02 | [WebSockets, NWConnection and the Sockets tab](PLAN-02-sockets.md) | `plan/2-sockets` | PLAN-01 merged |
 | 03 | [Protobuf decoding and the Proto Config tab](PLAN-03-proto.md) | `plan/3-proto` | PLAN-02 merged |
 | 04 | [System info and export](PLAN-04-system-info.md) | `plan/4-system-info` | PLAN-03 merged |

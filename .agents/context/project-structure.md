@@ -45,6 +45,7 @@ Cerebro/
 │   └── CerebroProtoPlugin/    # SPM build-tool plugin that runs the generator
 └── Tests/
     ├── CerebroCoreTests/
+    ├── CerebroTests/
     ├── CerebroProtoTests/
     └── CerebroProtoGeneratorTests/
 ```

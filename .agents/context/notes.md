@@ -4,7 +4,9 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. Not yet proven: a full `release.yml` run on GitHub, and the Release gate on a real device.
+`v0.1.0` is released and has only placeholders for capture. PLAN-01 adds HTTP capture and the dashboard.
+
+Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, and a burst of large responses on a real device. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
 
 ## Where we differ from the spec
 
@@ -35,7 +37,11 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 | SwiftUI `Text` for response bodies? | No. It took 2-3 s on 100 KB and never finished 1 MB, while `UITextView` took under 0.5 s |
 | SwiftUI floating trigger? | No. It swallowed the host app's touches |
 | C for speed? | No. On about 1 MB, zlib took 7 ms and JSON 34 ms, both already native, and SwiftProtobuf took 34 ms |
+| Cost of capture? | 1,000 requests of 64 KB with the dashboard open, in a Release build, took 2.0 s against 1.8 s. It dropped 2 of about 149 frames against 0, the worst frame took 51 ms against 17 ms, and memory grew 38 MB against 8 MB |
+| Memory on a huge response? | Bounded. A 200 MB response arrived in full, and peak memory went from 408 MB to 429 MB |
+| How should a URLProtocol handle redirects? | Tell the client and keep delivering the 3xx. A spike tried three approaches, following and refusing with a fast and a slow delegate, and only this one passed all four. Stopping there hung a refused redirect, and Apple's sample approach fails it with `NSCocoaErrorDomain 3072` |
 
 ## Worth knowing
 
+- A URLProtocol can't read the app's session, so the side effects in the README's "What changes while Cerebro captures" follow from the design. Don't try to fix them without a new idea.
 - `Cerebro.xcodeproj` leaves out `SWIFT_APPROACHABLE_CONCURRENCY` and member import visibility on purpose, so the same sources compile the same way as in SPM.
