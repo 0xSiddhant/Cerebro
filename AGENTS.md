@@ -25,7 +25,7 @@ Users choose one of three install options, and all three are first-class: SPM, C
 
 ## Current plan
 
-PLAN-02, WebSockets, NWConnection and the Sockets tab, is next. See `.agents/plans/README.md` for the order and gates.
+PLAN-03, protobuf decoding and the Proto Config tab, is next. See `.agents/plans/README.md` for the order and gates.
 
 ## Commands
 
