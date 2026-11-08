@@ -10,10 +10,19 @@ final class SocketCaptureEngine: Sendable {
         current.withLock { $0 }
     }
 
+    private let bodyLimit: Int
+    private let backlog: SocketBacklog
     private let redactor: Redactor
     private let record: @Sendable (RawSocketActivity) -> Void
 
-    init(redactor: Redactor, record: @escaping @Sendable (RawSocketActivity) -> Void) {
+    init(
+        bodyLimit: Int,
+        backlog: SocketBacklog,
+        redactor: Redactor,
+        record: @escaping @Sendable (RawSocketActivity) -> Void
+    ) {
+        self.bodyLimit = bodyLimit
+        self.backlog = backlog
         self.redactor = redactor
         self.record = record
     }
@@ -23,9 +32,24 @@ final class SocketCaptureEngine: Sendable {
         SocketIdentity(id: id, source: source, name: redactor.redact(url: url)?.absoluteString ?? fallbackName)
     }
 
-    /// Hands activity to the background pipeline and returns.
-    func submit(_ content: RawSocketActivity.Content, on socket: SocketIdentity) {
-        record(RawSocketActivity(socket: socket, content: content, date: Date()))
+    /// Applies the stored-body cap and hands the frame to the background pipeline.
+    func submit(
+        _ payload: SocketPayload, _ direction: SocketDirection, didFail: Bool = false, on socket: SocketIdentity
+    ) {
+        let (kind, body) = capped(payload)
+        let frame = RawSocketFrame(
+            direction: direction,
+            kind: kind,
+            body: backlog.admit(bytes: body.data.count) ? body : nil,
+            byteCount: body.byteCount,
+            didFail: didFail
+        )
+        record(RawSocketActivity(socket: socket, content: .frame(frame), date: Date()))
+    }
+
+    /// Hands an event to the background pipeline.
+    func submit(_ event: SocketEvent, on socket: SocketIdentity) {
+        record(RawSocketActivity(socket: socket, content: .event(event), date: Date()))
     }
 
     func install() {
@@ -47,6 +71,16 @@ final class SocketCaptureEngine: Sendable {
         }
         if removed {
             WebSocketTaskHooks.uninstall()
+        }
+    }
+
+    private func capped(_ payload: SocketPayload) -> (SocketFrame.Kind, RawBody) {
+        switch payload {
+        case .text(let text):
+            let bytes = text.utf8
+            return (.text, RawBody(data: Data(bytes.prefix(bodyLimit)), limit: bodyLimit, isTruncatedFrom: bytes.count))
+        case .binary(let data):
+            return (.binary, RawBody(data: data, limit: bodyLimit))
         }
     }
 }

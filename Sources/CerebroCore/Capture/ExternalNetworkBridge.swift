@@ -8,6 +8,7 @@ public enum ExternalNetworkBridge {
     /// One socket in your engine.
     public struct Connection: Sendable, Hashable {
         fileprivate let id = UUID()
+        fileprivate let identity = SocketIdentitySlot()
 
         /// What to call the socket if it has no URL.
         public let name: String
@@ -20,26 +21,33 @@ public enum ExternalNetworkBridge {
             self.name = name
             self.url = url
         }
+
+        /// Whether two values are the same socket.
+        public static func == (first: Self, second: Self) -> Bool {
+            first.id == second.id
+        }
+
+        /// Hashes the socket's identity.
+        public func hash(into hasher: inout Hasher) {
+            hasher.combine(id)
+        }
     }
 
     /// Logs one frame.
     public static func log(_ payload: SocketPayload, _ direction: SocketDirection, on connection: Connection) {
-        submit(.frame(direction, payload), on: connection)
+        guard let engine = SocketCaptureEngine.active else { return }
+        engine.submit(payload, direction, on: identity(of: connection, with: engine))
     }
 
     /// Logs anything else that happened on the socket.
     public static func log(_ event: SocketEvent, on connection: Connection) {
-        submit(.event(event), on: connection)
+        guard let engine = SocketCaptureEngine.active else { return }
+        engine.submit(event, on: identity(of: connection, with: engine))
     }
 
-    private static func submit(_ content: RawSocketActivity.Content, on connection: Connection) {
-        guard let engine = SocketCaptureEngine.active else { return }
-        let socket = engine.identity(
-            id: connection.id,
-            source: .external,
-            url: connection.url,
-            fallbackName: connection.name
-        )
-        engine.submit(content, on: socket)
+    private static func identity(of connection: Connection, with engine: SocketCaptureEngine) -> SocketIdentity {
+        connection.identity.value {
+            engine.identity(id: connection.id, source: .external, url: connection.url, fallbackName: connection.name)
+        }
     }
 }

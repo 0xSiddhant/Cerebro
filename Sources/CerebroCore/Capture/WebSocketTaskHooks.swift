@@ -72,8 +72,8 @@ enum WebSocketTaskHooks {
         replace("resume", on: taskClass) { implementation, selector in
             let original = unsafeBitCast(implementation, to: Original.self)
             let hook: @convention(block) (URLSessionWebSocketTask) -> Void = { task in
-                if let (engine, record) = current(for: task), record.markOpened() {
-                    engine.submit(.event(.opened), on: record.identity)
+                if let (engine, record) = current(for: task), record.markStarted() {
+                    engine.submit(.stateChanged("Connecting"), on: record.identity)
                 }
                 original(task, selector)
             }
@@ -89,11 +89,7 @@ enum WebSocketTaskHooks {
             let hook: SendHook = { task, message, completion in
                 original(task, selector, message) { error in
                     if let (engine, record) = current(for: task) {
-                        if let error {
-                            recordFailure(error, on: task, record, engine)
-                        } else if let payload = payload(of: message) {
-                            engine.submit(.frame(.sent, payload), on: record.identity)
-                        }
+                        recordSend(of: message, error: error, on: task, record, engine)
                     }
                     completion(error)
                 }
@@ -112,7 +108,8 @@ enum WebSocketTaskHooks {
                         if let error {
                             recordFailure(error, on: task, record, engine)
                         } else if let payload = message.flatMap(payload) {
-                            engine.submit(.frame(.received, payload), on: record.identity)
+                            noteOpened(record, engine)
+                            engine.submit(payload, .received, on: record.identity)
                         }
                     }
                     completion(message, error)
@@ -128,14 +125,15 @@ enum WebSocketTaskHooks {
             let original = unsafeBitCast(implementation, to: Original.self)
             let hook: PingHook = { task, completion in
                 if let (engine, record) = current(for: task) {
-                    engine.submit(.event(.ping), on: record.identity)
+                    engine.submit(.ping, on: record.identity)
                 }
                 original(task, selector) { error in
                     if let (engine, record) = current(for: task) {
                         if let error {
                             recordFailure(error, on: task, record, engine)
                         } else {
-                            engine.submit(.event(.pong), on: record.identity)
+                            noteOpened(record, engine)
+                            engine.submit(.pong, on: record.identity)
                         }
                     }
                     completion(error)
@@ -151,7 +149,7 @@ enum WebSocketTaskHooks {
             let original = unsafeBitCast(implementation, to: Original.self)
             let hook: @convention(block) (URLSessionWebSocketTask, Int, NSData?) -> Void = { task, code, reason in
                 if let (engine, record) = existing(for: task), record.markClosed() {
-                    engine.submit(.event(.closed(code: code, reason: text(of: reason as Data?))), on: record.identity)
+                    engine.submit(.closed(code: code, reason: text(of: reason as Data?)), on: record.identity)
                 }
                 original(task, selector, code, reason)
             }
@@ -165,7 +163,7 @@ enum WebSocketTaskHooks {
             let original = unsafeBitCast(implementation, to: Original.self)
             let hook: @convention(block) (URLSessionWebSocketTask) -> Void = { task in
                 if let (engine, record) = existing(for: task), record.markClosed() {
-                    engine.submit(.event(closeEvent(of: task)), on: record.identity)
+                    engine.submit(closeEvent(of: task), on: record.identity)
                 }
                 original(task, selector)
             }
@@ -182,7 +180,33 @@ enum WebSocketTaskHooks {
     ) {
         guard record.markClosed() else { return }
         let event = task.closeCode == .invalid ? SocketEvent.failed(error.localizedDescription) : closeEvent(of: task)
-        engine.submit(.event(event), on: record.identity)
+        engine.submit(event, on: record.identity)
+    }
+
+    /// A send that failed still shows, because that's the message a developer most wants to see.
+    private static func recordSend(
+        of message: NSObject,
+        error: NSError?,
+        on task: URLSessionWebSocketTask,
+        _ record: WebSocketTaskRecord,
+        _ engine: SocketCaptureEngine
+    ) {
+        if error == nil {
+            noteOpened(record, engine)
+        }
+        if let payload = payload(of: message) {
+            engine.submit(payload, .sent, didFail: error != nil, on: record.identity)
+        }
+        if let error {
+            recordFailure(error, on: task, record, engine)
+        }
+    }
+
+    /// Only the app's delegate sees the handshake, so the first thing to succeed is the proof it worked.
+    private static func noteOpened(_ record: WebSocketTaskRecord, _ engine: SocketCaptureEngine) {
+        if record.markOpened() {
+            engine.submit(.opened, on: record.identity)
+        }
     }
 
     /// URLSession also calls `cancel` on itself when a server's close arrives with no receive waiting,
@@ -223,6 +247,7 @@ enum WebSocketTaskHooks {
 /// `Sendable` because `identity` never changes and `state` is behind a lock.
 private final class WebSocketTaskRecord: NSObject, Sendable {
     private struct State {
+        var isStarted = false
         var isOpened = false
         var isClosed = false
     }
@@ -262,16 +287,28 @@ private final class WebSocketTaskRecord: NSObject, Sendable {
         }
     }
 
-    /// URLSession rewrites `ws` and `wss` to `http` and `https` in the task's request.
+    /// URLSession rewrites `ws` and `wss` to `http` and `https` in a request it built from a URL.
     private static func webSocketURL(of task: URLSessionWebSocketTask) -> URL? {
         guard let url = task.originalRequest?.url ?? task.currentRequest?.url,
             var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         else { return nil }
-        components.scheme = components.scheme == "http" ? "ws" : "wss"
+        switch components.scheme?.lowercased() {
+        case "http": components.scheme = "ws"
+        case "https": components.scheme = "wss"
+        default: break
+        }
         return components.url ?? url
     }
 
     /// Returns whether this is the first time, since a task can be resumed again after a suspend.
+    func markStarted() -> Bool {
+        state.withLock { state in
+            defer { state.isStarted = true }
+            return !state.isStarted
+        }
+    }
+
+    /// Returns whether this is the first sign the socket really opened.
     func markOpened() -> Bool {
         state.withLock { state in
             defer { state.isOpened = true }

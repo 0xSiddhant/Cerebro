@@ -10,11 +10,13 @@ public final class MonitoredNWConnection: Sendable {
     /// A closure that's told about state changes.
     public typealias StateHandler = @Sendable (NWConnection.State) -> Void
 
+    /// A closure that's given received content.
+    public typealias ReceiveHandler = @Sendable (Data?, NWConnection.ContentContext?, Bool, NWError?) -> Void
+
     /// The real connection, for anything this type doesn't forward.
     public let connection: NWConnection
 
-    private let id = UUID()
-    private let appStateHandler = OSAllocatedUnfairLock<StateHandler?>(initialState: nil)
+    private let recorder: NWConnectionRecorder
 
     /// Creates a connection, as `NWConnection(host:port:using:)` does.
     public convenience init(host: NWEndpoint.Host, port: NWEndpoint.Port, using parameters: NWParameters) {
@@ -26,11 +28,12 @@ public final class MonitoredNWConnection: Sendable {
         self.init(wrapping: NWConnection(to: endpoint, using: parameters))
     }
 
-    /// Monitors an existing connection.
+    /// Monitors an existing connection, keeping any state handler it already has.
     public init(wrapping connection: NWConnection) {
         self.connection = connection
+        recorder = NWConnectionRecorder(endpoint: connection.endpoint, appStateHandler: connection.stateUpdateHandler)
         if SocketCaptureEngine.active != nil {
-            connection.stateUpdateHandler = recordingStateHandler()
+            connection.stateUpdateHandler = recorder.stateHandler()
         }
     }
 
@@ -48,10 +51,10 @@ public final class MonitoredNWConnection: Sendable {
 
     /// Called when the state changes.
     public var stateUpdateHandler: StateHandler? {
-        get { appStateHandler.withLock { $0 } }
+        get { recorder.appStateHandler }
         set {
-            appStateHandler.withLock { $0 = newValue }
-            connection.stateUpdateHandler = SocketCaptureEngine.active == nil ? newValue : recordingStateHandler()
+            recorder.appStateHandler = newValue
+            connection.stateUpdateHandler = SocketCaptureEngine.active == nil ? newValue : recorder.stateHandler()
         }
     }
 
@@ -110,20 +113,16 @@ public final class MonitoredNWConnection: Sendable {
         isComplete: Bool = true,
         completion: NWConnection.SendCompletion
     ) {
-        guard let engine = SocketCaptureEngine.active else {
+        guard SocketCaptureEngine.active != nil else {
             connection.send(
                 content: content, contentContext: contentContext, isComplete: isComplete, completion: completion)
             return
-        }
-        let socket = identity(with: engine)
-        if let content, !content.isEmpty {
-            engine.submit(.frame(.sent, Self.payload(content, in: contentContext)), on: socket)
         }
         connection.send(
             content: content,
             contentContext: contentContext,
             isComplete: isComplete,
-            completion: Self.recording(completion, on: socket, with: engine)
+            completion: recorder.recording(completion, sending: content, in: contentContext)
         )
     }
 
@@ -131,74 +130,122 @@ public final class MonitoredNWConnection: Sendable {
     public func receive(
         minimumIncompleteLength: Int,
         maximumLength: Int,
-        completion: @escaping @Sendable (Data?, NWConnection.ContentContext?, Bool, NWError?) -> Void
+        completion: @escaping ReceiveHandler
     ) {
         connection.receive(
             minimumIncompleteLength: minimumIncompleteLength,
             maximumLength: maximumLength,
-            completion: recording(completion)
+            completion: recorder.recording(completion)
         )
     }
 
     /// Receives a whole message, as `NWConnection.receiveMessage` does.
-    public func receiveMessage(
-        completion: @escaping @Sendable (Data?, NWConnection.ContentContext?, Bool, NWError?) -> Void
-    ) {
-        connection.receiveMessage(completion: recording(completion))
+    public func receiveMessage(completion: @escaping ReceiveHandler) {
+        connection.receiveMessage(completion: recorder.recording(completion))
+    }
+}
+
+/// What the wrapper's callbacks need. It holds neither the wrapper nor the connection, so they can
+/// keep it alive: `NWConnection` still delivers `.cancelled` after the app lets go of its wrapper.
+private final class NWConnectionRecorder: Sendable {
+    typealias ReceiveHandler = MonitoredNWConnection.ReceiveHandler
+
+    private let id = UUID()
+    private let endpoint: NWEndpoint
+    private let identity = SocketIdentitySlot()
+    private let storedAppStateHandler: OSAllocatedUnfairLock<MonitoredNWConnection.StateHandler?>
+    private let isFinished = OSAllocatedUnfairLock(initialState: false)
+
+    init(endpoint: NWEndpoint, appStateHandler: MonitoredNWConnection.StateHandler?) {
+        self.endpoint = endpoint
+        storedAppStateHandler = OSAllocatedUnfairLock(initialState: appStateHandler)
     }
 
-    private func identity(with engine: SocketCaptureEngine) -> SocketIdentity {
-        var url: URL?
-        if case .url(let endpointURL) = connection.endpoint {
-            url = endpointURL
+    var appStateHandler: MonitoredNWConnection.StateHandler? {
+        get { storedAppStateHandler.withLock { $0 } }
+        set { storedAppStateHandler.withLock { $0 = newValue } }
+    }
+
+    func stateHandler() -> MonitoredNWConnection.StateHandler {
+        { [self] state in
+            record(state)
+            appStateHandler?(state)
         }
-        return engine.identity(
-            id: id,
-            source: .nwConnection,
-            url: url,
-            fallbackName: connection.endpoint.debugDescription
-        )
     }
 
-    private func recordingStateHandler() -> StateHandler {
-        { [weak self] state in
-            guard let self else { return }
-            if let engine = SocketCaptureEngine.active {
-                engine.submit(.event(Self.event(for: state)), on: identity(with: engine))
+    func recording(
+        _ completion: NWConnection.SendCompletion,
+        sending content: Data?,
+        in context: NWConnection.ContentContext
+    ) -> NWConnection.SendCompletion {
+        let payload = content.flatMap { $0.isEmpty ? nil : Self.payload($0, in: context) }
+        guard case .contentProcessed(let handler) = completion else {
+            recordSent(payload, didFail: false)
+            return completion
+        }
+        return .contentProcessed { [self] error in
+            recordSent(payload, didFail: error != nil)
+            if let error {
+                recordFailure(error)
             }
-            appStateHandler.withLock { $0 }?(state)
+            handler(error)
         }
     }
 
-    private func recording(
-        _ completion: @escaping @Sendable (Data?, NWConnection.ContentContext?, Bool, NWError?) -> Void
-    ) -> @Sendable (Data?, NWConnection.ContentContext?, Bool, NWError?) -> Void {
+    func recording(_ completion: @escaping ReceiveHandler) -> ReceiveHandler {
         guard SocketCaptureEngine.active != nil else { return completion }
-        return { [weak self] data, context, isComplete, error in
-            if let self, let engine = SocketCaptureEngine.active {
-                let socket = identity(with: engine)
-                if let data, !data.isEmpty {
-                    engine.submit(.frame(.received, Self.payload(data, in: context)), on: socket)
-                }
-                if let error {
-                    engine.submit(.event(.failed(error.debugDescription)), on: socket)
-                }
+        return { [self] data, context, isComplete, error in
+            if let data, !data.isEmpty, let engine = SocketCaptureEngine.active {
+                engine.submit(Self.payload(data, in: context), .received, on: identity(with: engine))
+            }
+            if let error {
+                recordFailure(error)
             }
             completion(data, context, isComplete, error)
         }
     }
 
-    private static func recording(
-        _ completion: NWConnection.SendCompletion,
-        on socket: SocketIdentity,
-        with engine: SocketCaptureEngine
-    ) -> NWConnection.SendCompletion {
-        guard case .contentProcessed(let handler) = completion else { return completion }
-        return .contentProcessed { error in
-            if let error {
-                engine.submit(.event(.failed(error.debugDescription)), on: socket)
+    private func identity(with engine: SocketCaptureEngine) -> SocketIdentity {
+        identity.value {
+            var url: URL?
+            if case .url(let endpointURL) = endpoint {
+                url = endpointURL
             }
-            handler(error)
+            return engine.identity(id: id, source: .nwConnection, url: url, fallbackName: endpoint.debugDescription)
+        }
+    }
+
+    private func record(_ state: NWConnection.State) {
+        guard let engine = SocketCaptureEngine.active else { return }
+        let event = Self.event(for: state)
+        if Self.isFinal(event), !markFinished() {
+            return
+        }
+        engine.submit(event, on: identity(with: engine))
+    }
+
+    private func recordSent(_ payload: SocketPayload?, didFail: Bool) {
+        guard let payload, let engine = SocketCaptureEngine.active else { return }
+        engine.submit(payload, .sent, didFail: didFail, on: identity(with: engine))
+    }
+
+    private func recordFailure(_ error: NWError) {
+        guard let engine = SocketCaptureEngine.active, markFinished() else { return }
+        engine.submit(.failed(error.debugDescription), on: identity(with: engine))
+    }
+
+    /// Returns whether this is the first end, because one failure surfaces in several callbacks.
+    private func markFinished() -> Bool {
+        isFinished.withLock { isFinished in
+            defer { isFinished = true }
+            return !isFinished
+        }
+    }
+
+    private static func isFinal(_ event: SocketEvent) -> Bool {
+        switch event {
+        case .closed, .failed: return true
+        default: return false
         }
     }
 

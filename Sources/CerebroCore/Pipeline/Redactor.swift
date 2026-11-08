@@ -21,6 +21,18 @@ struct Redactor: Sendable {
         !jsonKeys.isEmpty
     }
 
+    /// Whether text names a configured JSON key, for text that can't be parsed and redacted properly.
+    func mentionsJSONKey(in text: String) -> Bool {
+        guard !jsonKeys.isEmpty else { return false }
+        let lowercased = text.lowercased()
+        return jsonKeys.contains { lowercased.contains($0) }
+    }
+
+    /// The same check for bytes. Bytes that aren't text can't name a key.
+    func mentionsJSONKey(in data: Data) -> Bool {
+        String(data: data, encoding: .utf8).map { mentionsJSONKey(in: $0) } ?? false
+    }
+
     func redact(headers fields: [String: String]) -> [NamedValue] {
         fields
             .map { name, value in

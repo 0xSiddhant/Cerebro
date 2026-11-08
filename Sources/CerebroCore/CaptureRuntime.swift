@@ -5,6 +5,9 @@ public final class CaptureRuntime: Sendable {
     /// How much payload all sockets may hold together, as a multiple of the stored-body cap.
     private static let socketPayloadBodies = 100
 
+    /// How many frames can wait for the pipeline, across every socket.
+    private static let socketBacklogFrames = 10_000
+
     /// Where finished transactions land.
     public let store: TransactionStore
 
@@ -34,8 +37,10 @@ public final class CaptureRuntime: Sendable {
     init(unchecked configuration: CerebroConfiguration, console: ConsoleLogger? = nil) {
         let store = TransactionStore(requestLimit: configuration.requestLimit)
         let redactor = Redactor(rules: configuration.redaction)
+        // A limit below zero means store nothing, and must never reach code that assumes a size.
+        let bodyLimit = max(configuration.bodyLimit, 0)
         let processor = BodyProcessor(
-            limit: configuration.bodyLimit,
+            limit: bodyLimit,
             decoders: configuration.decoders,
             redactor: redactor
         )
@@ -55,16 +60,20 @@ public final class CaptureRuntime: Sendable {
                 console.log(transaction)
             }
         }
-        engine = HTTPCaptureEngine(bodyLimit: configuration.bodyLimit) { continuation.yield($0) }
+        engine = HTTPCaptureEngine(bodyLimit: bodyLimit) { continuation.yield($0) }
 
+        let (scaled, overflowed) = bodyLimit.multipliedReportingOverflow(by: Self.socketPayloadBodies)
+        let payloadByteLimit = overflowed ? Int.max : scaled
         let socketStore = SocketStore(
             frameLimit: configuration.socketFrameLimit,
-            payloadByteLimit: configuration.bodyLimit * Self.socketPayloadBodies
+            payloadByteLimit: payloadByteLimit
         )
         let socketBuilder = SocketActivityBuilder(processor: processor)
+        let backlog = SocketBacklog(frameLimit: Self.socketBacklogFrames, byteLimit: payloadByteLimit)
+        // Unbounded because `backlog` limits the payloads. Dropping from here could lose a close.
         let (activities, activityInput) = AsyncStream.makeStream(
             of: RawSocketActivity.self,
-            bufferingPolicy: .bufferingNewest(configuration.socketFrameLimit)
+            bufferingPolicy: .unbounded
         )
         self.socketStore = socketStore
         socketActivity = activityInput
@@ -72,9 +81,12 @@ public final class CaptureRuntime: Sendable {
         socketProcessing = Task.detached(priority: .utility) {
             for await activity in activities {
                 await socketStore.record(socketBuilder.item(from: activity), on: activity.socket)
+                backlog.finish(bytes: activity.backlogBytes)
             }
         }
-        socketEngine = SocketCaptureEngine(redactor: redactor) { activityInput.yield($0) }
+        socketEngine = SocketCaptureEngine(bodyLimit: bodyLimit, backlog: backlog, redactor: redactor) {
+            activityInput.yield($0)
+        }
     }
 
     /// Starts capturing.
