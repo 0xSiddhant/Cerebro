@@ -51,7 +51,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //
         //     Cerebro.start(CerebroConfiguration(socketFrameLimit: 200))
         //
-        // Redact more than the default `Authorization` and cookie headers: `redaction` below shows how.
+        // Redact credentials and personal data, which Cerebro doesn't do on its own: `redaction` below shows how.
         //
         // Stop a shake from showing and hiding the floating button:
         //
@@ -65,41 +65,48 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //
         //     Cerebro.start(CerebroConfiguration(consoleLevel: .off, requestLimit: 100))
 
-        // Redaction. Cerebro replaces a matching value with `[redacted]` before storing anything, so the
-        // secret never reaches the store, the console, or Copy cURL and share. Run the Redaction sample in
-        // this app and open its request in the dashboard to see these rules work.
+        // Redaction. Cerebro redacts nothing until you choose. With no rules, `Authorization`, cookies and
+        // every other value reach the dashboard, console, Copy cURL and share exactly as sent. A value your
+        // rules select is replaced with `[redacted]` before anything is stored, so it never reaches any of
+        // those. Run the Redaction sample in this app and open its request in the dashboard to see it work.
         //
-        // With no configuration, the `Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie`
-        // headers are already redacted. Add rules for anything else sensitive:
-        //
-        // - `headers` for custom auth headers, such as an API key.
+        // - `sensitiveHeaders` selects common credential headers. Select the ones your app really sends:
+        //   `.authorization` for bearer tokens and logins, `.proxyAuthorization` for a proxy that needs a
+        //   login, `.cookie` and `.setCookie` for cookie sessions, `.apiKey`, `.xAPIKey` and `.xGoogAPIKey`
+        //   for API keys, `.xAuthToken` and `.xAccessToken` for token headers, `.xCSRFToken` and
+        //   `.xXSRFToken` for CSRF protection, and `.xAmzSecurityToken` for temporary AWS credentials.
+        //   `Set(SensitiveHeader.allCases)` selects them all.
+        // - `headers` for names the enum doesn't have, such as your app's own session header.
         // - `queryParameters` for secrets in URLs, including a socket's URL. The Query list shows
         //   `[redacted]`, and the URL itself shows it percent-encoded, as `%5Bredacted%5D`.
-        // - `jsonKeys` for passwords, tokens or personal data in bodies.
+        // - `jsonKeys` for passwords, tokens or personal data in bodies and socket frames.
         //
-        // Names ignore case and must match in full. Header and JSON rules apply to requests and responses.
-        // JSON keys match at any depth, and the whole value is replaced, even an object or an array.
+        // Names ignore case and must match in full. Header and body rules apply to requests and responses.
         //
-        // `jsonKeys` has a cost, so set it only when you need it. Cerebro then parses each JSON body at
-        // capture, in the background, and stores it re-encoded, so key order and spacing can change. A body
-        // counts as JSON if its content type says so or it starts with `{` or `[`. A JSON body that can't be
-        // parsed, or that's over `bodyLimit`, shows as withheld and is never stored.
+        // `jsonKeys` has a cost, so set it only when you need it. Cerebro then reads bodies at capture, in
+        // the background. A body it can't redact shows as withheld and is never stored. Each kind differs:
+        //
+        // - JSON, meaning its content type says so or it starts with `{` or `[`. Keys match at any depth,
+        //   and the whole value is replaced, even an object or an array. The body is stored re-encoded, so
+        //   key order and spacing can change. One that can't be parsed or is over `bodyLimit` is withheld.
+        // - Form-encoded HTTP bodies. Each named field's value is replaced, and the other fields keep their
+        //   exact bytes. One over `bodyLimit` is withheld.
+        // - Any other text, such as plain text, a form with no `Content-Type`, or a prefixed socket frame.
+        //   It can't be redacted field by field, so it's withheld if it contains a key name anywhere. A
+        //   short key such as `id` can hide a lot. Socket close reasons, errors and state text containing a
+        //   key name become `[redacted]`.
+        // - Binary, meaning bytes that aren't valid UTF-8, such as an image. It's stored as sent.
         //
         // Redaction doesn't cover:
         //
         // - The URL path or fragment. Keep secrets out of them.
-        // - Non-JSON HTTP bodies, such as form-encoded or plain text. They're stored as sent, even when
-        //   they contain a `jsonKeys` name.
+        // - Any body or socket frame while `jsonKeys` is empty. They're stored as sent.
         // - Places a rule doesn't look. A query value that a server echoes in a response body needs a
-        //   `jsonKeys` entry too, and a secret inside a longer JSON string, or a URL in a `Location` header,
-        //   is left alone.
-        // - Socket frames, unless `jsonKeys` is set. Then a frame that starts with `{` or `[` is treated like
-        //   a JSON body, and any other frame is stored as sent unless its text contains a key name anywhere.
-        //   That withholds the whole frame, so a short key such as `id` can hide a lot. Bytes that aren't
-        //   valid UTF-8 are stored as sent. Close reasons, errors and state text containing a key name
-        //   become `[redacted]`.
+        //   `jsonKeys` entry too, and a secret inside a longer JSON string, another form field's value, or
+        //   a URL in a `Location` header is left alone.
         let redaction = RedactionRules(
-            headers: ["X-Api-Key"],
+            sensitiveHeaders: [.authorization, .proxyAuthorization, .cookie, .setCookie, .xAPIKey],
+            headers: ["X-Cerebro-Example-Session"],
             jsonKeys: ["password", "ssn"],
             queryParameters: ["token"]
         )

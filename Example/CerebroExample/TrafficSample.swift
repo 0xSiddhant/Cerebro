@@ -82,7 +82,7 @@ enum TrafficSample: CaseIterable, Sendable {
         )
     }
 
-    /// Sends a fake secret everywhere the rules in `AppDelegate` look: a header, a query parameter and a
+    /// Sends a fake secret everywhere the rules in `AppDelegate` look: headers, a query parameter and a
     /// JSON body, at the top level and nested. Open this request in the dashboard to see each one redacted.
     ///
     /// The endpoint returns nothing on purpose. An echo server repeats the values in its response, under
@@ -92,7 +92,11 @@ enum TrafficSample: CaseIterable, Sendable {
         return try await post(
             Data(#"{"username":"demo-user","password":"\#(secret)","profile":{"ssn":"\#(secret)"}}"#.utf8),
             contentType: "application/json",
-            headers: ["X-Api-Key": secret],
+            headers: [
+                "Authorization": "Bearer \(secret)",
+                "X-Api-Key": secret,
+                "X-Cerebro-Example-Session": secret,
+            ],
             to: "https://httpbin.org/status/200?token=\(secret)&page=1"
         )
     }
