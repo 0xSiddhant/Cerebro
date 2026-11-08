@@ -25,6 +25,7 @@ public enum Cerebro {
         Task { @MainActor in
             dashboard = DashboardWindowManager(
                 store: started.store,
+                socketStore: started.socketStore,
                 isShakeGestureEnabled: configuration.isShakeGestureEnabled
             )
         }
