@@ -1,3 +1,4 @@
+import Cerebro
 import Foundation
 import Network
 
@@ -6,7 +7,7 @@ import Network
 /// All of its state is touched on `queue`, which is where the connection delivers its callbacks.
 final class NWConnectionExchange: @unchecked Sendable {
     private let queue = DispatchQueue(label: "CerebroExample.NWConnectionExchange")
-    private let connection = NWConnection(host: "example.com", port: .https, using: .tls)
+    private let connection = MonitoredNWConnection(host: "example.com", port: .https, using: .tls)
     private var continuation: CheckedContinuation<String, Error>?
 
     func run() async throws -> String {

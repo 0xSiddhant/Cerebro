@@ -1,3 +1,4 @@
+import Cerebro
 import Foundation
 import SwiftProtobuf
 
@@ -13,6 +14,7 @@ enum TrafficSample: CaseIterable, Sendable {
     case mockEcho
     case webSocket
     case nwConnection
+    case externalBridge
     case protobuf
 
     private static let session = URLSession(configuration: .default)
@@ -30,6 +32,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockEcho: "Mock API: POST echo"
         case .webSocket: "URLSessionWebSocketTask"
         case .nwConnection: "NWConnection"
+        case .externalBridge: "ExternalNetworkBridge"
         case .protobuf: "Protobuf over HTTP"
         }
     }
@@ -44,7 +47,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockStocks: "\(Self.mockAPI)/api/v1/stocks"
         case .mockSlowFlights: "\(Self.mockAPI)/api/v1/flights?delay=1500"
         case .mockUnauthorized: "\(Self.mockAPI)/api/v1/flights?status=401"
-        case .mockEcho, .webSocket, .nwConnection, .protobuf: ""
+        case .mockEcho, .webSocket, .nwConnection, .externalBridge, .protobuf: ""
         }
     }
 
@@ -57,6 +60,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockEcho: try await postToMockEcho()
         case .webSocket: try await exchangeWebSocketMessage()
         case .nwConnection: try await NWConnectionExchange().run()
+        case .externalBridge: logExternalSocket()
         case .protobuf: try await sendProtobuf()
         }
     }
@@ -80,15 +84,40 @@ enum TrafficSample: CaseIterable, Sendable {
     private func exchangeWebSocketMessage() async throws -> String {
         let task = Self.session.webSocketTask(with: try Self.url("wss://ws.postman-echo.com/raw"))
         task.resume()
-        defer { task.cancel(with: .normalClosure, reason: nil) }
+        defer { task.cancel(with: .normalClosure, reason: Data("done".utf8)) }
 
         try await task.send(.string("hello from Cerebro"))
 
-        switch try await task.receive() {
+        let reply = try await task.receive()
+        try await sendPing(on: task)
+
+        switch reply {
         case .string(let text): return "Echo: \(text)"
         case .data(let data): return "Echo: \(data.count) bytes"
         @unknown default: return "Echo: unknown message"
         }
+    }
+
+    private func sendPing(on task: URLSessionWebSocketTask) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            task.sendPing { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    /// Stands in for an engine like Starscream, which reports its own traffic with one call each.
+    private func logExternalSocket() -> String {
+        let socket = ExternalNetworkBridge.Connection(name: "Starscream sample")
+        ExternalNetworkBridge.log(.opened, on: socket)
+        ExternalNetworkBridge.log(.text(#"{"subscribe":"prices"}"#), .sent, on: socket)
+        ExternalNetworkBridge.log(.text(#"{"price":42}"#), .received, on: socket)
+        ExternalNetworkBridge.log(.closed(code: 1000, reason: "done"), on: socket)
+        return "Logged 2 frames"
     }
 
     private func sendProtobuf() async throws -> String {
