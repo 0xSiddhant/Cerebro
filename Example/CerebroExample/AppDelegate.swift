@@ -35,8 +35,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //     let rule = ProtoRule(messageType: MyResponse.self)
         //     Cerebro.start(CerebroConfiguration().registering([rule]))
         //
-        // HTTP only, or WebSockets only: there's no setting for either. `Cerebro.start()` captures HTTP
-        // today, and `URLSessionWebSocketTask` capture arrives in a later release with no code change.
+        // HTTP only, or WebSockets only: there's no setting for either. `Cerebro.start()` captures both.
+        // `NWConnection` traffic needs `MonitoredNWConnection`, as `NWConnectionExchange` shows, and other
+        // socket engines need `ExternalNetworkBridge`, as `TrafficSample` shows.
         //
         // How much each request prints to the console: `.off`, `.summary` (the default) or `.full`:
         //
@@ -45,6 +46,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         // Keep fewer requests, or store less of each body (the defaults are 500 and 1 MB):
         //
         //     Cerebro.start(CerebroConfiguration(requestLimit: 100, bodyLimit: 256 * 1024))
+        //
+        // Keep fewer frames for each socket (the default is 1,000):
+        //
+        //     Cerebro.start(CerebroConfiguration(socketFrameLimit: 200))
         //
         // Redact more than the default `Authorization` and cookie headers:
         //
