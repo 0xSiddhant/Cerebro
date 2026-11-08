@@ -51,14 +51,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //
         //     Cerebro.start(CerebroConfiguration(socketFrameLimit: 200))
         //
-        // Redact more than the default `Authorization` and cookie headers:
-        //
-        //     let redaction = RedactionRules(
-        //         headers: ["X-Api-Key"],
-        //         jsonKeys: ["password"],
-        //         queryParameters: ["token"]
-        //     )
-        //     Cerebro.start(CerebroConfiguration(redaction: redaction))
+        // Redact more than the default `Authorization` and cookie headers: `redaction` below shows how.
         //
         // Stop a shake from showing and hiding the floating button:
         //
@@ -71,10 +64,49 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         // Options combine in one configuration:
         //
         //     Cerebro.start(CerebroConfiguration(consoleLevel: .off, requestLimit: 100))
+
+        // Redaction. Cerebro replaces a matching value with `[redacted]` before storing anything, so the
+        // secret never reaches the store, the console, or Copy cURL and share. Run the Redaction sample in
+        // this app and open its request in the dashboard to see these rules work.
         //
+        // With no configuration, the `Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie`
+        // headers are already redacted. Add rules for anything else sensitive:
+        //
+        // - `headers` for custom auth headers, such as an API key.
+        // - `queryParameters` for secrets in URLs, including a socket's URL. The Query list shows
+        //   `[redacted]`, and the URL itself shows it percent-encoded, as `%5Bredacted%5D`.
+        // - `jsonKeys` for passwords, tokens or personal data in bodies.
+        //
+        // Names ignore case and must match in full. Header and JSON rules apply to requests and responses.
+        // JSON keys match at any depth, and the whole value is replaced, even an object or an array.
+        //
+        // `jsonKeys` has a cost, so set it only when you need it. Cerebro then parses each JSON body at
+        // capture, in the background, and stores it re-encoded, so key order and spacing can change. A body
+        // counts as JSON if its content type says so or it starts with `{` or `[`. A JSON body that can't be
+        // parsed, or that's over `bodyLimit`, shows as withheld and is never stored.
+        //
+        // Redaction doesn't cover:
+        //
+        // - The URL path or fragment. Keep secrets out of them.
+        // - Non-JSON HTTP bodies, such as form-encoded or plain text. They're stored as sent, even when
+        //   they contain a `jsonKeys` name.
+        // - Places a rule doesn't look. A query value that a server echoes in a response body needs a
+        //   `jsonKeys` entry too, and a secret inside a longer JSON string, or a URL in a `Location` header,
+        //   is left alone.
+        // - Socket frames, unless `jsonKeys` is set. Then a frame that starts with `{` or `[` is treated like
+        //   a JSON body, and any other frame is stored as sent unless its text contains a key name anywhere.
+        //   That withholds the whole frame, so a short key such as `id` can hide a lot. Bytes that aren't
+        //   valid UTF-8 are stored as sent. Close reasons, errors and state text containing a key name
+        //   become `[redacted]`.
+        let redaction = RedactionRules(
+            headers: ["X-Api-Key"],
+            jsonKeys: ["password", "ssn"],
+            queryParameters: ["token"]
+        )
+
         // This app registers a protobuf rule so it exercises that path:
         let rule = ProtoRule(messageType: Google_Protobuf_Struct.self)
-        Cerebro.start(CerebroConfiguration(consoleLevel: .summary).registering([rule]))
+        Cerebro.start(CerebroConfiguration(consoleLevel: .summary, redaction: redaction).registering([rule]))
         return true
     }
 

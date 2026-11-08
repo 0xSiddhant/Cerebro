@@ -12,6 +12,7 @@ enum TrafficSample: CaseIterable, Sendable {
     case mockSlowFlights
     case mockUnauthorized
     case mockEcho
+    case redaction
     case webSocket
     case nwConnection
     case externalBridge
@@ -30,6 +31,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockSlowFlights: "Mock API: slow flights"
         case .mockUnauthorized: "Mock API: unauthorized"
         case .mockEcho: "Mock API: POST echo"
+        case .redaction: "Redaction"
         case .webSocket: "URLSessionWebSocketTask"
         case .nwConnection: "NWConnection"
         case .externalBridge: "ExternalNetworkBridge"
@@ -47,7 +49,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockStocks: "\(Self.mockAPI)/api/v1/stocks"
         case .mockSlowFlights: "\(Self.mockAPI)/api/v1/flights?delay=1500"
         case .mockUnauthorized: "\(Self.mockAPI)/api/v1/flights?status=401"
-        case .mockEcho, .webSocket, .nwConnection, .externalBridge, .protobuf: ""
+        case .mockEcho, .redaction, .webSocket, .nwConnection, .externalBridge, .protobuf: ""
         }
     }
 
@@ -58,6 +60,7 @@ enum TrafficSample: CaseIterable, Sendable {
             try await sendRequest(to: address, through: Self.session)
         case .sharedSession: try await sendRequest(to: address, through: .shared)
         case .mockEcho: try await postToMockEcho()
+        case .redaction: try await postFakeSecrets()
         case .webSocket: try await exchangeWebSocketMessage()
         case .nwConnection: try await NWConnectionExchange().run()
         case .externalBridge: logExternalSocket()
@@ -71,11 +74,42 @@ enum TrafficSample: CaseIterable, Sendable {
     }
 
     private func postToMockEcho() async throws -> String {
-        var request = URLRequest(url: try Self.url("\(Self.mockAPI)/echo?source=cerebro"))
+        try await post(
+            Data(#"{"hello":"from Cerebro","items":[1,2,3]}"#.utf8),
+            contentType: "application/json",
+            headers: ["X-Cerebro-Demo": "it's a demo"],
+            to: "\(Self.mockAPI)/echo?source=cerebro"
+        )
+    }
+
+    /// Sends a fake secret everywhere the rules in `AppDelegate` look: a header, a query parameter and a
+    /// JSON body, at the top level and nested. Open this request in the dashboard to see each one redacted.
+    ///
+    /// The endpoint returns nothing on purpose. An echo server repeats the values in its response, under
+    /// other keys and inside strings, where these rules don't match them.
+    private func postFakeSecrets() async throws -> String {
+        let secret = "demo-not-a-real-secret"
+        return try await post(
+            Data(#"{"username":"demo-user","password":"\#(secret)","profile":{"ssn":"\#(secret)"}}"#.utf8),
+            contentType: "application/json",
+            headers: ["X-Api-Key": secret],
+            to: "https://httpbin.org/status/200?token=\(secret)&page=1"
+        )
+    }
+
+    private func post(
+        _ body: Data,
+        contentType: String,
+        headers: [String: String] = [:],
+        to address: String
+    ) async throws -> String {
+        var request = URLRequest(url: try Self.url(address))
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("it's a demo", forHTTPHeaderField: "X-Cerebro-Demo")
-        request.httpBody = Data(#"{"hello":"from Cerebro","items":[1,2,3]}"#.utf8)
+        request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        for (name, value) in headers {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+        request.httpBody = body
 
         let (_, response) = try await Self.session.data(for: request)
         return Self.summary(of: response)
@@ -124,13 +158,11 @@ enum TrafficSample: CaseIterable, Sendable {
         var message = Google_Protobuf_Struct()
         message.fields["greeting"] = Google_Protobuf_Value(stringValue: "hello from Cerebro")
 
-        var request = URLRequest(url: try Self.url("https://httpbin.org/post"))
-        request.httpMethod = "POST"
-        request.setValue("application/x-protobuf", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try message.serializedData()
-
-        let (_, response) = try await Self.session.data(for: request)
-        return Self.summary(of: response)
+        return try await post(
+            try message.serializedData(),
+            contentType: "application/x-protobuf",
+            to: "https://httpbin.org/post"
+        )
     }
 
     private static func url(_ string: String) throws -> URL {
