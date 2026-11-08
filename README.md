@@ -108,7 +108,7 @@ Cerebro sends each request through its own session, which has these side effects
 
 Certificate pinning and client certificates keep working, because those challenges still reach your delegate.
 
-Cerebro keeps both the request and response body of up to 500 requests, so it can hold about 1 GB at worst. Lower `requestLimit` or `bodyLimit` if your app moves many large bodies. Sockets are capped separately: 100 connections and 100 times `bodyLimit` of payload (100 MB by default), oldest first.
+Cerebro keeps both the request and response body of up to 500 requests, so it can hold about 1 GB at worst. Lower `requestLimit` or `bodyLimit` if your app moves many large bodies. Sockets are capped separately: 100 connections and 100 times `bodyLimit` of payload (100 MB by default), and the socket idle longest goes first.
 
 ## What Cerebro can't capture
 

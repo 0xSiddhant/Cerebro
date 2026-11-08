@@ -25,7 +25,8 @@ These win over the spec, which is older.
 | Unredactable bodies | With JSON keys configured, a JSON body that can't be parsed is withheld | Stopping at the cap skips parsing, and redaction comes first |
 | Proto decoding | Stays at capture, and raw bytes are dropped when redaction changes the body | Undecoded bytes can't be redacted |
 | Socket frames | Payloads use the stored-body cap | The spec caps frames by count only |
-| Socket store | Also capped at 100 connections and 100 times the body cap of payload in all | A reconnecting socket would otherwise fill a fresh 1,000-frame timeline every time |
+| Socket store | Also capped at 100 connections and 100 times the body cap of payload in all, taking from the socket idle longest | A reconnecting socket would otherwise fill a fresh 1,000-frame timeline every time |
+| WebSocket open | Shown as Connecting at `resume`, and Opened at the first frame or pong | Only the app's delegate sees the handshake, and a refused upgrade must never look open |
 | Branches and releases | `develop` flow, with releases automated on `main` | The owner's rule. `rules/git.md` has it |
 | Versions | Breaking commits are a minor bump below 1.0, and `1.0.0` needs a `Release-As` footer | The spec makes `v1.0.0` a deliberate Plan 5 step |
 
@@ -42,7 +43,7 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 | Cost of capture? | 1,000 requests of 64 KB with the dashboard open, in a Release build, took 2.0 s against 1.8 s. It dropped 2 of about 149 frames against 0, the worst frame took 51 ms against 17 ms, and memory grew 38 MB against 8 MB |
 | Memory on a huge response? | Bounded. A 200 MB response arrived in full, and peak memory went from 408 MB to 429 MB |
 | Do the WebSocket hooks see `async` calls? | Yes, on iOS 18.5 and 26.4. The `async` forms call the same Objective-C methods as the completion-handler ones |
-| Cost of a fast socket stream? | 30,000 frames in 5.5 s, in a Release build. Behind the host app there were no slow frames and the worst took 17 ms. With the timeline open, 9 of 308 frames went over 34 ms and the worst took 98 ms |
+| Cost of a fast socket stream? | 30,000 frames in 5.5 s, in a Release build. Behind the host app there were no slow frames and the worst took 17 ms. With the timeline open, 4 of 315 frames went over 34 ms and the worst took 72 ms |
 | How should a URLProtocol handle redirects? | Tell the client, then hold the 3xx until `stopLoading` (followed) or 500 ms (refused, which sends no signal). Sending the 3xx straight away passed a small spike, but with a new session per request it failed about 1 run in 20 to 100: the app got the 302, or `URLSession.data(for:)` crashed. Never sending it hangs a refused redirect, and Apple's sample approach fails one with `NSCocoaErrorDomain 3072` |
 
 ## Worth knowing
