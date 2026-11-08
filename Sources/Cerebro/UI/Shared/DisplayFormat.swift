@@ -35,7 +35,8 @@ enum DisplayFormat {
         let start = data.prefix(previewByteLimit)
         guard !start.isEmpty, !start.contains(0) else { return nil }
         // A character of up to four bytes can be cut off at the limit, so allow for losing its start.
-        return (0...3).lazy.compactMap { String(data: start.dropLast($0), encoding: .utf8) }.first
+        let droppable = data.count > previewByteLimit ? 3 : 0
+        return (0...droppable).lazy.compactMap { String(data: start.dropLast($0), encoding: .utf8) }.first
     }
 
     static func status(of transaction: HTTPTransaction) -> String {

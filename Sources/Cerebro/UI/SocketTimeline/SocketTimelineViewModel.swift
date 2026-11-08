@@ -9,6 +9,7 @@ struct SocketFrameRow: Equatable {
     let text: String
     let detail: String
     let isSent: Bool
+    let didFail: Bool
     let body: CapturedBody?
 }
 
@@ -53,7 +54,9 @@ final class SocketTimelineViewModel {
     }
 
     func show(_ connections: [SocketConnection]) {
-        guard let connection = connections.first(where: { $0.id == connectionID }) else { return }
+        guard let connection = connections.first(where: { $0.id == connectionID }),
+            connection.timeline != items
+        else { return }
         items = connection.timeline
         onChange?()
     }
@@ -72,6 +75,7 @@ final class SocketTimelineViewModel {
             text: text(of: frame),
             detail: detail(of: frame),
             isSent: frame.direction == .sent,
+            didFail: frame.didFail,
             body: frame.payload?.data == nil ? nil : frame.payload
         )
     }
@@ -79,7 +83,9 @@ final class SocketTimelineViewModel {
     private static func text(of frame: SocketFrame) -> String {
         guard let payload = frame.payload else { return "Empty frame" }
         guard let data = payload.data else {
-            return payload.content == .withheld ? "Withheld, because it couldn't be redacted" : "Not stored"
+            return payload.content == .withheld
+                ? "Withheld, because it couldn't be redacted"
+                : "Not stored, because frames arrived too fast"
         }
         return DisplayFormat.preview(of: data) ?? "Binary data"
     }
@@ -94,6 +100,9 @@ final class SocketTimelineViewModel {
         }
         if let compression = frame.payload?.compression {
             parts.append(compression.rawValue)
+        }
+        if frame.didFail {
+            parts.append("failed")
         }
         parts.append(DisplayFormat.time(frame.date))
         return parts.joined(separator: " · ")

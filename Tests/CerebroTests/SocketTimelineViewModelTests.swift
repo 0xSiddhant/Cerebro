@@ -94,6 +94,24 @@ private func eventText(_ event: SocketEvent) throws -> String {
     #expect(row.body == nil)
 }
 
+@Test @MainActor func aFailedSendIsMarked() throws {
+    let failed = SocketTimelineItem.frame(
+        SocketFrame(direction: .sent, kind: .text, byteCount: 1, date: date, payload: text("x"), didFail: true)
+    )
+
+    let row = try frameRow(failed)
+
+    #expect(row.didFail)
+    #expect(row.detail.contains("failed"))
+}
+
+@Test @MainActor func aFrameTheBacklogDroppedSaysWhy() throws {
+    let row = try frameRow(frame(payload: CapturedBody(content: .notStored, byteCount: 9)))
+
+    #expect(row.text.contains("too fast"))
+    #expect(row.body == nil)
+}
+
 @Test @MainActor func emptyFrameIsNamed() throws {
     let row = try frameRow(frame(payload: nil))
 
@@ -136,6 +154,9 @@ private func eventText(_ event: SocketEvent) throws -> String {
     ])
     #expect(model.items.count == 1)
     #expect(changes == 1)
+
+    model.show([SocketConnection(id: mine.id, source: .external, name: "mine", startDate: date, timeline: model.items)])
+    #expect(changes == 1)
 }
 
 @Test func timeUsesA24HourClockToTheMillisecond() throws {
@@ -144,4 +165,16 @@ private func eventText(_ event: SocketEvent) throws -> String {
     )
 
     #expect(DisplayFormat.time(afternoon) == "17:08:03.000")
+}
+
+@Test func shortBytesThatArentTextHaveNoPreview() {
+    #expect(DisplayFormat.preview(of: Data([0xFF])) == nil)
+    #expect(DisplayFormat.preview(of: Data([0xFF, 0xFE])) == nil)
+    #expect(DisplayFormat.preview(of: Data([0x81, 0x7E, 0xFF])) == nil)
+}
+
+@Test func aCharacterCutOffAtThePreviewLimitIsDropped() {
+    let text = String(repeating: "a", count: 399) + "é" + "b"
+
+    #expect(DisplayFormat.preview(of: Data(text.utf8)) == String(repeating: "a", count: 399))
 }

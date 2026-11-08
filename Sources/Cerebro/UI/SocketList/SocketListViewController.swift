@@ -1,5 +1,9 @@
 import UIKit
 
+#if SWIFT_PACKAGE
+import CerebroCore
+#endif
+
 /// The Sockets tab: every captured socket, newest first.
 final class SocketListViewController: UITableViewController {
     private let viewModel: SocketListViewModel

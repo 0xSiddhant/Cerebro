@@ -1,6 +1,6 @@
 import UIKit
 
-/// One frame as a chat bubble: sent on the right in blue, received on the left in gray.
+/// One frame as a chat bubble: sent on the right in blue, received on the left in gray, failed in red.
 final class SocketFrameCell: UITableViewCell {
     static let reuseIdentifier = "SocketFrameCell"
 
@@ -62,7 +62,7 @@ final class SocketFrameCell: UITableViewCell {
         detail.text = row.detail
         sentConstraint.isActive = row.isSent
         receivedConstraint.isActive = !row.isSent
-        bubble.backgroundColor = row.isSent ? .systemBlue : .systemGray5
+        bubble.backgroundColor = row.didFail ? .systemRed : row.isSent ? .systemBlue : .systemGray5
         message.textColor = row.isSent ? .white : .label
         detail.textColor = row.isSent ? UIColor.white.withAlphaComponent(0.8) : .secondaryLabel
     }
