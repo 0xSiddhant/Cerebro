@@ -25,3 +25,19 @@ private func viewModel(_ text: String) -> BodyViewerViewModel {
 
     #expect(await BodyViewerViewModel(title: "Body", body: body).text(for: .pretty) == #"{"a":"#)
 }
+
+@Test @MainActor func fileNameFollowsTheTitleAndContent() {
+    let json = CapturedBody(content: .complete(Data("  {\"a\":1}".utf8)), byteCount: 8)
+    let plain = CapturedBody(content: .complete(Data("hello".utf8)), byteCount: 5)
+
+    #expect(BodyViewerViewModel(title: "Response body", body: json).fileName == "response-body.json")
+    #expect(BodyViewerViewModel(title: "Request body", body: plain).fileName == "request-body.txt")
+}
+
+@Test @MainActor func copyMessageWarnsAboutATruncatedBody() {
+    let whole = CapturedBody(content: .complete(Data("a".utf8)), byteCount: 1)
+    let cut = CapturedBody(content: .truncated(Data("a".utf8)), byteCount: 9)
+
+    #expect(BodyViewerViewModel(title: "Body", body: whole).copyMessage == "Copied.")
+    #expect(BodyViewerViewModel(title: "Body", body: cut).copyMessage.contains("cut off"))
+}

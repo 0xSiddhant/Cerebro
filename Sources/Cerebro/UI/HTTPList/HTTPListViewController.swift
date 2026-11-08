@@ -1,5 +1,9 @@
 import UIKit
 
+#if SWIFT_PACKAGE
+import CerebroCore
+#endif
+
 /// The HTTP tab: every captured request, newest first, with search and filters.
 final class HTTPListViewController: UITableViewController {
     private let viewModel: HTTPListViewModel
@@ -35,6 +39,46 @@ final class HTTPListViewController: UITableViewController {
         else { return }
         let inspector = LogInspectorViewController(viewModel: LogInspectorViewModel(transaction: transaction))
         navigationController?.pushViewController(inspector, animated: true)
+    }
+
+    override func tableView(
+        _ tableView: UITableView,
+        contextMenuConfigurationForRowAt indexPath: IndexPath,
+        point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard let request = request(at: indexPath) else { return nil }
+        return UIContextMenuConfiguration(actionProvider: { [weak self] _ in
+            guard let self else { return nil }
+            let copy = UIAction(title: "Copy cURL", image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
+                self?.copyCurl(of: request)
+            }
+            let share = CurlActions.shareActions(for: request, from: self) { [weak self] in
+                self?.tableView.cellForRow(at: indexPath)
+            }
+            return UIMenu(children: [copy] + share)
+        })
+    }
+
+    override func tableView(
+        _ tableView: UITableView,
+        trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        guard let request = request(at: indexPath) else { return nil }
+        let copy = UIContextualAction(style: .normal, title: "Copy cURL") { [weak self] _, _, finished in
+            self?.copyCurl(of: request)
+            finished(true)
+        }
+        copy.backgroundColor = .systemBlue
+        copy.image = UIImage(systemName: "doc.on.doc")
+        return UISwipeActionsConfiguration(actions: [copy])
+    }
+
+    private func request(at indexPath: IndexPath) -> CapturedRequest? {
+        dataSource.itemIdentifier(for: indexPath).flatMap { viewModel.transaction(id: $0)?.request }
+    }
+
+    private func copyCurl(of request: CapturedRequest) {
+        CurlActions.copy(request, confirmingIn: navigationController?.view ?? view)
     }
 
     private func cell(in table: UITableView, at indexPath: IndexPath, for id: UUID) -> UITableViewCell {
