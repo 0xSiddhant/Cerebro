@@ -14,6 +14,7 @@ final class DashboardWindowManager: NSObject {
     private weak var previousKeyWindow: UIWindow?
     private var wantsDashboard = false
     private var badgeUpdates: Task<Void, Never>?
+    private var unseenRequests = UnseenRequestCounter()
 
     init(store: TransactionStore, isShakeGestureEnabled: Bool) {
         self.store = store
@@ -24,7 +25,7 @@ final class DashboardWindowManager: NSObject {
         }
         badgeUpdates = Task { [weak self, store] in
             for await transactions in await store.updates() {
-                self?.overlay.trigger.errorCount = transactions.filter(\.outcome.isError).count
+                self?.updateBadge(with: transactions)
             }
         }
         NotificationCenter.default.addObserver(
@@ -45,6 +46,8 @@ final class DashboardWindowManager: NSObject {
             return
         }
         guard overlay.presentedViewController == nil else { return }
+        unseenRequests.markAllSeen()
+        overlay.trigger.badgeCount = 0
         // Text fields need a key window. The app gets it back when the dashboard closes.
         previousKeyWindow = window.windowScene?.keyWindow
         window.makeKey()
@@ -62,6 +65,15 @@ final class DashboardWindowManager: NSObject {
         previousKeyWindow?.makeKey()
         window?.isHidden = true
         window = nil
+    }
+
+    private func updateBadge(with transactions: [HTTPTransaction]) {
+        unseenRequests.update(with: transactions)
+        // Anything that arrives while the dashboard is open is already on screen.
+        if overlay.presentedViewController != nil {
+            unseenRequests.markAllSeen()
+        }
+        overlay.trigger.badgeCount = unseenRequests.unseenCount
     }
 
     private func toggleTrigger() {

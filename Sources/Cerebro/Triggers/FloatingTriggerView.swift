@@ -1,15 +1,17 @@
 import UIKit
 
-/// The floating circle that opens the dashboard. It drags, snaps to the nearest edge and shows an error badge.
+/// The floating circle that opens the dashboard. It drags, snaps to the nearest edge and shows how many
+/// requests arrived since the dashboard was last opened.
 final class FloatingTriggerView: UIView {
-    private static let size: CGFloat = 56
+    private static let size: CGFloat = 44
     private static let margin: CGFloat = 12
-    private static let badgeHeight: CGFloat = 20
+    private static let iconInset: CGFloat = 12
+    private static let badgeHeight: CGFloat = 16
 
     var onTap: (() -> Void)?
 
-    /// How many errors the badge shows. Zero hides it.
-    var errorCount = 0 {
+    /// How many new requests the badge shows. Zero hides it.
+    var badgeCount = 0 {
         didSet { updateBadge() }
     }
 
@@ -31,13 +33,13 @@ final class FloatingTriggerView: UIView {
 
         icon.tintColor = .white
         icon.contentMode = .scaleAspectFit
-        icon.frame = bounds.insetBy(dx: 15, dy: 15)
+        icon.frame = bounds.insetBy(dx: Self.iconInset, dy: Self.iconInset)
         addSubview(icon)
 
         badge.backgroundColor = .systemRed
         badge.textColor = .white
         badge.textAlignment = .center
-        badge.font = .boldSystemFont(ofSize: 12)
+        badge.font = .boldSystemFont(ofSize: 10)
         badge.layer.cornerRadius = Self.badgeHeight / 2
         badge.clipsToBounds = true
         badge.isHidden = true
@@ -93,9 +95,10 @@ final class FloatingTriggerView: UIView {
     }
 
     private func updateBadge() {
-        badge.isHidden = errorCount == 0
-        badge.text = errorCount > 99 ? "99+" : String(errorCount)
-        let width = max(Self.badgeHeight, badge.intrinsicContentSize.width + 10)
+        badge.isHidden = badgeCount == 0
+        badge.text = badgeCount > 99 ? "99+" : String(badgeCount)
+        accessibilityValue = badgeCount == 0 ? nil : "\(badge.text ?? "") new"
+        let width = max(Self.badgeHeight, badge.intrinsicContentSize.width + 8)
         badge.frame = CGRect(x: bounds.maxX - width + 4, y: -4, width: width, height: Self.badgeHeight)
     }
 }

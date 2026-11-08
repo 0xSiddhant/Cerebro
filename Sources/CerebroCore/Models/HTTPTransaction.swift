@@ -76,14 +76,6 @@ public enum TransactionOutcome: Sendable, Equatable {
 
     /// The app cancelled the request.
     case cancelled
-
-    /// Whether the floating trigger's error badge counts this outcome.
-    public var isError: Bool {
-        switch self {
-        case .clientError, .serverError, .failed: return true
-        case .success, .redirection, .cancelled: return false
-        }
-    }
 }
 
 /// One name and value, from a header or a query string.
