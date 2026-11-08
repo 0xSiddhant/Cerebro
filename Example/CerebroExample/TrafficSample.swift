@@ -7,11 +7,16 @@ enum TrafficSample: CaseIterable, Sendable {
     case sharedSession
     case gzip
     case serverError
+    case mockStocks
+    case mockSlowFlights
+    case mockUnauthorized
+    case mockEcho
     case webSocket
     case nwConnection
     case protobuf
 
     private static let session = URLSession(configuration: .default)
+    private static let mockAPI = "https://mock.0xsiddhant.com"
 
     var title: String {
         switch self {
@@ -19,19 +24,37 @@ enum TrafficSample: CaseIterable, Sendable {
         case .sharedSession: "URLSession.shared"
         case .gzip: "Gzip response"
         case .serverError: "Server error"
+        case .mockStocks: "Mock API: stocks"
+        case .mockSlowFlights: "Mock API: slow flights"
+        case .mockUnauthorized: "Mock API: unauthorized"
+        case .mockEcho: "Mock API: POST echo"
         case .webSocket: "URLSessionWebSocketTask"
         case .nwConnection: "NWConnection"
         case .protobuf: "Protobuf over HTTP"
         }
     }
 
+    /// Where a sample that's a plain GET sends it.
+    private var address: String {
+        switch self {
+        case .urlSession: "https://httpbin.org/get"
+        case .sharedSession: "https://httpbin.org/anything/shared"
+        case .gzip: "https://httpbin.org/gzip"
+        case .serverError: "https://httpbin.org/status/500"
+        case .mockStocks: "\(Self.mockAPI)/api/v1/stocks"
+        case .mockSlowFlights: "\(Self.mockAPI)/api/v1/flights?delay=1500"
+        case .mockUnauthorized: "\(Self.mockAPI)/api/v1/flights?status=401"
+        case .mockEcho, .webSocket, .nwConnection, .protobuf: ""
+        }
+    }
+
     /// Sends the traffic and returns a one-line result.
     func run() async throws -> String {
         switch self {
-        case .urlSession: try await sendRequest(to: "https://httpbin.org/get", through: Self.session)
-        case .sharedSession: try await sendRequest(to: "https://httpbin.org/anything/shared", through: .shared)
-        case .gzip: try await sendRequest(to: "https://httpbin.org/gzip", through: Self.session)
-        case .serverError: try await sendRequest(to: "https://httpbin.org/status/500", through: Self.session)
+        case .urlSession, .gzip, .serverError, .mockStocks, .mockSlowFlights, .mockUnauthorized:
+            try await sendRequest(to: address, through: Self.session)
+        case .sharedSession: try await sendRequest(to: address, through: .shared)
+        case .mockEcho: try await postToMockEcho()
         case .webSocket: try await exchangeWebSocketMessage()
         case .nwConnection: try await NWConnectionExchange().run()
         case .protobuf: try await sendProtobuf()
@@ -40,6 +63,17 @@ enum TrafficSample: CaseIterable, Sendable {
 
     private func sendRequest(to address: String, through session: URLSession) async throws -> String {
         let (_, response) = try await session.data(from: Self.url(address))
+        return Self.summary(of: response)
+    }
+
+    private func postToMockEcho() async throws -> String {
+        var request = URLRequest(url: try Self.url("\(Self.mockAPI)/echo?source=cerebro"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("it's a demo", forHTTPHeaderField: "X-Cerebro-Demo")
+        request.httpBody = Data(#"{"hello":"from Cerebro","items":[1,2,3]}"#.utf8)
+
+        let (_, response) = try await Self.session.data(for: request)
         return Self.summary(of: response)
     }
 
