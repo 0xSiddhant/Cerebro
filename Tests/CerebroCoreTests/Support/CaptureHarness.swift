@@ -29,6 +29,19 @@ struct CaptureHarness {
         return await runtime.store.transactions
     }
 
+    /// Waits for a socket that meets `condition`, since activity reaches the store in the background.
+    func socket(where condition: @Sendable (SocketConnection) -> Bool) async throws -> SocketConnection {
+        for _ in 0..<300 {
+            if let socket = await runtime.socketStore.connections.first(where: condition) {
+                return socket
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let sockets = await runtime.socketStore.connections
+        let match = sockets.first(where: condition)
+        return try #require(match, "no matching socket in \(sockets)")
+    }
+
     func transaction() async throws -> HTTPTransaction {
         try #require(try await transactions(count: 1).first)
     }

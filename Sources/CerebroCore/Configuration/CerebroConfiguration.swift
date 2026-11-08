@@ -12,6 +12,9 @@ public struct CerebroConfiguration: Sendable {
     /// The most bytes stored for each request or response body.
     public var bodyLimit: Int
 
+    /// How many frames and events are kept for each socket. The oldest is dropped first.
+    public var socketFrameLimit: Int
+
     /// What to redact on top of the default headers.
     public var redaction: RedactionRules
 
@@ -27,6 +30,7 @@ public struct CerebroConfiguration: Sendable {
         consoleLevel: ConsoleLevel = .summary,
         requestLimit: Int = 500,
         bodyLimit: Int = 1_048_576,
+        socketFrameLimit: Int = 1_000,
         redaction: RedactionRules = RedactionRules(),
         isShakeGestureEnabled: Bool = true,
         decoders: [any BodyDecoder] = []
@@ -35,6 +39,7 @@ public struct CerebroConfiguration: Sendable {
         self.consoleLevel = consoleLevel
         self.requestLimit = requestLimit
         self.bodyLimit = bodyLimit
+        self.socketFrameLimit = socketFrameLimit
         self.redaction = redaction
         self.isShakeGestureEnabled = isShakeGestureEnabled
         self.decoders = decoders

@@ -5,6 +5,7 @@ import Testing
     let configuration = CerebroConfiguration()
 
     #expect(configuration.allowsDistributionBuilds == false)
+    #expect(configuration.socketFrameLimit == 1_000)
     #expect(configuration.consoleLevel == .summary)
     #expect(configuration.requestLimit == 500)
     #expect(configuration.bodyLimit == 1_048_576)
