@@ -43,6 +43,11 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
         .testTarget(
+            name: "CerebroTests",
+            dependencies: ["Cerebro"],
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
             name: "CerebroProtoTests",
             dependencies: ["CerebroProto"],
             swiftSettings: swiftSettings

@@ -25,7 +25,7 @@ Users choose one of three install options, and all three are first-class: SPM, C
 
 ## Current plan
 
-PLAN-01, HTTP capture and base dashboard, is next. See `.agents/plans/README.md` for the order and gates.
+PLAN-02, WebSockets, NWConnection and the Sockets tab, is next. See `.agents/plans/README.md` for the order and gates.
 
 ## Commands
 
@@ -37,7 +37,7 @@ xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme Cerebro-Pa
   -destination 'platform=iOS Simulator,name=iPhone 17'
 
 # Package: run one test (add this to the command above)
-'-only-testing:CerebroCoreTests/defaultConfigurationBuilds()'
+'-only-testing:CerebroCoreTests/defaultsMatchTheSpec()'
 
 # Example app
 xcodebuild build -project Example/CerebroExample.xcodeproj -scheme CerebroExample \

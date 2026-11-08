@@ -4,7 +4,9 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. Not yet proven: a full `release.yml` run on GitHub, and the Release gate on a real device.
+`v0.1.0` is released and has only placeholders for capture. PLAN-01 adds HTTP capture and the dashboard.
+
+Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, and a burst of large responses on a real device. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
 
 ## Where we differ from the spec
 
@@ -17,6 +19,7 @@ These win over the spec, which is older.
 | HTTP capture | Also use `URLProtocol.registerClass` | The swizzled getters miss `URLSession.shared` |
 | Release gate | One runtime signing check, not `#if DEBUG` | A prebuilt XCFramework reports Release even in a Debug app |
 | WebSocket hooks | Also hook `resume`, `sendPing` and `cancel(with:reason:)` | `send` and `receive` can't see open, close or ping |
+| Trigger badge | Counts requests since the dashboard was last opened, not errors | The owner's rule |
 | Dashboard | Four tabs, with Proto Config hidden when no decoder is registered | The spec says five but lists four |
 | Pipeline | Decompress, proto decode, redact. Pretty-print only on open | Most requests are never opened |
 | Unredactable bodies | With JSON keys configured, a JSON body that can't be parsed is withheld | Stopping at the cap skips parsing, and redaction comes first |
@@ -35,7 +38,13 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 | SwiftUI `Text` for response bodies? | No. It took 2-3 s on 100 KB and never finished 1 MB, while `UITextView` took under 0.5 s |
 | SwiftUI floating trigger? | No. It swallowed the host app's touches |
 | C for speed? | No. On about 1 MB, zlib took 7 ms and JSON 34 ms, both already native, and SwiftProtobuf took 34 ms |
+| Cost of capture? | 1,000 requests of 64 KB with the dashboard open, in a Release build, took 2.0 s against 1.8 s. It dropped 2 of about 149 frames against 0, the worst frame took 51 ms against 17 ms, and memory grew 38 MB against 8 MB |
+| Memory on a huge response? | Bounded. A 200 MB response arrived in full, and peak memory went from 408 MB to 429 MB |
+| How should a URLProtocol handle redirects? | Tell the client, then hold the 3xx until `stopLoading` (followed) or 500 ms (refused, which sends no signal). Sending the 3xx straight away passed a small spike, but with a new session per request it failed about 1 run in 20 to 100: the app got the 302, or `URLSession.data(for:)` crashed. Never sending it hangs a refused redirect, and Apple's sample approach fails one with `NSCocoaErrorDomain 3072` |
 
 ## Worth knowing
 
+- A URLProtocol can't read the app's session, so the side effects in the README's "What changes while Cerebro captures" follow from the design. Don't try to fix them without a new idea.
+- Copy as cURL and the share sheet (for cURL and bodies) shipped with PLAN-01 at the owner's request, ahead of PLAN-04. PLAN-04 reuses `CurlCommand` and `CapturedContentSharing`, and still adds raw JSON and HAR export.
+- A session delegate that answers a redirect just as the held 3xx goes out, about 500 ms in, can still crash `URLSession.data(for:)`. Nothing public can close that window, because a refusal sends no signal. Delegates that answer sooner never reach it.
 - `Cerebro.xcodeproj` leaves out `SWIFT_APPROACHABLE_CONCURRENCY` and member import visibility on purpose, so the same sources compile the same way as in SPM.
