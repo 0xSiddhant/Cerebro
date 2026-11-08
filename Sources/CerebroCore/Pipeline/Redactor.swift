@@ -4,14 +4,12 @@ import Foundation
 struct Redactor: Sendable {
     static let marker = "[redacted]"
 
-    private static let defaultHeaders: Set<String> = ["authorization", "proxy-authorization", "cookie", "set-cookie"]
-
     private let headers: Set<String>
     private let jsonKeys: Set<String>
     private let queryParameters: Set<String>
 
     init(rules: RedactionRules) {
-        headers = Self.defaultHeaders.union(rules.headers.map { $0.lowercased() })
+        headers = Set((rules.sensitiveHeaders.map(\.rawValue) + rules.headers).map { $0.lowercased() })
         jsonKeys = Set(rules.jsonKeys.map { $0.lowercased() })
         queryParameters = Set(rules.queryParameters.map { $0.lowercased() })
     }

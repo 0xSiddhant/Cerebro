@@ -6,20 +6,44 @@ private func value(of name: String, in fields: [NamedValue]) -> String? {
     fields.first { $0.name == name }?.value
 }
 
-@Test func redactsTheFourDefaultHeadersWithNoConfiguration() {
-    let fields = Redactor(rules: RedactionRules()).redact(headers: [
-        "Authorization": "Bearer secret",
-        "proxy-authorization": "secret",
-        "COOKIE": "session=secret",
-        "Set-Cookie": "session=secret",
-        "Accept": "application/json",
-    ])
+@Test func redactsNoHeaderWithNoConfiguration() {
+    let sent = Dictionary(uniqueKeysWithValues: SensitiveHeader.allCases.map { ($0.rawValue, "secret") })
+
+    let fields = Redactor(rules: RedactionRules()).redact(headers: sent)
+
+    #expect(fields.count == SensitiveHeader.allCases.count)
+    #expect(fields.allSatisfy { $0.value == "secret" })
+}
+
+@Test func redactsEverySelectedHeaderWhateverItsCase() {
+    var sent = Dictionary(uniqueKeysWithValues: SensitiveHeader.allCases.map { ($0.rawValue, "secret") })
+    sent["authorization"] = sent.removeValue(forKey: SensitiveHeader.authorization.rawValue)
+    sent["Accept"] = "application/json"
+    let redactor = Redactor(rules: RedactionRules(sensitiveHeaders: Set(SensitiveHeader.allCases)))
+
+    let fields = redactor.redact(headers: sent)
+
+    #expect(fields.count == SensitiveHeader.allCases.count + 1)
+    #expect(value(of: "authorization", in: fields) == Redactor.marker)
+    #expect(fields.filter { $0.name != "Accept" }.allSatisfy { $0.value == Redactor.marker })
+    #expect(value(of: "Accept", in: fields) == "application/json")
+}
+
+@Test func redactsOnlyTheSelectedHeaders() {
+    let redactor = Redactor(rules: RedactionRules(sensitiveHeaders: [.authorization]))
+
+    let fields = redactor.redact(headers: ["Authorization": "secret", "Cookie": "session=kept"])
 
     #expect(value(of: "Authorization", in: fields) == Redactor.marker)
-    #expect(value(of: "proxy-authorization", in: fields) == Redactor.marker)
-    #expect(value(of: "COOKIE", in: fields) == Redactor.marker)
-    #expect(value(of: "Set-Cookie", in: fields) == Redactor.marker)
-    #expect(value(of: "Accept", in: fields) == "application/json")
+    #expect(value(of: "Cookie", in: fields) == "session=kept")
+}
+
+@Test func aNameInHeadersIsRedactedWithOrWithoutItsCase() {
+    let without = Redactor(rules: RedactionRules(sensitiveHeaders: [.cookie], headers: ["Authorization"]))
+    let with = Redactor(rules: RedactionRules(sensitiveHeaders: [.authorization], headers: ["Authorization"]))
+
+    #expect(value(of: "Authorization", in: without.redact(headers: ["Authorization": "secret"])) == Redactor.marker)
+    #expect(value(of: "Authorization", in: with.redact(headers: ["Authorization": "secret"])) == Redactor.marker)
 }
 
 @Test func redactsConfiguredHeadersWhateverTheirCase() {

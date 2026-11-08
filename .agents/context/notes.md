@@ -22,6 +22,7 @@ These win over the spec, which is older.
 | Trigger badge | Counts requests since the dashboard was last opened, not errors | The owner's rule |
 | Dashboard | Four tabs, with Proto Config hidden when no decoder is registered | The spec says five but lists four |
 | Pipeline | Decompress, proto decode, redact. Pretty-print only on open | Most requests are never opened |
+| Redacted headers | None by default. The developer selects `SensitiveHeader` cases, or names in `headers` | The owner's rule: Cerebro opts nothing out on its own. The spec has a fixed default list |
 | Unredactable bodies | With JSON keys configured, a JSON body that can't be parsed is withheld, form fields are redacted one by one, and other text that names a key is withheld | Stopping at the cap skips parsing, and redaction comes first |
 | Proto decoding | Stays at capture, and raw bytes are dropped when redaction changes the body | Undecoded bytes can't be redacted |
 | Socket frames | Payloads use the stored-body cap | The spec caps frames by count only |
