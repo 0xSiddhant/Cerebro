@@ -29,6 +29,11 @@ final class CaptureSession: NSObject, @unchecked Sendable {
         queue.addOperation(work)
     }
 
+    /// Runs work on that queue after a delay.
+    func perform(after delay: DispatchTimeInterval, _ work: @escaping @Sendable () -> Void) {
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + delay) { [self] in perform(work) }
+    }
+
     /// Call on `queue`.
     func makeTask(for request: URLRequest, spooledFile: URL?, owner: CustomURLProtocol) -> URLSessionTask {
         let task: URLSessionTask
@@ -64,9 +69,13 @@ extension CaptureSession: URLSessionDataDelegate {
         newRequest request: URLRequest,
         completionHandler: @escaping (URLRequest?) -> Void
     ) {
-        // The host's own session follows the redirect, so its delegate still gets a say.
-        tasks[task.taskIdentifier]?.wasRedirected(to: request, by: response)
-        completionHandler(nil)
+        // The app's own session follows the redirect, so its delegate still gets a say. Answering
+        // here is what delivers the 3xx, so the answer waits until the app's session has decided.
+        guard let owner = tasks[task.taskIdentifier] else {
+            completionHandler(nil)
+            return
+        }
+        owner.wasRedirected(to: request, by: response) { completionHandler(nil) }
     }
 
     func urlSession(
