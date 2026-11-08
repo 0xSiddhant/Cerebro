@@ -4,6 +4,10 @@ import Foundation
 struct SnapshotObservers<Snapshot: Sendable> {
     private var continuations: [UUID: AsyncStream<Snapshot>.Continuation] = [:]
 
+    var isEmpty: Bool {
+        continuations.isEmpty
+    }
+
     /// Adds a reader, which gets `current` at once. `onEnd` runs when it stops reading.
     mutating func add(
         startingWith current: Snapshot,

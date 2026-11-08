@@ -44,13 +44,24 @@ public struct SocketFrame: Sendable, Equatable {
     /// The stored payload, or `nil` if the frame was empty.
     public let payload: CapturedBody?
 
+    /// Whether sending it failed.
+    public let didFail: Bool
+
     /// Creates a frame.
-    public init(direction: SocketDirection, kind: Kind, byteCount: Int, date: Date, payload: CapturedBody?) {
+    public init(
+        direction: SocketDirection,
+        kind: Kind,
+        byteCount: Int,
+        date: Date,
+        payload: CapturedBody?,
+        didFail: Bool = false
+    ) {
         self.direction = direction
         self.kind = kind
         self.byteCount = byteCount
         self.date = date
         self.payload = payload
+        self.didFail = didFail
     }
 }
 

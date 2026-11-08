@@ -10,6 +10,7 @@ public actor SocketStore {
 
     private var entries: [UUID: Entry] = [:]
     private var order: [UUID] = []
+    private var leastRecentFirst: [UUID] = []
     private var changed = Set<UUID>()
     private var storedBytes = 0
     private var observers = SnapshotObservers<[SocketConnection]>()
@@ -50,6 +51,7 @@ public actor SocketStore {
             add(socket, startingAt: item.date)
         }
         entries[socket.id]?.connection.apply(item)
+        markActive(socket.id)
         append(item, to: socket.id)
         evictOverByteLimit()
         changed.insert(socket.id)
@@ -60,10 +62,18 @@ public actor SocketStore {
         let connection = SocketConnection(id: socket.id, source: socket.source, name: socket.name, startDate: date)
         entries[socket.id] = Entry(connection: connection, timeline: RingBuffer(capacity: frameLimit))
         order.append(socket.id)
+        leastRecentFirst.append(socket.id)
         guard order.count > connectionLimit else { return }
-        let oldest = order.removeFirst()
-        storedBytes -= entries.removeValue(forKey: oldest)?.storedBytes ?? 0
-        changed.remove(oldest)
+        let dropped = leastRecentFirst.removeFirst()
+        order.removeAll { $0 == dropped }
+        storedBytes -= entries.removeValue(forKey: dropped)?.storedBytes ?? 0
+        changed.remove(dropped)
+    }
+
+    private func markActive(_ id: UUID) {
+        guard leastRecentFirst.last != id else { return }
+        leastRecentFirst.removeAll { $0 == id }
+        leastRecentFirst.append(id)
     }
 
     private func append(_ item: SocketTimelineItem, to id: UUID) {
@@ -73,11 +83,11 @@ public actor SocketStore {
         storedBytes += added - evicted
     }
 
-    /// Takes from the oldest socket first, so the one in use keeps its history longest.
+    /// Takes from the socket idle longest first, so the one in use keeps its history longest.
     private func evictOverByteLimit() {
         var index = 0
-        while storedBytes > payloadByteLimit, index < order.count {
-            let id = order[index]
+        while storedBytes > payloadByteLimit, index < leastRecentFirst.count {
+            let id = leastRecentFirst[index]
             guard let removed = entries[id]?.timeline.removeOldest() else {
                 index += 1
                 continue
@@ -113,6 +123,7 @@ public actor SocketStore {
 
     private func publish() {
         pendingPublish = nil
+        guard !observers.isEmpty else { return }
         observers.publish(snapshot())
     }
 }
@@ -125,11 +136,17 @@ extension SocketTimelineItem {
 }
 
 extension SocketConnection {
+    /// A failed connection stays failed when the app then cancels it, and the reverse.
+    fileprivate var isFinished: Bool {
+        status == .closed || status == .failed
+    }
+
     /// Totals live here rather than in the timeline, so they stay true after frames are evicted.
     fileprivate mutating func apply(_ item: SocketTimelineItem) {
         switch item {
         case .frame(let frame):
             frameCount += 1
+            guard !frame.didFail else { return }
             if frame.direction == .sent {
                 bytesSent += Int64(frame.byteCount)
             } else {
@@ -140,9 +157,9 @@ extension SocketConnection {
             }
         case .event(.opened, _):
             status = .open
-        case .event(.closed, _):
+        case .event(.closed, _) where !isFinished:
             status = .closed
-        case .event(.failed, _):
+        case .event(.failed, _) where !isFinished:
             status = .failed
         case .event:
             break

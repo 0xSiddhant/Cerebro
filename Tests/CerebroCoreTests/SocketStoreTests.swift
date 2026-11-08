@@ -8,15 +8,20 @@ private func identity(_ name: String = "socket") -> SocketIdentity {
 
 private let start = Date(timeIntervalSince1970: 0)
 
-private func frame(_ size: Int, direction: SocketDirection = .sent, at offset: TimeInterval = 0) -> SocketTimelineItem {
-    let byteCount = size
-    return .frame(
+private func frame(
+    _ size: Int,
+    direction: SocketDirection = .sent,
+    at offset: TimeInterval = 0,
+    didFail: Bool = false
+) -> SocketTimelineItem {
+    .frame(
         SocketFrame(
             direction: direction,
             kind: .binary,
-            byteCount: byteCount,
+            byteCount: size,
             date: start.addingTimeInterval(offset),
-            payload: CapturedBody(content: .complete(Data(count: byteCount)), byteCount: byteCount)
+            payload: CapturedBody(content: .complete(Data(count: size)), byteCount: size),
+            didFail: didFail
         )
     )
 }
@@ -82,7 +87,7 @@ private func store(frames: Int = 1_000, connections: Int = 100, bytes: Int = 1_0
     #expect(await store.connections.first?.status == .open)
 }
 
-@Test func payloadByteLimitTrimsTheOldestSocketFirst() async throws {
+@Test func payloadByteLimitTrimsTheSocketIdleLongestFirst() async throws {
     let store = store(bytes: 100)
     let old = identity("old")
     let new = identity("new")
@@ -95,6 +100,75 @@ private func store(frames: Int = 1_000, connections: Int = 100, bytes: Int = 1_0
     #expect(connections.map(\.name) == ["old", "new"])
     #expect(connections[0].timeline.isEmpty)
     #expect(connections[1].timeline.count == 2)
+}
+
+@Test func anOlderSocketStillInUseKeepsItsHistory() async {
+    let store = store(bytes: 100)
+    let live = identity("live")
+    let idle = identity("idle")
+    await store.record(frame(40), on: live)
+    await store.record(frame(40), on: idle)
+    await store.record(frame(1), on: live)
+
+    await store.record(frame(40), on: live)
+
+    let connections = await store.connections
+    #expect(connections.map(\.name) == ["live", "idle"])
+    #expect(connections[0].timeline.count == 3)
+    #expect(connections[1].timeline.isEmpty)
+}
+
+@Test func connectionLimitKeepsAnOlderSocketStillInUse() async {
+    let store = store(connections: 2)
+    let live = identity("live")
+    await store.record(frame(1), on: live)
+    await store.record(frame(1), on: identity("idle"))
+    await store.record(frame(1), on: live)
+
+    await store.record(frame(1), on: identity("new"))
+
+    #expect(await store.connections.map(\.name) == ["live", "new"])
+}
+
+@Test func aFailedSocketStaysFailedWhenTheAppThenCancels() async {
+    let store = store()
+    let socket = identity()
+
+    await store.record(event(.failed("reset")), on: socket)
+    await store.record(event(.closed(code: nil, reason: nil)), on: socket)
+
+    #expect(await store.connections.first?.status == .failed)
+}
+
+@Test func aClosedSocketStaysClosedWhenALateFailureArrives() async {
+    let store = store()
+    let socket = identity()
+
+    await store.record(event(.closed(code: 1000, reason: nil)), on: socket)
+    await store.record(event(.failed("cancelled")), on: socket)
+
+    #expect(await store.connections.first?.status == .closed)
+}
+
+@Test func aSocketThatReopensIsOpenAgain() async {
+    let store = store()
+    let socket = identity()
+    await store.record(event(.closed(code: 1000, reason: nil)), on: socket)
+
+    await store.record(event(.opened), on: socket)
+
+    #expect(await store.connections.first?.status == .open)
+}
+
+@Test func aFailedSendIsAFrameButNotBytesSentOrProofOfOpening() async throws {
+    let store = store()
+
+    await store.record(frame(10, didFail: true), on: identity())
+
+    let connection = try #require(await store.connections.first)
+    #expect(connection.frameCount == 1)
+    #expect(connection.bytesSent == 0)
+    #expect(connection.status == .connecting)
 }
 
 @Test func payloadByteLimitTrimsASingleSocketFromItsOldestFrame() async throws {
@@ -122,7 +196,7 @@ private func store(frames: Int = 1_000, connections: Int = 100, bytes: Int = 1_0
     #expect(connection.timeline.count == 2)
 }
 
-@Test func connectionLimitDropsTheOldestSocketAndItsBytes() async {
+@Test func connectionLimitDropsTheSocketIdleLongestAndItsBytes() async {
     let store = store(connections: 2, bytes: 100)
     let first = identity("first")
 
