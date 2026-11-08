@@ -12,7 +12,8 @@ struct RawBody: Sendable, Equatable {
 
     init(data: Data, limit: Int, isTruncatedFrom totalBytes: Int? = nil) {
         self.limit = limit
-        self.data = data.prefix(limit)
+        // A prefix shares the whole buffer, so anything over the cap has to be copied to free the rest.
+        self.data = data.count > limit ? Data(data.prefix(limit)) : data
         self.byteCount = totalBytes ?? data.count
     }
 

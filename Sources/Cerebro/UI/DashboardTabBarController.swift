@@ -4,26 +4,40 @@ import UIKit
 import CerebroCore
 #endif
 
-/// The dashboard's shell. PLAN-02 to PLAN-04 add the Sockets, Proto Config and System Info tabs.
+/// The dashboard's shell. PLAN-03 and PLAN-04 add the Proto Config and System Info tabs.
 final class DashboardTabBarController: UITabBarController {
     private let onClose: () -> Void
 
-    init(store: TransactionStore, onClose: @escaping () -> Void) {
+    init(store: TransactionStore, socketStore: SocketStore, onClose: @escaping () -> Void) {
         self.onClose = onClose
         super.init(nibName: nil, bundle: nil)
-        let list = HTTPListViewController(viewModel: HTTPListViewModel(store: store))
-        list.navigationItem.leftBarButtonItem = UIBarButtonItem(
-            systemItem: .close,
-            primaryAction: UIAction { [weak self] _ in self?.close() }
-        )
-        let tab = UINavigationController(rootViewController: list)
-        tab.tabBarItem = UITabBarItem(title: "HTTP", image: UIImage(systemName: "network"), tag: 0)
-        viewControllers = [tab]
+        viewControllers = [
+            makeTab(
+                root: HTTPListViewController(viewModel: HTTPListViewModel(store: store)),
+                title: "HTTP",
+                image: "network"
+            ),
+            makeTab(
+                root: SocketListViewController(viewModel: SocketListViewModel(store: socketStore), store: socketStore),
+                title: "Sockets",
+                image: "bolt.horizontal"
+            ),
+        ]
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("DashboardTabBarController is built in code")
+    }
+
+    private func makeTab(root: UIViewController, title: String, image: String) -> UINavigationController {
+        root.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            systemItem: .close,
+            primaryAction: UIAction { [weak self] _ in self?.close() }
+        )
+        let tab = UINavigationController(rootViewController: root)
+        tab.tabBarItem = UITabBarItem(title: title, image: UIImage(systemName: image), tag: 0)
+        return tab
     }
 
     private func close() {

@@ -1,8 +1,12 @@
 import UIKit
 
-/// A row of the HTTP list, with a colour-coded status badge.
-final class HTTPTransactionCell: UITableViewCell {
-    static let reuseIdentifier = "HTTPTransactionCell"
+#if SWIFT_PACKAGE
+import CerebroCore
+#endif
+
+/// A row of the HTTP or Sockets list, with a colour-coded status badge.
+final class TrafficRowCell: UITableViewCell {
+    static let reuseIdentifier = "TrafficRowCell"
 
     private let method = UILabel()
     private let path = UILabel()
@@ -40,13 +44,13 @@ final class HTTPTransactionCell: UITableViewCell {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
-        fatalError("HTTPTransactionCell is built in code")
+        fatalError("TrafficRowCell is built in code")
     }
 
-    func show(_ row: HTTPListRow) {
-        method.text = row.method
-        path.text = row.path
-        detail.text = row.detail
-        status.show(row.status, outcome: row.outcome)
+    func show(tag: String, title: String, detail: String, status: String, outcome: TransactionOutcome) {
+        method.text = tag
+        path.text = title
+        self.detail.text = detail
+        self.status.show(status, outcome: outcome)
     }
 }

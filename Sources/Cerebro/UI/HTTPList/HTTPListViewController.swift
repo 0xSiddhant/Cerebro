@@ -24,7 +24,7 @@ final class HTTPListViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        tableView.register(HTTPTransactionCell.self, forCellReuseIdentifier: HTTPTransactionCell.reuseIdentifier)
+        tableView.register(TrafficRowCell.self, forCellReuseIdentifier: TrafficRowCell.reuseIdentifier)
         tableView.dataSource = dataSource
         navigationItem.searchController = makeSearchController()
         navigationItem.hidesSearchBarWhenScrolling = false
@@ -82,9 +82,15 @@ final class HTTPListViewController: UITableViewController {
     }
 
     private func cell(in table: UITableView, at indexPath: IndexPath, for id: UUID) -> UITableViewCell {
-        let cell = table.dequeueReusableCell(withIdentifier: HTTPTransactionCell.reuseIdentifier, for: indexPath)
+        let cell = table.dequeueReusableCell(withIdentifier: TrafficRowCell.reuseIdentifier, for: indexPath)
         if let row = viewModel.rows.first(where: { $0.id == id }) {
-            (cell as? HTTPTransactionCell)?.show(row)
+            (cell as? TrafficRowCell)?.show(
+                tag: row.method,
+                title: row.path,
+                detail: row.detail,
+                status: row.status,
+                outcome: row.outcome
+            )
         }
         return cell
     }

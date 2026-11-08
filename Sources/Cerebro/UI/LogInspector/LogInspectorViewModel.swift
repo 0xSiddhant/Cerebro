@@ -60,8 +60,6 @@ struct InspectorRow: Equatable {
 /// Lays one transaction out as a summary and pages, leaving out anything it doesn't have.
 @MainActor
 final class LogInspectorViewModel {
-    private static let previewByteLimit = 400
-
     let title: String
     let summary: InspectorSummary
     let request: CapturedRequest
@@ -159,17 +157,9 @@ final class LogInspectorViewModel {
                 value: DisplayFormat.bytes(Int64(body.byteCount)),
                 body: body.data == nil ? nil : body,
                 isBodyRow: true,
-                preview: body.data.flatMap(preview)
+                preview: body.data.flatMap(DisplayFormat.preview)
             )
         ]
-    }
-
-    /// The start of a body as text, or `nil` if it's binary. Stored bodies are already redacted.
-    private static func preview(of data: Data) -> String? {
-        let start = data.prefix(previewByteLimit)
-        guard !start.isEmpty, !start.contains(0) else { return nil }
-        // A character of up to four bytes can be cut off at the limit, so allow for losing its start.
-        return (0...3).lazy.compactMap { String(data: start.dropLast($0), encoding: .utf8) }.first
     }
 
     private static func summary(of body: CapturedBody) -> String {

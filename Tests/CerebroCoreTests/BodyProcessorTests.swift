@@ -182,3 +182,13 @@ private let json = Data(#"{"password":"secret","name":"ada"}"#.utf8)
 
     #expect(body?.content == .truncated(json.prefix(10)))
 }
+
+@Test func aTruncatedBodyDoesntHoldOnToTheRest() {
+    let whole = Data(count: 1_000)
+
+    let body = RawBody(data: whole, limit: 10)
+
+    #expect(body.data.count == 10)
+    #expect(body.isTruncated)
+    #expect(body.data.withUnsafeBytes(\.baseAddress) != whole.withUnsafeBytes(\.baseAddress))
+}

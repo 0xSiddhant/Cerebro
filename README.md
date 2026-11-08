@@ -2,7 +2,7 @@
 
 A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in an in-app dashboard, including compressed and protobuf payloads. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
 
-**Status:** early development. HTTP capture and the dashboard work today. WebSocket and NWConnection capture, protobuf decoding, system info and background sessions arrive in the coming releases.
+**Status:** early development. HTTP, WebSocket and NWConnection capture and the dashboard work today. Protobuf decoding, system info and background sessions arrive in the coming releases.
 
 ## Requirements
 
@@ -45,7 +45,7 @@ import Cerebro
 Cerebro.start()
 ```
 
-Call it as early as you can, because sessions created before it aren't captured. No other change is needed for HTTP traffic, including `URLSession.shared`.
+Call it as early as you can, because sessions created before it aren't captured. No other change is needed for HTTP traffic, including `URLSession.shared`, or for `URLSessionWebSocketTask`.
 
 Tap the floating button to open the dashboard, and shake the device to hide or show the button. The number on it counts the requests since you last opened the dashboard. To open the dashboard from your own debug menu, call `Cerebro.present()`. `Cerebro.stop()` ends capture and removes the dashboard.
 
@@ -70,10 +70,32 @@ Cerebro.start(CerebroConfiguration(
 | `consoleLevel` | `.summary` | `.off`, one line per request, or `.full` with headers and bodies |
 | `requestLimit` | `500` | Requests kept. The oldest is dropped first |
 | `bodyLimit` | 1 MB | Bytes stored for each request or response body. Longer bodies are marked as truncated |
+| `socketFrameLimit` | `1000` | Frames and events kept for each socket. The oldest is dropped first |
 | `redaction` | Nothing extra | Extra header names, JSON keys and query parameters to redact |
 | `isShakeGestureEnabled` | `true` | Whether a shake shows or hides the button |
 
 `Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie` are always redacted before anything is stored. Setting `jsonKeys` makes Cerebro parse JSON bodies at capture, and a JSON body it can't parse is withheld rather than stored unredacted.
+
+### Other sockets
+
+iOS gives Cerebro no way to see these by itself, so each needs a small change. Skipping it only means that traffic isn't shown.
+
+Create a `MonitoredNWConnection` instead of an `NWConnection`. It has the same methods, and only forwards to the real connection while Cerebro is off.
+
+```swift
+let connection = MonitoredNWConnection(host: "example.com", port: .https, using: .tls)
+```
+
+For engines like Starscream or Socket.IO, make one call per frame or event:
+
+```swift
+let socket = ExternalNetworkBridge.Connection(name: "Prices", url: url)
+
+ExternalNetworkBridge.log(.opened, on: socket)
+ExternalNetworkBridge.log(.text(message), .sent, on: socket)
+ExternalNetworkBridge.log(.binary(data), .received, on: socket)
+ExternalNetworkBridge.log(.closed(code: 1000, reason: "done"), on: socket)
+```
 
 ## What changes while Cerebro captures
 
@@ -86,7 +108,7 @@ Cerebro sends each request through its own session, which has these side effects
 
 Certificate pinning and client certificates keep working, because those challenges still reach your delegate.
 
-Cerebro keeps both the request and response body of up to 500 requests, so it can hold about 1 GB at worst. Lower `requestLimit` or `bodyLimit` if your app moves many large bodies.
+Cerebro keeps both the request and response body of up to 500 requests, so it can hold about 1 GB at worst. Lower `requestLimit` or `bodyLimit` if your app moves many large bodies. Sockets are capped separately: 100 connections and 100 times `bodyLimit` of payload (100 MB by default), and the socket idle longest goes first.
 
 ## What Cerebro can't capture
 

@@ -15,11 +15,23 @@ struct BodyProcessor: Sendable {
     let redactor: Redactor
 
     /// Processes a body. `declared` is the compression named in the request's headers.
-    func process(_ raw: RawBody, context: BodyContext, declared: BodyCompression? = nil) -> CapturedBody? {
+    ///
+    /// `detectsCompression` looks for compression in the body's first bytes. `withholdsKeyMentions` is
+    /// for formats that wrap JSON in a prefix, like Socket.IO's frames, which can't be parsed to redact.
+    func process(
+        _ raw: RawBody,
+        context: BodyContext,
+        declared: BodyCompression? = nil,
+        detectsCompression: Bool = true,
+        withholdsKeyMentions: Bool = false
+    ) -> CapturedBody? {
         guard raw.byteCount > 0 else { return nil }
-        let working = decode(decompress(raw, declared: declared), context: context)
+        let working = decode(
+            decompress(raw, declared: declared, detectsCompression: detectsCompression),
+            context: context
+        )
         return CapturedBody(
-            content: redact(working, context: context),
+            content: redact(working, context: context, withholdsKeyMentions: withholdsKeyMentions),
             byteCount: raw.byteCount,
             compression: working.compression,
             isDecompressed: working.isDecompressed,
@@ -27,8 +39,9 @@ struct BodyProcessor: Sendable {
         )
     }
 
-    private func decompress(_ raw: RawBody, declared: BodyCompression?) -> Working {
-        let compression = declared ?? Decompressor.compression(fromMagicBytes: raw.data)
+    private func decompress(_ raw: RawBody, declared: BodyCompression?, detectsCompression: Bool) -> Working {
+        let detected = detectsCompression ? Decompressor.compression(fromMagicBytes: raw.data) : nil
+        let compression = declared ?? detected
         var working = Working(data: raw.data, isTruncated: raw.isTruncated, compression: compression)
         guard let compression, let output = Decompressor.decompress(raw.data, as: compression, limit: limit) else {
             return working
@@ -52,9 +65,16 @@ struct BodyProcessor: Sendable {
     }
 
     /// Redaction beats every shortcut: a JSON body that can't be redacted isn't stored at all.
-    private func redact(_ body: Working, context: BodyContext) -> CapturedBody.Content {
+    private func redact(
+        _ body: Working,
+        context: BodyContext,
+        withholdsKeyMentions: Bool
+    ) -> CapturedBody.Content {
         let stored: CapturedBody.Content = body.isTruncated ? .truncated(body.data) : .complete(body.data)
-        guard redactor.redactsJSON, looksLikeJSON(body.data, contentType: context.contentType) else { return stored }
+        guard redactor.redactsJSON else { return stored }
+        guard looksLikeJSON(body.data, contentType: context.contentType) else {
+            return withholdsKeyMentions && redactor.mentionsJSONKey(in: body.data) ? .withheld : stored
+        }
         guard !body.isTruncated,
             let object = try? JSONSerialization.jsonObject(with: body.data, options: .fragmentsAllowed),
             let redacted = try? JSONSerialization.data(

@@ -3,7 +3,7 @@ import Foundation
 /// Holds the session's transactions. It's an actor because capture finishes on arbitrary threads.
 public actor TransactionStore {
     private var buffer: RingBuffer<HTTPTransaction>
-    private var observers: [UUID: AsyncStream<[HTTPTransaction]>.Continuation] = [:]
+    private var observers = SnapshotObservers<[HTTPTransaction]>()
     private var pendingPublish: Task<Void, Never>?
     private let updateInterval: Duration
 
@@ -27,21 +27,13 @@ public actor TransactionStore {
     /// Delivers the current transactions now, then again after each batch of changes.
     /// A slow reader only ever sees the latest batch.
     public func updates() -> AsyncStream<[HTTPTransaction]> {
-        let id = UUID()
-        let (stream, continuation) = AsyncStream.makeStream(
-            of: [HTTPTransaction].self,
-            bufferingPolicy: .bufferingNewest(1)
-        )
-        continuation.onTermination = { [weak self] _ in
+        observers.add(startingWith: buffer.elements) { [weak self] id in
             Task { await self?.removeObserver(id) }
         }
-        continuation.yield(buffer.elements)
-        observers[id] = continuation
-        return stream
     }
 
     private func removeObserver(_ id: UUID) {
-        observers[id] = nil
+        observers.remove(id)
     }
 
     private func schedulePublish() {
@@ -54,9 +46,6 @@ public actor TransactionStore {
 
     private func publish() {
         pendingPublish = nil
-        let snapshot = buffer.elements
-        for observer in observers.values {
-            observer.yield(snapshot)
-        }
+        observers.publish(buffer.elements)
     }
 }

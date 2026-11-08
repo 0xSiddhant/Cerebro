@@ -41,7 +41,7 @@ Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (C
 | Foreground `URLSession` | `CustomURLProtocol` injected into session configurations | None |
 | `URLSession.shared` | `CustomURLProtocol` registered with `URLProtocol.registerClass`, because the swizzled getters don't reach it | None |
 | Background `URLSession` | Delegate-proxy engine | None |
-| `URLSessionWebSocketTask` | Hooks on its public `send`, `receive`, `resume`, `sendPing(pongReceiveHandler:)` and `cancel(with:reason:)` methods | None |
+| `URLSessionWebSocketTask` | Hooks on its public `send`, `receive`, `resume`, `sendPing(pongReceiveHandler:)`, `cancel(with:reason:)` and `cancel` methods | None |
 | `NWConnection` | `MonitoredNWConnection` wrapper | Create the wrapper instead of `NWConnection` |
 | Starscream, Socket.IO, others | `ExternalNetworkBridge` | One call per frame or event |
 
