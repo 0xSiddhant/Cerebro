@@ -39,9 +39,10 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 | C for speed? | No. On about 1 MB, zlib took 7 ms and JSON 34 ms, both already native, and SwiftProtobuf took 34 ms |
 | Cost of capture? | 1,000 requests of 64 KB with the dashboard open, in a Release build, took 2.0 s against 1.8 s. It dropped 2 of about 149 frames against 0, the worst frame took 51 ms against 17 ms, and memory grew 38 MB against 8 MB |
 | Memory on a huge response? | Bounded. A 200 MB response arrived in full, and peak memory went from 408 MB to 429 MB |
-| How should a URLProtocol handle redirects? | Tell the client and keep delivering the 3xx. A spike tried three approaches, following and refusing with a fast and a slow delegate, and only this one passed all four. Stopping there hung a refused redirect, and Apple's sample approach fails it with `NSCocoaErrorDomain 3072` |
+| How should a URLProtocol handle redirects? | Tell the client, then hold the 3xx until `stopLoading` (followed) or 500 ms (refused, which sends no signal). Sending the 3xx straight away passed a small spike, but with a new session per request it failed about 1 run in 20 to 100: the app got the 302, or `URLSession.data(for:)` crashed. Never sending it hangs a refused redirect, and Apple's sample approach fails one with `NSCocoaErrorDomain 3072` |
 
 ## Worth knowing
 
 - A URLProtocol can't read the app's session, so the side effects in the README's "What changes while Cerebro captures" follow from the design. Don't try to fix them without a new idea.
+- A session delegate that answers a redirect just as the held 3xx goes out, about 500 ms in, can still crash `URLSession.data(for:)`. Nothing public can close that window, because a refusal sends no signal. Delegates that answer sooner never reach it.
 - `Cerebro.xcodeproj` leaves out `SWIFT_APPROACHABLE_CONCURRENCY` and member import visibility on purpose, so the same sources compile the same way as in SPM.

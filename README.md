@@ -80,6 +80,7 @@ Cerebro sends each request through its own session, which has these side effects
 - Settings on your `URLSessionConfiguration` other than headers don't apply, such as timeouts, cellular access and cookie handling.
 - The `urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)` upload progress callback doesn't fire.
 - HTTP Basic, Digest and NTLM logins answered by a session delegate aren't answered, so your app receives the 401.
+- A redirect your session delegate refuses arrives about 500 ms later. Followed redirects aren't delayed.
 
 Certificate pinning and client certificates keep working, because those challenges still reach your delegate.
 
