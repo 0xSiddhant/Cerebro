@@ -28,9 +28,44 @@ struct Redactor: Sendable {
         return jsonKeys.contains { lowercased.contains($0) }
     }
 
-    /// The same check for bytes. Bytes that aren't text can't name a key.
-    func mentionsJSONKey(in data: Data) -> Bool {
-        String(data: data, encoding: .utf8).map { mentionsJSONKey(in: $0) } ?? false
+    /// The same check for a body's bytes. Bytes that aren't UTF-8, such as an image's, count as binary and
+    /// are left alone. The check also reads the text form-decoded, for a form that has no content type.
+    func mentionsJSONKey(in data: Data, isTruncated: Bool) -> Bool {
+        guard let text = Self.text(of: data, isTruncated: isTruncated) else { return false }
+        return mentionsJSONKey(in: text) || mentionsJSONKey(in: Self.formDecoded(text))
+    }
+
+    /// Reads bytes as text. A body cut off at the cap can end partway through a character, which alone
+    /// doesn't make it binary. A UTF-8 character is four bytes at most, so that leaves three at most.
+    private static func text(of data: Data, isTruncated: Bool) -> String? {
+        for cutBytes in 0...(isTruncated ? 3 : 0) {
+            if let text = String(data: data.dropLast(cutBytes), encoding: .utf8) {
+                return text
+            }
+        }
+        return nil
+    }
+
+    /// Replaces the value of each configured field in a form-encoded body. Every other field keeps its
+    /// exact bytes, in order.
+    func redact(form data: Data) -> Data {
+        let separator = UInt8(ascii: "&")
+        let fields = data.split(separator: separator, omittingEmptySubsequences: false)
+        return Data(fields.map(redacted(field:)).joined(separator: [separator]))
+    }
+
+    private func redacted(field: Data) -> Data {
+        guard let equals = field.firstIndex(of: UInt8(ascii: "=")),
+            let name = String(bytes: field[..<equals], encoding: .utf8),
+            jsonKeys.contains(Self.formDecoded(name).lowercased())
+        else { return field }
+        return field[...equals] + Data(Self.marker.utf8)
+    }
+
+    /// Undoes form encoding, where a space can be written as `+`. A malformed escape is left as it is.
+    private static func formDecoded(_ text: String) -> String {
+        let spaced = text.replacingOccurrences(of: "+", with: " ")
+        return spaced.removingPercentEncoding ?? spaced
     }
 
     func redact(headers fields: [String: String]) -> [NamedValue] {

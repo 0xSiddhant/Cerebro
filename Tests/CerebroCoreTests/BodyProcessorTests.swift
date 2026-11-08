@@ -174,6 +174,118 @@ private let json = Data(#"{"password":"secret","name":"ada"}"#.utf8)
     #expect(body?.content == .complete(text))
 }
 
+private let formContentType = "application/x-www-form-urlencoded"
+
+private func processed(
+    _ sent: Data,
+    contentType: String?,
+    keys: Set<String> = ["password"],
+    limit: Int = 1_000
+) -> CapturedBody? {
+    processor(limit: limit, rules: RedactionRules(jsonKeys: keys))
+        .process(Fixtures.raw(sent, limit: limit), context: Fixtures.context(contentType: contentType))
+}
+
+private func processed(
+    _ sent: String,
+    contentType: String?,
+    keys: Set<String> = ["password"],
+    limit: Int = 1_000
+) -> CapturedBody? {
+    processed(Data(sent.utf8), contentType: contentType, keys: keys, limit: limit)
+}
+
+@Test func formFieldsAreRedactedAndTheRestKeepTheirExactBytesInOrder() {
+    let body = processed("a=1%202&password=hunter2&b=c+d&&password=again&empty=", contentType: formContentType)
+
+    #expect(body?.content == .complete(Data("a=1%202&password=[redacted]&b=c+d&&password=[redacted]&empty=".utf8)))
+}
+
+@Test func formContentTypeMatchesWhateverItsCaseOrCharset() {
+    let body = processed("password=hunter2", contentType: "Application/X-WWW-Form-URLEncoded; charset=UTF-8")
+
+    #expect(body?.content == .complete(Data("password=[redacted]".utf8)))
+}
+
+@Test func formFieldNamesAreComparedDecodedAndWithoutCase() {
+    let body = processed(
+        "p%61ssword=a&PASSWORD=b&first+name=c&first%20name=d&other=e",
+        contentType: formContentType,
+        keys: ["password", "First Name"]
+    )
+
+    let expected = "p%61ssword=[redacted]&PASSWORD=[redacted]&first+name=[redacted]&first%20name=[redacted]&other=e"
+    #expect(body?.content == .complete(Data(expected.utf8)))
+}
+
+@Test func aFormFieldNotNamedByARuleIsLeftAloneEvenIfItsValueHoldsAKey() {
+    let sent = "note=my+password+is+long&password"
+
+    #expect(processed(sent, contentType: formContentType)?.content == .complete(Data(sent.utf8)))
+}
+
+@Test func aTruncatedFormBodyIsWithheld() {
+    let body = processed("a=1&password=hunter2", contentType: formContentType, limit: 5)
+
+    #expect(body?.content == .withheld)
+}
+
+@Test func jsonSentUnderAFormContentTypeIsStillRedactedByKey() throws {
+    let stored = try #require(processed(json, contentType: formContentType)?.data)
+
+    #expect(String(data: stored, encoding: .utf8)?.contains("secret") == false)
+}
+
+@Test func aFormWithNoContentTypeIsWithheldIfItNamesAKey() {
+    #expect(processed("user=ada&password=hunter2", contentType: nil)?.content == .withheld)
+    #expect(processed("user=ada&p%61ssword=hunter2", contentType: nil)?.content == .withheld)
+}
+
+@Test func aFormWithNoContentTypeThatNamesNoKeyIsKept() {
+    let sent = "user=ada&page=2"
+
+    #expect(processed(sent, contentType: nil)?.content == .complete(Data(sent.utf8)))
+}
+
+@Test func plainTextThatNamesAKeyIsWithheld() {
+    #expect(processed("the PassWord is hunter2", contentType: "text/plain")?.content == .withheld)
+}
+
+@Test func withNoJSONKeysFormAndTextBodiesAreLeftAlone() {
+    let form = "password=hunter2"
+    let text = "the password is hunter2"
+
+    #expect(processed(form, contentType: formContentType, keys: [])?.content == .complete(Data(form.utf8)))
+    #expect(processed(text, contentType: "text/plain", keys: [])?.content == .complete(Data(text.utf8)))
+    #expect(processed(form, contentType: nil, keys: [])?.content == .complete(Data(form.utf8)))
+}
+
+@Test func textCutMidCharacterIsStillCheckedForAKey() {
+    let sent = Data("the password é".utf8)
+
+    #expect(processed(sent, contentType: "text/plain", limit: sent.count - 1)?.content == .withheld)
+}
+
+@Test func textCutMidCharacterThatNamesNoKeyIsStoredTruncated() {
+    let sent = Data("nothing here é".utf8)
+    let limit = sent.count - 1
+
+    #expect(processed(sent, contentType: "text/plain", limit: limit)?.content == .truncated(sent.prefix(limit)))
+}
+
+@Test func binaryBodiesAreStoredEvenIfTheirBytesHoldAKey() {
+    let image = Data([0x89, 0x50, 0x4E, 0x47, 0xFF]) + Data("id".utf8)
+
+    #expect(processed(image, contentType: "image/png", keys: ["id"])?.content == .complete(image))
+    #expect(processed(image, contentType: nil, keys: ["id"])?.content == .complete(image))
+}
+
+@Test func truncatedBinaryBodiesStayStored() {
+    let image = Data([0x89, 0x50, 0x4E, 0x47, 0xFF]) + Data("id and more".utf8)
+
+    #expect(processed(image, contentType: "image/png", keys: ["id"], limit: 8)?.content == .truncated(image.prefix(8)))
+}
+
 @Test func withNoJSONKeysABodyOverTheCapIsStillStoredTruncated() {
     let body = processor(limit: 10).process(
         Fixtures.raw(json, limit: 10),

@@ -160,6 +160,26 @@ extension CaptureTests {
                 #expect(!stored.contains("secret"))
             }
         }
+
+        @Test func aFormBodyWithNoContentTypeIsNotStoredInTheClear() async throws {
+            let configuration = CerebroConfiguration(
+                consoleLevel: .off,
+                redaction: RedactionRules(jsonKeys: ["password"])
+            )
+            try await withCapture(configuration) { harness in
+                var request = URLRequest(url: harness.url("/login"))
+                request.httpMethod = "POST"
+                request.httpBody = Data("user=ada&password=secret".utf8)
+
+                _ = try await URLSession(configuration: .default).data(for: request)
+
+                // URLSession adds this header after capture, so the pipeline never sees a content type.
+                #expect(harness.server.requests.first?.header("Content-Type") == "application/x-www-form-urlencoded")
+                let captured = try await harness.transaction().request
+                #expect(!captured.headers.contains { $0.name.lowercased() == "content-type" })
+                #expect(captured.body?.content == .withheld)
+            }
+        }
     }
 }
 

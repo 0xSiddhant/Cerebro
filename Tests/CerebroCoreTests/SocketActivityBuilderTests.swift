@@ -163,6 +163,12 @@ private func redacted(_ event: SocketEvent, jsonKeys: Set<String>) -> SocketEven
     #expect(try frame(.text(text)).payload?.data == Data(text.utf8))
 }
 
+@Test func aTextFrameCutMidCharacterIsStillCheckedForAKey() throws {
+    let text = "the token é"
+
+    #expect(try frame(.text(text), limit: text.utf8.count - 1, jsonKeys: ["token"]).payload?.content == .withheld)
+}
+
 @Test func binaryBytesCantNameAKey() throws {
     let bytes = Data([0xFF, 0xFE, 0x01])
 
