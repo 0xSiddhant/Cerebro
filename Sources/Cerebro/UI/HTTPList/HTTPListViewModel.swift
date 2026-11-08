@@ -122,16 +122,8 @@ final class HTTPListViewModel {
             method: transaction.request.method,
             path: url?.path.isEmpty == false ? url?.path ?? "/" : "/",
             detail: detail.joined(separator: " · "),
-            status: status(of: transaction),
+            status: DisplayFormat.status(of: transaction),
             outcome: transaction.outcome
         )
-    }
-
-    private static func status(of transaction: HTTPTransaction) -> String {
-        switch transaction.outcome {
-        case .failed: return "Failed"
-        case .cancelled: return "Cancelled"
-        default: return transaction.response.map { String($0.statusCode) } ?? ""
-        }
     }
 }

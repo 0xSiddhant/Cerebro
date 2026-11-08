@@ -1,9 +1,5 @@
 import UIKit
 
-#if SWIFT_PACKAGE
-import CerebroCore
-#endif
-
 /// A row of the HTTP list, with a colour-coded status badge.
 final class HTTPTransactionCell: UITableViewCell {
     static let reuseIdentifier = "HTTPTransactionCell"
@@ -11,7 +7,7 @@ final class HTTPTransactionCell: UITableViewCell {
     private let method = UILabel()
     private let path = UILabel()
     private let detail = UILabel()
-    private let status = UILabel()
+    private let status = StatusBadgeLabel()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -22,14 +18,6 @@ final class HTTPTransactionCell: UITableViewCell {
         path.lineBreakMode = .byTruncatingMiddle
         detail.font = .preferredFont(forTextStyle: .caption1)
         detail.textColor = .secondaryLabel
-        status.font = .monospacedDigitSystemFont(ofSize: 12, weight: .bold)
-        status.textColor = .white
-        status.textAlignment = .center
-        status.layer.cornerRadius = 6
-        status.clipsToBounds = true
-        status.translatesAutoresizingMaskIntoConstraints = false
-        status.setContentHuggingPriority(.required, for: .horizontal)
-        status.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         let top = UIStackView(arrangedSubviews: [method, path])
         top.spacing = 6
@@ -47,8 +35,6 @@ final class HTTPTransactionCell: UITableViewCell {
             line.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
             line.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
             line.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
-            status.heightAnchor.constraint(equalToConstant: 22),
-            status.widthAnchor.constraint(greaterThanOrEqualToConstant: 40),
         ])
     }
 
@@ -61,17 +47,6 @@ final class HTTPTransactionCell: UITableViewCell {
         method.text = row.method
         path.text = row.path
         detail.text = row.detail
-        status.text = "  \(row.status)  "
-        status.backgroundColor = Self.color(for: row.outcome)
-    }
-
-    private static func color(for outcome: TransactionOutcome) -> UIColor {
-        switch outcome {
-        case .success: return .systemGreen
-        case .redirection: return .systemBlue
-        case .clientError: return .systemOrange
-        case .serverError, .failed: return .systemRed
-        case .cancelled: return .systemGray
-        }
+        status.show(row.status, outcome: row.outcome)
     }
 }
