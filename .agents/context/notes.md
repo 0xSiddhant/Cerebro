@@ -19,6 +19,7 @@ These win over the spec, which is older.
 | HTTP capture | Also use `URLProtocol.registerClass` | The swizzled getters miss `URLSession.shared` |
 | Release gate | One runtime signing check, not `#if DEBUG` | A prebuilt XCFramework reports Release even in a Debug app |
 | WebSocket hooks | Also hook `resume`, `sendPing` and `cancel(with:reason:)` | `send` and `receive` can't see open, close or ping |
+| Trigger badge | Counts requests since the dashboard was last opened, not errors | The owner's rule |
 | Dashboard | Four tabs, with Proto Config hidden when no decoder is registered | The spec says five but lists four |
 | Pipeline | Decompress, proto decode, redact. Pretty-print only on open | Most requests are never opened |
 | Unredactable bodies | With JSON keys configured, a JSON body that can't be parsed is withheld | Stopping at the cap skips parsing, and redaction comes first |
@@ -44,5 +45,6 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 ## Worth knowing
 
 - A URLProtocol can't read the app's session, so the side effects in the README's "What changes while Cerebro captures" follow from the design. Don't try to fix them without a new idea.
+- Copy as cURL and the share sheet (for cURL and bodies) shipped with PLAN-01 at the owner's request, ahead of PLAN-04. PLAN-04 reuses `CurlCommand` and `CapturedContentSharing`, and still adds raw JSON and HAR export.
 - A session delegate that answers a redirect just as the held 3xx goes out, about 500 ms in, can still crash `URLSession.data(for:)`. Nothing public can close that window, because a refusal sends no signal. Delegates that answer sooner never reach it.
 - `Cerebro.xcodeproj` leaves out `SWIFT_APPROACHABLE_CONCURRENCY` and member import visibility on purpose, so the same sources compile the same way as in SPM.

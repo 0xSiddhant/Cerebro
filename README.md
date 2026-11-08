@@ -47,7 +47,9 @@ Cerebro.start()
 
 Call it as early as you can, because sessions created before it aren't captured. No other change is needed for HTTP traffic, including `URLSession.shared`.
 
-Tap the floating button to open the dashboard, and shake the device to hide or show the button. To open the dashboard from your own debug menu, call `Cerebro.present()`. `Cerebro.stop()` ends capture and removes the dashboard.
+Tap the floating button to open the dashboard, and shake the device to hide or show the button. The number on it counts the requests since you last opened the dashboard. To open the dashboard from your own debug menu, call `Cerebro.present()`. `Cerebro.stop()` ends capture and removes the dashboard.
+
+In the dashboard, a request's page has Copy cURL and Share buttons at the top. In the list, swipe a request to copy its cURL, or long-press it for the same options. A body has its own copy and share buttons. Redacted values stay as placeholders, and Cerebro warns you before anything is shared.
 
 Cerebro runs on simulators and in development-signed builds. It stays off in Ad Hoc, TestFlight and App Store builds unless you set `allowsDistributionBuilds`.
 

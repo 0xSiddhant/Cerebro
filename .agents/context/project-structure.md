@@ -38,7 +38,8 @@ Cerebro/
 │   ├── Cerebro/
 │   │   ├── Facade/            # Cerebro.start / stop / present
 │   │   ├── Triggers/          # shake hook, floating trigger, PassthroughWindow, DashboardWindowManager
-│   │   └── UI/                # tab bar shell, HTTP list, Log Inspector, Sockets, Proto Config, System Info
+│   │   └── UI/                # tab bar shell, then one folder per screen holding its view controller,
+│   │                          # view model and views (HTTPList, LogInspector, BodyViewer); Shared for the rest
 │   ├── CerebroProto/          # proto rules and decoder
 │   └── CerebroProtoGenerator/ # reads traffic_map.json and .pb.swift files, writes ProtoRule.generated
 ├── Plugins/
