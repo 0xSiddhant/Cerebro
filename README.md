@@ -9,9 +9,9 @@
 [![SPM compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)](#swift-package-manager)
 [![CocoaPods via Git](https://img.shields.io/badge/CocoaPods-via%20Git-EE3322)](#cocoapods)
 
-A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
+A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app, and decodes protobuf to JSON when you add rules for it. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
 
-**Status:** early development. HTTP, WebSocket and NWConnection capture and the dashboard work today.
+**Status:** early development. HTTP, WebSocket and NWConnection capture, protobuf decoding and the dashboard work today.
 
 ## Screenshots
 
@@ -48,7 +48,7 @@ In Xcode:
 1. Choose **File > Add Package Dependencies**.
 2. Enter `https://github.com/0xSiddhant/Cerebro.git`.
 3. Set **Dependency Rule** to **Exact Version**, using the [latest release](https://github.com/0xSiddhant/Cerebro/releases/latest) number.
-4. Add the **Cerebro** product to your app target. Leave `CerebroProto` set to **None**, because it's a placeholder until protobuf decoding ships.
+4. Add the **Cerebro** product to your app target. Add **CerebroProto** as well only if you decode protobuf.
 
 In a `Package.swift`, with `X.Y.Z` as the [latest release](https://github.com/0xSiddhant/Cerebro/releases/latest):
 
@@ -82,7 +82,7 @@ Replace `X.Y.Z` with the [latest release](https://github.com/0xSiddhant/Cerebro/
 2. Drag `Cerebro.xcframework` into your project and tick your app target.
 3. In the target's **General > Frameworks, Libraries, and Embedded Content**, set it to **Embed & Sign**. It's a dynamic framework, so without this the app crashes at launch with `Library not loaded: @rpath/Cerebro.framework/Cerebro`.
 
-Capture only needs that one zip. Leave out `CerebroProto.xcframework` and `SwiftProtobuf.xcframework` until protobuf decoding ships. The release zips are built with Xcode 26, the only version CI tests, so use that or later.
+Capture only needs that one zip. To decode protobuf, also add [`CerebroProto.xcframework.zip`](https://github.com/0xSiddhant/Cerebro/releases/latest/download/CerebroProto.xcframework.zip) and [`SwiftProtobuf.xcframework.zip`](https://github.com/0xSiddhant/Cerebro/releases/latest/download/SwiftProtobuf.xcframework.zip) the same way. The release zips are built with Xcode 26, the only version CI tests, so use that or later.
 
 ### 2. Start Cerebro
 
@@ -151,6 +151,7 @@ The [guide](docs/GUIDE.md) covers everything past setup:
 | [Configuration](docs/GUIDE.md#configuration) | Every setting and its default |
 | [Redaction](docs/GUIDE.md#redaction) | Hiding tokens, cookies and body fields. Nothing is redacted until you select it |
 | [Traffic that needs code](docs/GUIDE.md#traffic-that-needs-code) | `NWConnection`, Starscream and Socket.IO |
+| [Protobuf decoding](docs/GUIDE.md#protobuf-decoding) | Showing binary protobuf as JSON, with rules in code or in a `traffic_map.json` file |
 | [When Cerebro runs](docs/GUIDE.md#when-cerebro-runs) | On in simulators and development-signed builds, off elsewhere unless you opt in |
 | [What changes while Cerebro captures](docs/GUIDE.md#what-changes-while-cerebro-captures) | Side effects on your app's requests |
 | [What Cerebro can't capture](docs/GUIDE.md#what-cerebro-cant-capture) | WKWebView, AVPlayer and other limits |

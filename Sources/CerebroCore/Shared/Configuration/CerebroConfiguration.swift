@@ -21,7 +21,7 @@ public struct CerebroConfiguration: Sendable {
     /// Whether shaking the device shows or hides the floating trigger.
     public var isShakeGestureEnabled: Bool
 
-    /// Decoders tried in order on each body. PLAN-03 registers the proto decoder here.
+    /// Decoders tried in order on each body. `registering(_:)` adds the proto decoder here.
     public var decoders: [any BodyDecoder]
 
     /// Creates a configuration. Every argument has a working default.

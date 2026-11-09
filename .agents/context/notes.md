@@ -25,6 +25,9 @@ These win over the spec, which is older.
 | Redacted headers | None by default. The developer selects `SensitiveHeader` cases, or names in `headers` | The owner's rule: Cerebro opts nothing out on its own. The spec has a fixed default list |
 | Unredactable bodies | With JSON keys configured, a JSON body that can't be parsed is withheld, form fields are redacted one by one, and other text that names a key is withheld | Stopping at the cap skips parsing, and redaction comes first |
 | Proto decoding | Stays at capture, and raw bytes are dropped when redaction changes the body | Undecoded bytes can't be redacted |
+| Undecoded protobuf | Withheld when JSON keys are configured, with or without a rule | The plan only named bodies over the cap, but no undecoded protobuf can be redacted |
+| Proto JSON keys | Proto field names, not lowerCamelCase | Redaction rules get written from the `.proto` file |
+| gRPC-web framing | With a 5-byte strip on a gRPC body, the header's length limits the message | A frame of trailers can follow it, and the plan's plain strip couldn't decode that |
 | Socket frames | Payloads use the stored-body cap | The spec caps frames by count only |
 | Socket store | Also capped at 100 connections and 100 times the body cap of payload in all, taking from the socket idle longest | A reconnecting socket would otherwise fill a fresh 1,000-frame timeline every time |
 | WebSocket open | Shown as Connecting at `resume`, and Opened at the first frame or pong | Only the app's delegate sees the handshake, and a refused upgrade must never look open |
