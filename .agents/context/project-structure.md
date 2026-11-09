@@ -27,13 +27,13 @@ Cerebro/
 ├── Example/                   # example app using the package by local path
 │   └── traffic_map.json       # proto mappings; PLAN-03 wires it to the build plugin
 ├── Sources/
-│   ├── CerebroCore/
-│   │   ├── Capture/           # URLProtocol, config injection, background delegate proxy,
-│   │   │                      # WebSocket hooks, MonitoredNWConnection, ExternalNetworkBridge
-│   │   ├── Pipeline/          # decompression, pretty JSON, redaction
-│   │   ├── Store/             # ring buffer, session persistence, export
-│   │   ├── Metrics/           # NWPathMonitor, getifaddrs, byte counting, public IP
-│   │   ├── Models/
+│   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
+│   │   ├── HTTP/              # URLProtocol, config injection, transaction model, builder and store;
+│   │   │                      # background delegate proxy, persistence and export in later plans
+│   │   ├── Socket/            # WebSocket hooks, MonitoredNWConnection, ExternalNetworkBridge,
+│   │   │                      # socket model, builder and store
+│   │   ├── Shared/            # used by both: body processing, redaction, ring buffer
+│   │   ├── Metrics/           # PLAN-04: NWPathMonitor, getifaddrs, public IP
 │   │   └── Configuration/
 │   ├── Cerebro/
 │   │   ├── Facade/            # Cerebro.start / stop / present
@@ -51,5 +51,7 @@ Cerebro/
     ├── CerebroProtoTests/
     └── CerebroProtoGeneratorTests/
 ```
+
+In `CerebroCore`, a file goes in `HTTP/` or `Socket/` if only that traffic uses it, and in `Shared/` if both do. Each of the three stays flat.
 
 An empty folder holds a `.gitkeep` so it gets committed. Delete that file when the folder gets real content.
