@@ -36,7 +36,8 @@ enum BackgroundSessionHooks {
             return session
         }
         method_setImplementation(method, imp_implementationWithBlock(hook))
-        installed.withLock { $0 = InstalledHook(method: method, original: original) }
+        let hookToRestore = InstalledHook(method: method, original: original)
+        installed.withLock { $0 = hookToRestore }
     }
 
     /// Only stops new sessions getting a proxy. A session's delegate can't be replaced, so existing ones
