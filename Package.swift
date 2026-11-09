@@ -14,7 +14,6 @@ let package = Package(
     products: [
         .library(name: "Cerebro", targets: ["Cerebro"]),
         .library(name: "CerebroProto", targets: ["CerebroProto"]),
-        .executable(name: "cerebro-proto-gen", targets: ["CerebroProtoGenerator"]),
         .plugin(name: "CerebroProtoPlugin", targets: ["CerebroProtoPlugin"]),
     ],
     dependencies: [

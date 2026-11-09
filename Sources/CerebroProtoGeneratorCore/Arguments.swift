@@ -31,7 +31,10 @@ struct Arguments: Equatable {
     /// Every `.pb.swift` file named directly or found under a folder.
     var generatedFiles: [String] {
         sources.flatMap { source -> [String] in
-            guard let files = FileManager.default.enumerator(atPath: source) else { return [source] }
+            var isFolder: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: source, isDirectory: &isFolder), isFolder.boolValue,
+                let files = FileManager.default.enumerator(atPath: source)
+            else { return [source] }
             return files.compactMap { $0 as? String }.filter { $0.hasSuffix(".pb.swift") }
                 .map { (source as NSString).appendingPathComponent($0) }
         }

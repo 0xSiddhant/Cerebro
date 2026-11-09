@@ -198,3 +198,48 @@ private let quoteRule = #"{"name":"Quote","match":{"host":"a.com"},"response":"m
 func badArgumentsFail(arguments: [String]) {
     #expect(throws: GeneratorError.usage(Arguments.usage)) { try Arguments(arguments) }
 }
+
+/// A temporary folder holding a map and one generated file, removed when the test ends.
+private func withFiles(map contents: String, _ body: (URL) throws -> Void) throws {
+    let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    try Data(contents.utf8).write(to: folder.appending(path: "traffic_map.json"))
+    try Data(generatedSource.utf8).write(to: folder.appending(path: "quote.pb.swift"))
+    try body(folder)
+}
+
+private func runGenerator(in folder: URL, source: String) throws -> String {
+    let output = folder.appending(path: "Rules.swift")
+    try ProtoRuleGenerator.run(arguments: [
+        "--map", folder.appending(path: "traffic_map.json").path,
+        "--output", output.path,
+        "--sources", source,
+    ])
+    return try String(contentsOf: output, encoding: .utf8)
+}
+
+@Test func aSingleGeneratedFileCanBeNamedDirectly() throws {
+    try withFiles(map: map(rules: quoteRule)) { folder in
+        let output = try runGenerator(in: folder, source: folder.appending(path: "quote.pb.swift").path)
+
+        #expect(output.contains("messageType: Market_V1_Quote.self"))
+    }
+}
+
+@Test func aFolderIsSearchedForGeneratedFiles() throws {
+    try withFiles(map: map(rules: quoteRule)) { folder in
+        let output = try runGenerator(in: folder, source: folder.path)
+
+        #expect(output.contains("messageType: Market_V1_Quote.self"))
+    }
+}
+
+@Test func anUnknownMessageFailsTheRunAndWritesNothing() throws {
+    try withFiles(map: map(rules: #"{"match":{"host":"a"},"response":"market.v1.Missing"}"#)) { folder in
+        #expect(throws: GeneratorError.unknownMessages(["market.v1.Missing"])) {
+            _ = try runGenerator(in: folder, source: folder.path)
+        }
+        #expect(!FileManager.default.fileExists(atPath: folder.appending(path: "Rules.swift").path))
+    }
+}
