@@ -50,10 +50,10 @@ struct ConsoleLogger: Sendable {
     private func body(_ title: String, _ body: CapturedBody?) -> String? {
         guard let body else { return nil }
         switch body.content {
-        case .complete(let data):
-            return "\(title):\n\(BodyFormatter.prettyJSON(data) ?? BodyFormatter.text(data))"
-        case .truncated(let data):
-            return "\(title) (truncated, \(body.byteCount) bytes in all):\n\(BodyFormatter.text(data))"
+        case .complete:
+            return "\(title):\n\(BodyFormatter.pretty(body))"
+        case .truncated:
+            return "\(title) (truncated, \(body.byteCount) bytes in all):\n\(BodyFormatter.raw(body))"
         case .withheld:
             return "\(title): withheld, because it couldn't be redacted"
         case .notStored:

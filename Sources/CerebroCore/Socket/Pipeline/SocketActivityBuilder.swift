@@ -30,7 +30,8 @@ struct SocketActivityBuilder: Sendable {
             url: URL(string: socket.name),
             method: "SOCKET",
             contentType: nil,
-            direction: frame.direction == .sent ? .request : .response
+            direction: frame.direction == .sent ? .request : .response,
+            carrier: frame.kind == .binary ? .binaryFrame : .textFrame
         )
         // A text frame can't carry app compression, and its first bytes can look like a zlib header.
         return processor.process(

@@ -8,6 +8,10 @@ struct BodyProcessor: Sendable {
         var isTruncated: Bool
         var compression: BodyCompression?
         var isDecompressed = false
+
+        /// The bytes a decoder started from, once one has succeeded.
+        var decodedFrom: Data?
+        var undecoded: CapturedBody.Undecoded?
     }
 
     let limit: Int
@@ -28,12 +32,16 @@ struct BodyProcessor: Sendable {
             decompress(raw, declared: declared, detectsCompression: detectsCompression),
             context: context
         )
+        let redaction = redact(working, context: context)
         return CapturedBody(
-            content: redact(working, context: context),
+            content: redaction.content,
             byteCount: raw.byteCount,
             compression: working.compression,
             isDecompressed: working.isDecompressed,
-            contentType: context.contentType
+            contentType: context.contentType,
+            isDecoded: working.decodedFrom != nil,
+            rawData: redaction.didChange ? nil : working.decodedFrom,
+            undecoded: working.undecoded
         )
     }
 
@@ -51,40 +59,57 @@ struct BodyProcessor: Sendable {
     }
 
     private func decode(_ body: Working, context: BodyContext) -> Working {
-        guard !body.isTruncated else { return body }
         var working = body
+        guard !body.isTruncated else {
+            working.undecoded = isClaimed(context) || context.isProtobuf ? .truncated : nil
+            return working
+        }
         for decoder in decoders {
             if let decoded = decoder.decode(body.data, context: context) {
                 working.data = decoded
-                break
+                working.decodedFrom = body.data
+                return working
             }
+        }
+        if isClaimed(context) {
+            working.undecoded = .failed
+        } else if context.isProtobuf {
+            working.undecoded = .noRule
         }
         return working
     }
 
+    private func isClaimed(_ context: BodyContext) -> Bool {
+        decoders.contains { $0.claims(context) }
+    }
+
     /// Redaction beats every shortcut: a body that can't be redacted isn't stored at all.
-    private func redact(_ body: Working, context: BodyContext) -> CapturedBody.Content {
+    private func redact(_ body: Working, context: BodyContext) -> (content: CapturedBody.Content, didChange: Bool) {
         let stored: CapturedBody.Content = body.isTruncated ? .truncated(body.data) : .complete(body.data)
-        guard redactor.redactsJSON else { return stored }
+        guard redactor.redactsJSON else { return (stored, false) }
+        // Protobuf that wasn't decoded has no keys to find, so it can't be redacted.
+        if body.undecoded != nil {
+            return (.withheld, true)
+        }
         // JSON comes first, so JSON sent under a form content type is still redacted by key.
-        if looksLikeJSON(body.data, contentType: context.contentType) {
+        if body.decodedFrom != nil || looksLikeJSON(body.data, contentType: context.contentType) {
             return redactedJSON(body)
         }
         if isFormEncoded(context.contentType) {
-            return body.isTruncated ? .withheld : .complete(redactor.redact(form: body.data))
+            return (body.isTruncated ? .withheld : .complete(redactor.redact(form: body.data)), true)
         }
-        return redactor.mentionsJSONKey(in: body.data, isTruncated: body.isTruncated) ? .withheld : stored
+        return (redactor.mentionsJSONKey(in: body.data, isTruncated: body.isTruncated) ? .withheld : stored, false)
     }
 
-    private func redactedJSON(_ body: Working) -> CapturedBody.Content {
+    private func redactedJSON(_ body: Working) -> (content: CapturedBody.Content, didChange: Bool) {
         guard !body.isTruncated,
             let object = try? JSONSerialization.jsonObject(with: body.data, options: .fragmentsAllowed),
             let redacted = try? JSONSerialization.data(
                 withJSONObject: redactor.redact(json: object),
                 options: .fragmentsAllowed
             )
-        else { return .withheld }
-        return .complete(redacted)
+        else { return (.withheld, true) }
+        return (.complete(redacted), redactor.redactsAnything(in: object))
     }
 
     private func looksLikeJSON(_ data: Data, contentType: String?) -> Bool {
