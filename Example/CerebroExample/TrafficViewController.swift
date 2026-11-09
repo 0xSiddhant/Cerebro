@@ -20,7 +20,7 @@ final class TrafficViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
-        TrafficSample.allCases.forEach(run)
+        TrafficSample.allCases.filter { $0 != .mockUpload }.forEach(run)
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -33,7 +33,7 @@ final class TrafficViewController: UITableViewController {
 
         var content = UIListContentConfiguration.subtitleCell()
         content.text = sample.title
-        content.secondaryText = results[sample]
+        content.secondaryText = results[sample] ?? (sample == .mockUpload ? "Tap to upload sample JSON" : nil)
         cell.contentConfiguration = content
         return cell
     }

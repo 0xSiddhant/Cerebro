@@ -45,7 +45,7 @@ Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (C
 | `NWConnection` | `MonitoredNWConnection` wrapper | Create the wrapper instead of `NWConnection` |
 | Starscream, Socket.IO, others | `ExternalNetworkBridge` | One call per frame or event |
 
-WKWebView, AVPlayer streams and gRPC over SwiftNIO are out of reach, and the README says so.
+WKWebView, AVPlayer streams and gRPC over SwiftNIO are out of reach, and `docs/GUIDE.md` says so.
 
 ## Performance
 

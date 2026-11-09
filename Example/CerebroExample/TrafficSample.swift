@@ -12,6 +12,10 @@ enum TrafficSample: CaseIterable, Sendable {
     case mockSlowFlights
     case mockUnauthorized
     case mockEcho
+    case mockUpload
+    case mockPut
+    case mockPatch
+    case mockDelete
     case redaction
     case webSocket
     case nwConnection
@@ -31,6 +35,10 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockSlowFlights: "Mock API: slow flights"
         case .mockUnauthorized: "Mock API: unauthorized"
         case .mockEcho: "Mock API: POST echo"
+        case .mockUpload: "Mock API: upload JSON"
+        case .mockPut: "Mock API: PUT blackhole"
+        case .mockPatch: "Mock API: PATCH blackhole"
+        case .mockDelete: "Mock API: DELETE blackhole"
         case .redaction: "Redaction"
         case .webSocket: "URLSessionWebSocketTask"
         case .nwConnection: "NWConnection"
@@ -49,7 +57,9 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockStocks: "\(Self.mockAPI)/api/v1/stocks"
         case .mockSlowFlights: "\(Self.mockAPI)/api/v1/flights?delay=1500"
         case .mockUnauthorized: "\(Self.mockAPI)/api/v1/flights?status=401"
-        case .mockEcho, .redaction, .webSocket, .nwConnection, .externalBridge, .protobuf: ""
+        case .mockEcho, .mockUpload, .mockPut, .mockPatch, .mockDelete, .redaction, .webSocket, .nwConnection,
+            .externalBridge, .protobuf:
+            ""
         }
     }
 
@@ -60,6 +70,8 @@ enum TrafficSample: CaseIterable, Sendable {
             try await sendRequest(to: address, through: Self.session)
         case .sharedSession: try await sendRequest(to: address, through: .shared)
         case .mockEcho: try await postToMockEcho()
+        case .mockUpload: try await uploadMockJSON()
+        case .mockPut, .mockPatch, .mockDelete: try await sendBlackholeRequest()
         case .redaction: try await postFakeSecrets()
         case .webSocket: try await exchangeWebSocketMessage()
         case .nwConnection: try await NWConnectionExchange().run()
@@ -82,6 +94,63 @@ enum TrafficSample: CaseIterable, Sendable {
         )
     }
 
+    private func uploadMockJSON() async throws -> String {
+        var request = URLRequest(url: try Self.url("\(Self.mockAPI)/upload"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try sampleJSON()
+
+        let (data, response) = try await Self.session.data(for: request)
+        guard let response = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        guard response.statusCode == 201 else {
+            throw MockAPIError.httpStatus(method: "POST", statusCode: response.statusCode)
+        }
+
+        let result = try JSONDecoder().decode(MockUploadResponse.self, from: data)
+        guard result.success else {
+            throw URLError(.badServerResponse)
+        }
+        return "Mock URL: \(result.data.url)"
+    }
+
+    /// The HTTP method and accepted statuses of the blackhole samples, and `nil` for every other sample.
+    private var blackholeRequest: (method: String, acceptedStatusCodes: Set<Int>)? {
+        switch self {
+        case .mockPut: ("PUT", [200, 201, 204])
+        case .mockPatch: ("PATCH", [200, 204])
+        case .mockDelete: ("DELETE", [200, 202, 204])
+        default: nil
+        }
+    }
+
+    private func sendBlackholeRequest() async throws -> String {
+        guard let (method, acceptedStatusCodes) = blackholeRequest else {
+            throw URLError(.unsupportedURL)
+        }
+        var request = URLRequest(url: try Self.url("\(Self.mockAPI)/blackhole"))
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try sampleJSON()
+
+        let (_, response) = try await Self.session.data(for: request)
+        guard let response = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        guard acceptedStatusCodes.contains(response.statusCode) else {
+            throw MockAPIError.httpStatus(method: method, statusCode: response.statusCode)
+        }
+        return Self.summary(of: response)
+    }
+
+    private func sampleJSON() throws -> Data {
+        guard let fileURL = Bundle.main.url(forResource: "mock-request", withExtension: "json") else {
+            throw URLError(.fileDoesNotExist)
+        }
+        return try Data(contentsOf: fileURL)
+    }
+
     /// Sends a fake secret everywhere the rules in `AppDelegate` look: headers, a query parameter and a
     /// JSON body, at the top level and nested. Open this request in the dashboard to see each one redacted.
     ///
@@ -99,6 +168,25 @@ enum TrafficSample: CaseIterable, Sendable {
             ],
             to: "https://httpbin.org/status/200?token=\(secret)&page=1"
         )
+    }
+
+    private struct MockUploadResponse: Decodable {
+        let success: Bool
+        let data: MockUploadResult
+    }
+
+    private struct MockUploadResult: Decodable {
+        let url: URL
+    }
+
+    private enum MockAPIError: LocalizedError {
+        case httpStatus(method: String, statusCode: Int)
+
+        var errorDescription: String? {
+            switch self {
+            case .httpStatus(let method, let statusCode): "Mock API \(method) failed with HTTP \(statusCode)"
+            }
+        }
     }
 
     private func post(

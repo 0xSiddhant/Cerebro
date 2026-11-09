@@ -1,0 +1,5 @@
+{
+  "name": "Cerebro mock request",
+  "message": "Sent from the Example app",
+  "items": ["HTTP", "WebSocket", "NWConnection"]
+}

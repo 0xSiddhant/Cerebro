@@ -80,6 +80,10 @@ Redaction runs before storage, so exports never hold a raw value. Export still s
 - [ ] System Info tab: connection status and type, interfaces and IPs, connection quality, session byte totals, with batched updates
 - [ ] Share from the Log Inspector through the share sheet, with the warning first
 
+**Documentation**
+- [ ] Update `README.md` feature summary and link to the guide
+- [ ] Update `docs/GUIDE.md` with System Info fields, public-IP opt-in behavior, download metadata, and cURL/JSON/HAR export instructions
+
 **Packaging**
 - [ ] Add the new system frameworks to the `Core` subspec, and update `CerebroCore`'s dependencies in `.agents/context/architecture.md`
 
@@ -94,7 +98,8 @@ Redaction runs before storage, so exports never hold a raw value. Export still s
 7. A redacted value never appears in any export.
 8. Every export shows a warning before sharing.
 9. Live download progress and totals update in batches, and a large export doesn't block the main thread.
-10. The `build-and-test` skill passes in all channels.
+10. The README and guide accurately describe the System Info tab, opt-in lookup, and export behavior.
+11. The `build-and-test` skill passes in all channels.
 
 ## Test checklist
 

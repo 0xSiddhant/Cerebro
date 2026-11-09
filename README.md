@@ -1,121 +1,160 @@
 # Cerebro
 
-A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in an in-app dashboard, including compressed and protobuf payloads. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
+[![CI](https://github.com/0xSiddhant/Cerebro/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/0xSiddhant/Cerebro/actions/workflows/ci.yml)
+[![Release](https://github.com/0xSiddhant/Cerebro/actions/workflows/release.yml/badge.svg)](https://github.com/0xSiddhant/Cerebro/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/0xSiddhant/Cerebro?sort=semver)](https://github.com/0xSiddhant/Cerebro/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/0xSiddhant/Cerebro)](LICENSE)
+[![iOS 16+](https://img.shields.io/badge/iOS-16%2B-000000?logo=apple&logoColor=white)](#requirements)
+[![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white)](Package.swift)
+[![SPM compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)](#swift-package-manager)
+[![CocoaPods via Git](https://img.shields.io/badge/CocoaPods-via%20Git-EE3322)](#cocoapods)
 
-**Status:** early development. HTTP, WebSocket and NWConnection capture and the dashboard work today. Protobuf decoding, system info and background sessions arrive in the coming releases.
+A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
 
-## Requirements
+**Status:** early development. HTTP, WebSocket and NWConnection capture and the dashboard work today.
 
-iOS 16+ and Swift 5.9 or later.
+## Screenshots
 
-## Installation
+<table>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/http-list.png" width="180" alt="The HTTP list with a search field, status filters and one row per request"><br><sub>HTTP list</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/inspector-response.png" width="180" alt="The Log Inspector's Response page with the summary, a body preview and the response headers"><br><sub>Log Inspector: Response</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/inspector-request.png" width="180" alt="The Log Inspector's Request page with the URL, method, body, query and headers"><br><sub>Log Inspector: Request</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/inspector-metrics.png" width="180" alt="The Log Inspector's Metrics page with timing bars for DNS, Connect, TLS and first byte, and body sizes"><br><sub>Log Inspector: Metrics</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/body-viewer.png" width="180" alt="The Body Viewer showing a JSON response, pretty-printed, with copy and share buttons"><br><sub>Body Viewer</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/sockets-list.png" width="180" alt="The Sockets list with one NWConnection, one WebSocket and one external socket"><br><sub>Sockets</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/socket-timeline.png" width="180" alt="A WebSocket timeline with sent and received frames, ping, pong and close events"><br><sub>Socket timeline</sub></td>
+  </tr>
+</table>
 
-Pick one of these three options. Each [GitHub Release](https://github.com/0xSiddhant/Cerebro/releases) lists the exact lines for that version, so replace `1.2.4` below with the version you want.
+The [Example](Example) app produced these, and it's a quick way to try Cerebro: open `Example/CerebroExample.xcodeproj` and run it on a simulator.
 
-### 1. Swift Package Manager
+## Getting started
+
+### Requirements
+
+iOS or iPadOS 16+ and Swift 5.9 or later. CI builds with Xcode 26. Cerebro needs no permissions and no `Info.plist` keys.
+
+### 1. Install
+
+Pick one of these three options. They all need the same code.
+
+#### Swift Package Manager
+
+In Xcode:
+
+1. Choose **File > Add Package Dependencies**.
+2. Enter `https://github.com/0xSiddhant/Cerebro.git`.
+3. Set **Dependency Rule** to **Exact Version**, using the [latest release](https://github.com/0xSiddhant/Cerebro/releases/latest) number.
+4. Add the **Cerebro** product to your app target. Leave `CerebroProto` set to **None**, because it's a placeholder until protobuf decoding ships.
+
+In a `Package.swift`, with `X.Y.Z` as the [latest release](https://github.com/0xSiddhant/Cerebro/releases/latest):
 
 ```swift
-.package(url: "https://github.com/0xSiddhant/Cerebro.git", exact: "1.2.4")
+.package(url: "https://github.com/0xSiddhant/Cerebro.git", exact: "X.Y.Z"),
 ```
 
-Link the `Cerebro` product. Link `CerebroProto` too if you decode protobuf.
+```swift
+.target(name: "MyApp", dependencies: [.product(name: "Cerebro", package: "Cerebro")]),
+```
 
-### 2. CocoaPods
+SPM also downloads `swift-protobuf`, because the package declares it. Only `CerebroProto` links it.
 
-Cerebro is consumed from Git and is never published to CocoaPods trunk.
+#### CocoaPods
+
+Cerebro comes from Git and is never published to CocoaPods trunk, so a bare `pod 'Cerebro'` fails. Always include `:git`.
 
 ```ruby
-pod 'Cerebro', :git => 'https://github.com/0xSiddhant/Cerebro.git', :tag => 'v1.2.4'
+platform :ios, '16.0'
+
+target 'MyApp' do
+  pod 'Cerebro', :git => 'https://github.com/0xSiddhant/Cerebro.git', :tag => 'vX.Y.Z'
+end
 ```
 
-To decode protobuf, add `pod 'Cerebro/Proto'` the same way. A Pod is one module, so `ProtoRule` comes from `import Cerebro`, and there is no `import CerebroProto`.
+Replace `X.Y.Z` with the [latest release](https://github.com/0xSiddhant/Cerebro/releases/latest), then run `pod install` and open the `.xcworkspace`. Pod tags start with `v`, and SPM versions don't.
 
-### 3. XCFramework
+#### XCFramework
 
-1. Download `Cerebro.xcframework.zip` from a GitHub Release and unzip it.
-2. Add `Cerebro.xcframework` to your app target and set it to **Embed & Sign**.
+1. Download [`Cerebro.xcframework.zip`](https://github.com/0xSiddhant/Cerebro/releases/latest/download/Cerebro.xcframework.zip) from the latest release and unzip it.
+2. Drag `Cerebro.xcframework` into your project and tick your app target.
+3. In the target's **General > Frameworks, Libraries, and Embedded Content**, set it to **Embed & Sign**. It's a dynamic framework, so without this the app crashes at launch with `Library not loaded: @rpath/Cerebro.framework/Cerebro`.
 
-To decode protobuf, add `CerebroProto.xcframework` and `SwiftProtobuf.xcframework` the same way. Use this bundled SwiftProtobuf rather than one from SPM or Pods, because your generated `.pb.swift` types must conform to the same module `CerebroProto` was compiled against.
+Capture only needs that one zip. Leave out `CerebroProto.xcframework` and `SwiftProtobuf.xcframework` until protobuf decoding ships. The release zips are built with Xcode 26, the only version CI tests, so use that or later.
 
-## Usage
+### 2. Start Cerebro
+
+Add one line as early as you can. Capture is added to a session's configuration when that configuration is created, so **a session or configuration made before `Cerebro.start()` isn't captured**. `URLSession.shared` is the one exception, because Cerebro reaches it another way.
+
+UIKit:
 
 ```swift
 import Cerebro
+import UIKit
 
-Cerebro.start()
+@main
+final class AppDelegate: UIResponder, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        Cerebro.start()
+        return true
+    }
+}
 ```
 
-Call it as early as you can, because sessions created before it aren't captured. No other change is needed for HTTP traffic, including `URLSession.shared`, or for `URLSessionWebSocketTask`.
-
-Tap the floating button to open the dashboard, and shake the device to hide or show the button. The number on it counts the requests since you last opened the dashboard. To open the dashboard from your own debug menu, call `Cerebro.present()`. `Cerebro.stop()` ends capture and removes the dashboard.
-
-In the dashboard, a request's page has Copy cURL and Share buttons at the top. In the list, swipe a request to copy its cURL, or long-press it for the same options. A body has its own copy and share buttons. Redacted values stay as placeholders, and Cerebro warns you before anything is shared.
-
-Cerebro runs on simulators and in development-signed builds. It stays off in Ad Hoc, TestFlight and App Store builds unless you set `allowsDistributionBuilds`.
-
-### Settings
-
-Every setting is optional.
+SwiftUI:
 
 ```swift
-Cerebro.start(CerebroConfiguration(
-    consoleLevel: .full,
-    redaction: RedactionRules(jsonKeys: ["password"])
-))
+import Cerebro
+import SwiftUI
+
+@main
+struct MyApp: App {
+    init() {
+        Cerebro.start()
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
 ```
 
-| Setting | Default | What it does |
-|---|---|---|
-| `allowsDistributionBuilds` | `false` | Runs capture in distribution-signed builds too |
-| `consoleLevel` | `.summary` | `.off`, one line per request, or `.full` with headers and bodies |
-| `requestLimit` | `500` | Requests kept. The oldest is dropped first |
-| `bodyLimit` | 1 MB | Bytes stored for each request or response body. Longer bodies are marked as truncated |
-| `socketFrameLimit` | `1000` | Frames and events kept for each socket. The oldest is dropped first |
-| `redaction` | Nothing extra | Extra header names, JSON keys and query parameters to redact |
-| `isShakeGestureEnabled` | `true` | Whether a shake shows or hides the button |
+Stored properties run first. If your `AppDelegate` or `App` has something like `let api = APIClient()`, that client exists before either method above runs, so create it after `Cerebro.start()` instead.
 
-`Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie` are always redacted before anything is stored. Setting `jsonKeys` makes Cerebro parse JSON bodies at capture, and a JSON body it can't parse is withheld rather than stored unredacted.
+That one line is all most apps need. HTTP traffic and `URLSessionWebSocketTask` are captured from here on.
 
-### Other sockets
+### 3. Open the dashboard
 
-iOS gives Cerebro no way to see these by itself, so each needs a small change. Skipping it only means that traffic isn't shown.
+| Way | What it does |
+|---|---|
+| Floating button | Tap it to open the dashboard. Drag it to move it. Its number counts the requests since you last opened the dashboard |
+| Shake | Hides or shows the floating button. It doesn't open the dashboard. In the simulator, use **Device > Shake** |
+| `Cerebro.present()` | Opens the dashboard from your own debug menu or gesture. It does nothing while Cerebro is off |
+| Close button | Top left of the dashboard. It returns you to your app |
 
-Create a `MonitoredNWConnection` instead of an `NWConnection`. It has the same methods, and only forwards to the real connection while Cerebro is off.
+`Cerebro.stop()` ends capture, removes the dashboard and discards what was captured. A later `Cerebro.start()` begins again with nothing.
 
-```swift
-let connection = MonitoredNWConnection(host: "example.com", port: .https, using: .tls)
-```
+## Learn more
 
-For engines like Starscream or Socket.IO, make one call per frame or event:
+The [guide](docs/GUIDE.md) covers everything past setup:
 
-```swift
-let socket = ExternalNetworkBridge.Connection(name: "Prices", url: url)
-
-ExternalNetworkBridge.log(.opened, on: socket)
-ExternalNetworkBridge.log(.text(message), .sent, on: socket)
-ExternalNetworkBridge.log(.binary(data), .received, on: socket)
-ExternalNetworkBridge.log(.closed(code: 1000, reason: "done"), on: socket)
-```
-
-## What changes while Cerebro captures
-
-Cerebro sends each request through its own session, which has these side effects in builds where it runs:
-
-- Settings on your `URLSessionConfiguration` other than headers don't apply, such as timeouts, cellular access and cookie handling.
-- The `urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)` upload progress callback doesn't fire.
-- HTTP Basic, Digest and NTLM logins answered by a session delegate aren't answered, so your app receives the 401.
-- A redirect your session delegate refuses arrives about 500 ms later. Followed redirects aren't delayed.
-
-Certificate pinning and client certificates keep working, because those challenges still reach your delegate.
-
-Cerebro keeps both the request and response body of up to 500 requests, so it can hold about 1 GB at worst. Lower `requestLimit` or `bodyLimit` if your app moves many large bodies. Sockets are capped separately: 100 connections and 100 times `bodyLimit` of payload (100 MB by default), and the socket idle longest goes first.
-
-## What Cerebro can't capture
-
-- WKWebView traffic
-- AVPlayer streams
-- gRPC over SwiftNIO
-- Sockets not routed through `MonitoredNWConnection` or `ExternalNetworkBridge`
+| Topic | What's there |
+|---|---|
+| [Features](docs/GUIDE.md#features) | What Cerebro captures and what the dashboard shows |
+| [Configuration](docs/GUIDE.md#configuration) | Every setting and its default |
+| [Redaction](docs/GUIDE.md#redaction) | Hiding tokens, cookies and body fields. Nothing is redacted until you select it |
+| [Traffic that needs code](docs/GUIDE.md#traffic-that-needs-code) | `NWConnection`, Starscream and Socket.IO |
+| [When Cerebro runs](docs/GUIDE.md#when-cerebro-runs) | On in simulators and development-signed builds, off elsewhere unless you opt in |
+| [What changes while Cerebro captures](docs/GUIDE.md#what-changes-while-cerebro-captures) | Side effects on your app's requests |
+| [What Cerebro can't capture](docs/GUIDE.md#what-cerebro-cant-capture) | WKWebView, AVPlayer and other limits |
+| [Troubleshooting](docs/GUIDE.md#troubleshooting) | Common problems and fixes |
 
 ## License
 

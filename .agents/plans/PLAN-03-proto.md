@@ -138,7 +138,7 @@ They pass their rules to `Cerebro.start`, as the spec says. Finding generated ru
 - [ ] Keep the binary in the pod for a Run Script phase
 - [ ] Attach the binary to each GitHub Release in `release.yml`
 - [ ] Pass `-skipPackagePluginValidation` in CI
-- [ ] README instructions for both the plugin and the Run Script phase
+- [ ] README instructions for both the SPM plugin and the CocoaPods/XCFramework Run Script phase
 
 **Example**
 - [ ] Add a generated `.pb.swift` message, since the generator resolves names by scanning `.pb.swift` files
@@ -148,6 +148,10 @@ They pass their rules to `Cerebro.start`, as the spec says. Finding generated ru
 - [ ] Collapsible JSON tree in the Log Inspector, built when a request is opened
 - [ ] Proto Config tab: active mappings, URL matcher → message type, with their source and match counts
 - [ ] Hide the tab when no proto decoder is registered
+
+**Documentation**
+- [ ] Update `README.md` to summarize protobuf decoding and link to the guide
+- [ ] Update `docs/GUIDE.md` with rule configuration, generator setup, decoder behavior, and Proto Config tab details
 
 **Console**
 - [ ] Decoded proto appears, pretty-printed, when logging is set to full
@@ -168,7 +172,8 @@ They pass their rules to `Cerebro.start`, as the spec says. Finding generated ru
 12. Proto decoding never delays a request or a frame, and never runs on the main thread.
 13. A body over the stored-body cap isn't decoded, and shows as truncated hex, or as withheld when JSON keys are configured.
 14. A redacted value can't be recovered from a decoded body's hex view.
-15. The `build-and-test` skill passes in all channels.
+15. The README and guide describe the protobuf setup and user-facing behavior accurately.
+16. The `build-and-test` skill passes in all channels.
 
 ## Test checklist
 
@@ -188,4 +193,3 @@ They pass their rules to `Cerebro.start`, as the spec says. Finding generated ru
 **Manual**
 - [ ] Tree interaction and the Proto Config tab
 - [ ] Run Script phase in a Pod-based and an XCFramework-based app
-
