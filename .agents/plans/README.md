@@ -15,6 +15,7 @@ Each plan follows the same format: goal → gate → scope → decisions & reaso
 | 04 | [System info and export](PLAN-04-system-info.md) | `plan/4-system-info` | PLAN-03 merged |
 | 05 | [Background sessions, persistence and 1.0](PLAN-05-background-and-1.0.md) | `plan/5-background-and-1.0` | PLAN-04 merged |
 | 06 | [Server-Sent Events capture and live inspection](PLAN-06-sse.md) | `plan/6-sse` | PLAN-05 merged and `v1.0.0` released |
+| 07 | [Background transfer metrics](PLAN-07-background-metrics.md) | `plan/7-background-metrics` | PLAN-04 merged and the plan's open question 1 settled |
 | 99 | [Response mocking and replay](PLAN-99-mocking-and-replay.md) | Named when scheduled | Reference only: after 1.0, pulled into a new numbered plan when scheduled |
 
 A plan's file is deleted in the PR that finishes it, and its row here gets a ✅. After that the code and `context/notes.md` carry what matters.
