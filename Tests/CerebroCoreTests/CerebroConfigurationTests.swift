@@ -10,6 +10,9 @@ import Testing
     #expect(configuration.requestLimit == 500)
     #expect(configuration.bodyLimit == 1_048_576)
     #expect(configuration.isShakeGestureEnabled)
+    #expect(configuration.redaction.sensitiveHeaders.isEmpty)
+    #expect(configuration.redaction.headers.isEmpty)
     #expect(configuration.redaction.jsonKeys.isEmpty)
+    #expect(configuration.redaction.queryParameters.isEmpty)
     #expect(configuration.decoders.isEmpty)
 }

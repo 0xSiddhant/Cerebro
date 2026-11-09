@@ -15,7 +15,7 @@ public struct CerebroConfiguration: Sendable {
     /// How many frames and events are kept for each socket. The oldest is dropped first.
     public var socketFrameLimit: Int
 
-    /// What to redact on top of the default headers.
+    /// What to redact. Nothing is redacted until it's selected here.
     public var redaction: RedactionRules
 
     /// Whether shaking the device shows or hides the floating trigger.

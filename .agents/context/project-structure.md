@@ -28,14 +28,23 @@ Cerebro/
 ├── Example/                   # example app using the package by local path
 │   └── traffic_map.json       # proto mappings; PLAN-03 wires it to the build plugin
 ├── Sources/
-│   ├── CerebroCore/
-│   │   ├── Capture/           # URLProtocol, config injection, background delegate proxy,
-│   │   │                      # WebSocket hooks, MonitoredNWConnection, ExternalNetworkBridge
-│   │   ├── Pipeline/          # decompression, pretty JSON, redaction
-│   │   ├── Store/             # ring buffer, session persistence, export
-│   │   ├── Metrics/           # NWPathMonitor, getifaddrs, byte counting, public IP
-│   │   ├── Models/
-│   │   └── Configuration/
+│   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
+│   │   ├── HTTP/
+│   │   │   ├── Capture/       # URLProtocol, config injection; background delegate proxy in PLAN-05
+│   │   │   ├── Pipeline/      # raw exchange, transaction builder, console logger
+│   │   │   ├── Store/         # transaction store, cURL; persistence and export in later plans
+│   │   │   └── Models/        # transaction model and its metrics
+│   │   ├── Socket/
+│   │   │   ├── Capture/       # WebSocket hooks, MonitoredNWConnection, ExternalNetworkBridge
+│   │   │   ├── Pipeline/      # raw activity, activity builder
+│   │   │   ├── Store/         # socket store
+│   │   │   └── Models/        # socket connection model
+│   │   ├── Shared/            # used by both
+│   │   │   ├── Pipeline/      # body processing, decompression, redaction
+│   │   │   ├── Store/         # ring buffer, snapshot observers
+│   │   │   ├── Models/        # captured body, named value
+│   │   │   └── Configuration/ # CerebroConfiguration, redaction rules, release gate
+│   │   └── Metrics/           # PLAN-04: NWPathMonitor, getifaddrs, public IP
 │   ├── Cerebro/
 │   │   ├── Facade/            # Cerebro.start / stop / present
 │   │   ├── Triggers/          # shake hook, floating trigger, PassthroughWindow, DashboardWindowManager
@@ -52,5 +61,7 @@ Cerebro/
     ├── CerebroProtoTests/
     └── CerebroProtoGeneratorTests/
 ```
+
+In `CerebroCore`, a file goes in `HTTP/` or `Socket/` if only that traffic uses it, and in `Shared/` if both do. Inside those, it goes in the subfolder for its layer: `Capture/`, `Pipeline/`, `Store/` or `Models/`.
 
 An empty folder holds a `.gitkeep` so it gets committed. Delete that file when the folder gets real content.

@@ -1,6 +1,6 @@
 import Foundation
 
-/// A captured request as a cURL command. Redaction ran before storage, so it never holds a raw value.
+/// A captured request as a cURL command. Redaction ran before storage, so it never holds a redacted value.
 public struct CurlCommand: Sendable, Equatable {
     /// How a body reaches `curl`.
     private struct Payload {

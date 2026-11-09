@@ -139,7 +139,12 @@ extension CaptureTests {
         @Test func secretsNeverReachTheStore() async throws {
             let configuration = CerebroConfiguration(
                 consoleLevel: .off,
-                redaction: RedactionRules(headers: ["X-Api-Key"], jsonKeys: ["password"], queryParameters: ["token"])
+                redaction: RedactionRules(
+                    sensitiveHeaders: Set(SensitiveHeader.allCases),
+                    headers: ["X-App-Session"],
+                    jsonKeys: ["password"],
+                    queryParameters: ["token"]
+                )
             )
             let handler: @Sendable (LocalHTTPServer.Request) -> LocalHTTPServer.Response = { _ in
                 LocalHTTPServer.Response(
@@ -152,12 +157,58 @@ extension CaptureTests {
                     url: harness.url("/login").appending(queryItems: [.init(name: "token", value: "secret")]))
                 request.setValue("Bearer secret", forHTTPHeaderField: "Authorization")
                 request.setValue("secret", forHTTPHeaderField: "X-Api-Key")
+                request.setValue("secret", forHTTPHeaderField: "X-App-Session")
 
                 _ = try await URLSession(configuration: .default).data(for: request)
 
                 #expect(harness.server.requests.first?.header("Authorization") == "Bearer secret")
                 let stored = String(describing: try await harness.transaction())
                 #expect(!stored.contains("secret"))
+            }
+        }
+
+        /// `CerebroConfiguration()` is what a plain `Cerebro.start()` runs with.
+        @Test func aPlainStartStoresCredentialHeadersAsSent() async throws {
+            var configuration = CerebroConfiguration()
+            configuration.consoleLevel = .off
+            let handler: CaptureHarness.Handler = { _ in
+                LocalHTTPServer.Response(headers: ["Set-Cookie": "session=from-server"], body: Data("hello".utf8))
+            }
+            try await withCapture(configuration, handler: handler) { harness in
+                var request = URLRequest(url: harness.url("/login"))
+                request.setValue("Bearer sent", forHTTPHeaderField: "Authorization")
+                request.setValue("Basic sent", forHTTPHeaderField: "Proxy-Authorization")
+                request.setValue("session=sent", forHTTPHeaderField: "Cookie")
+
+                _ = try await URLSession(configuration: .ephemeral).data(for: request)
+
+                let transaction = try await harness.transaction()
+                let sent = transaction.request.headers
+                #expect(sent.first { $0.name == "Authorization" }?.value == "Bearer sent")
+                #expect(sent.first { $0.name == "Proxy-Authorization" }?.value == "Basic sent")
+                #expect(sent.first { $0.name == "Cookie" }?.value == "session=sent")
+                let received = transaction.response?.headers ?? []
+                #expect(received.first { $0.name.lowercased() == "set-cookie" }?.value == "session=from-server")
+            }
+        }
+
+        @Test func aFormBodyWithNoContentTypeIsNotStoredInTheClear() async throws {
+            let configuration = CerebroConfiguration(
+                consoleLevel: .off,
+                redaction: RedactionRules(jsonKeys: ["password"])
+            )
+            try await withCapture(configuration) { harness in
+                var request = URLRequest(url: harness.url("/login"))
+                request.httpMethod = "POST"
+                request.httpBody = Data("user=ada&password=secret".utf8)
+
+                _ = try await URLSession(configuration: .default).data(for: request)
+
+                // URLSession adds this header after capture, so the pipeline never sees a content type.
+                #expect(harness.server.requests.first?.header("Content-Type") == "application/x-www-form-urlencoded")
+                let captured = try await harness.transaction().request
+                #expect(!captured.headers.contains { $0.name.lowercased() == "content-type" })
+                #expect(captured.body?.content == .withheld)
             }
         }
     }
