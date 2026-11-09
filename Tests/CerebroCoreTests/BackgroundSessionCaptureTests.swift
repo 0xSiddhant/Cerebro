@@ -3,74 +3,6 @@ import ObjectiveC
 import Testing
 @testable import CerebroCore
 
-/// Stands in for the app's delegate, and remembers what reached it.
-private final class SpyDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
-    private let lock = NSLock()
-    private var names: [String] = []
-
-    var calls: [String] {
-        lock.withLock { names }
-    }
-
-    private func note(_ name: String) {
-        lock.withLock { names.append(name) }
-    }
-
-    func urlSession(
-        _ session: URLSession,
-        downloadTask: URLSessionDownloadTask,
-        didFinishDownloadingTo location: URL
-    ) {
-        note("file:\(FileManager.default.fileExists(atPath: location.path))")
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
-        note("metrics")
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
-        note("complete")
-    }
-}
-
-/// Implements a callback without declaring the protocol, which Objective-C delegates can do.
-private final class UndeclaredDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
-    private let lock = NSLock()
-    private var count = 0
-
-    var completions: Int {
-        lock.withLock { count }
-    }
-
-    @objc(URLSession:task:didCompleteWithError:)
-    func finished(_ session: URLSession, task: URLSessionTask, error: (any Error)?) {
-        lock.withLock { count += 1 }
-    }
-}
-
-/// Runs a request and keeps its real task and metrics, because neither can be made by hand.
-private final class Recorder: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
-    private let lock = NSLock()
-    private var collected: URLSessionTaskMetrics?
-    private var continuation: CheckedContinuation<URLSessionTaskMetrics?, Never>?
-
-    func run(_ task: URLSessionTask) async -> URLSessionTaskMetrics? {
-        await withCheckedContinuation { continuation in
-            lock.withLock { self.continuation = continuation }
-            task.resume()
-        }
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
-        lock.withLock { collected = metrics }
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
-        let (metrics, continuation) = lock.withLock { (collected, self.continuation) }
-        continuation?.resume(returning: metrics)
-    }
-}
-
 private func until(_ condition: () -> Bool) async throws {
     for _ in 0..<1_500 where !condition() {
         try await Task.sleep(for: .milliseconds(10))
@@ -85,7 +17,7 @@ private func letAnyDuplicateArrive() async throws {
 private func proxied(_ configuration: URLSessionConfiguration, delegate: AnyObject?) -> URLSession {
     URLSession(
         configuration: configuration,
-        delegate: BackgroundSessionProxy(appDelegate: delegate),
+        delegate: BackgroundSessionProxy(target: delegate),
         delegateQueue: nil
     )
 }
@@ -226,12 +158,12 @@ extension CaptureTests {
         func metricsAndCompletionMakeOneRowInEitherOrder(order: String) async throws {
             let configuration = URLSessionConfiguration.ephemeral
             try await withCapture { harness in
-                let recorder = Recorder()
+                let recorder = TransferRecorder()
                 let session = URLSession(configuration: configuration, delegate: recorder, delegateQueue: nil)
                 defer { session.invalidateAndCancel() }
                 let task = session.dataTask(with: harness.url("/file"))
                 let metrics = try #require(await recorder.run(task))
-                let proxy = BackgroundSessionProxy(appDelegate: nil)
+                let proxy = BackgroundSessionProxy(target: nil)
 
                 if order == "metricsFirst" {
                     proxy.urlSession(session, task: task, didFinishCollecting: metrics)
@@ -252,13 +184,13 @@ extension CaptureTests {
         @Test func aCompletionWithNoMetricsStillMakesARow() async throws {
             let configuration = URLSessionConfiguration.ephemeral
             try await withCapture { harness in
-                let recorder = Recorder()
+                let recorder = TransferRecorder()
                 let session = URLSession(configuration: configuration, delegate: recorder, delegateQueue: nil)
                 defer { session.invalidateAndCancel() }
                 let task = session.dataTask(with: harness.url("/file"))
                 _ = await recorder.run(task)
 
-                BackgroundSessionProxy(appDelegate: nil).urlSession(session, task: task, didCompleteWithError: nil)
+                BackgroundSessionProxy(target: nil).urlSession(session, task: task, didCompleteWithError: nil)
 
                 let transaction = try await harness.transaction()
                 #expect(transaction.timing == nil)
@@ -269,13 +201,13 @@ extension CaptureTests {
         @Test func afterStoppingTheProxyOnlyForwards() async throws {
             let configuration = URLSessionConfiguration.ephemeral
             try await withCapture { harness in
-                let recorder = Recorder()
+                let recorder = TransferRecorder()
                 let session = URLSession(configuration: configuration, delegate: recorder, delegateQueue: nil)
                 defer { session.invalidateAndCancel() }
                 let task = session.dataTask(with: harness.url("/file"))
                 let metrics = try #require(await recorder.run(task))
                 let spy = SpyDelegate()
-                let proxy = BackgroundSessionProxy(appDelegate: spy)
+                let proxy = BackgroundSessionProxy(target: spy)
                 harness.runtime.stop()
 
                 proxy.urlSession(session, task: task, didFinishCollecting: metrics)
@@ -303,7 +235,7 @@ extension CaptureTests {
 
         @Test func whatTheProxyDoesntImplementGoesToTheAppsDelegate() {
             let spy = SpyDelegate()
-            let proxy = BackgroundSessionProxy(appDelegate: spy)
+            let proxy = BackgroundSessionProxy(target: spy)
             let download = #selector(URLSessionDownloadDelegate.urlSession(_:downloadTask:didFinishDownloadingTo:))
             let bodyStream = #selector(URLSessionTaskDelegate.urlSession(_:task:needNewBodyStream:))
 
@@ -314,7 +246,7 @@ extension CaptureTests {
         }
 
         @Test func aProxyWithNoDelegateIsSafe() {
-            let proxy = BackgroundSessionProxy(appDelegate: nil)
+            let proxy = BackgroundSessionProxy(target: nil)
             let download = #selector(URLSessionDownloadDelegate.urlSession(_:downloadTask:didFinishDownloadingTo:))
 
             #expect(!proxy.responds(to: download))

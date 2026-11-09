@@ -8,7 +8,7 @@ import os
 /// downloaded file is never touched. These callbacks run on the app's delegate queue, so this only
 /// stores and hands off.
 ///
-/// Safety for `@unchecked Sendable`: `appDelegate` never changes, and `pending` is behind a lock.
+/// Safety for `@unchecked Sendable`: `target` never changes, and `pending` is behind a lock.
 final class BackgroundSessionProxy: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     private struct Completion: Sendable {
         let task: URLSessionTask
@@ -21,38 +21,38 @@ final class BackgroundSessionProxy: NSObject, URLSessionTaskDelegate, @unchecked
         var completion: Completion?
     }
 
-    /// Held strongly, as `URLSession` holds its delegate. `AnyObject` and not `NSObject`, because the
-    /// delegate may be an `NSProxy`, and it's reached by selector so one that never declared the protocol
-    /// behaves as it would without Cerebro.
-    let appDelegate: AnyObject?
+    /// The app's delegate, held strongly as `URLSession` holds it. `AnyObject` and not `NSObject`, because
+    /// it may be an `NSProxy`, and it's reached by selector so one that never declared the protocol behaves
+    /// as it would without Cerebro.
+    let target: AnyObject?
 
     private let pending = OSAllocatedUnfairLock<[Int: Pending]>(initialState: [:])
 
-    init(appDelegate: AnyObject?) {
-        self.appDelegate = appDelegate
+    init(target: AnyObject?) {
+        self.target = target
     }
 
     override func responds(to selector: Selector?) -> Bool {
-        super.responds(to: selector) || appDelegateResponds(to: selector)
+        super.responds(to: selector) || targetResponds(to: selector)
     }
 
     override func forwardingTarget(for selector: Selector?) -> Any? {
-        appDelegateResponds(to: selector) ? appDelegate : nil
+        targetResponds(to: selector) ? target : nil
     }
 
-    private func appDelegateResponds(to selector: Selector?) -> Bool {
+    private func targetResponds(to selector: Selector?) -> Bool {
         guard let selector else { return false }
-        return appDelegate?.responds(to: selector) == true
+        return target?.responds(to: selector) == true
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
         record(metrics, for: task)
-        appDelegate?.urlSession?(session, task: task, didFinishCollecting: metrics)
+        target?.urlSession?(session, task: task, didFinishCollecting: metrics)
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
         recordCompletion(of: task, error: error)
-        appDelegate?.urlSession?(session, task: task, didCompleteWithError: error)
+        target?.urlSession?(session, task: task, didCompleteWithError: error)
     }
 
     private func record(_ metrics: URLSessionTaskMetrics, for task: URLSessionTask) {

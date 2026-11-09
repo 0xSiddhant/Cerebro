@@ -30,7 +30,7 @@ enum BackgroundSessionHooks {
             guard configuration.identifier != nil else {
                 return makeSession(sessionClass, selector, configuration, delegate, queue)
             }
-            let proxy = BackgroundSessionProxy(appDelegate: delegate)
+            let proxy = BackgroundSessionProxy(target: delegate)
             let session = makeSession(sessionClass, selector, configuration, proxy, queue)
             hideProxy(on: type(of: session))
             return session
@@ -61,7 +61,7 @@ enum BackgroundSessionHooks {
         let hook: @convention(block) (AnyObject) -> AnyObject? = { session in
             let delegate = original(session, selector)
             if let proxy = delegate as? BackgroundSessionProxy {
-                return proxy.appDelegate
+                return proxy.target
             }
             return delegate
         }
