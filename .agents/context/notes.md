@@ -24,8 +24,8 @@ These win over the spec, which is older.
 | Pipeline | Decompress, proto decode, redact. Pretty-print only on open | Most requests are never opened |
 | Redacted headers | None by default. The developer selects `SensitiveHeader` cases, or names in `headers` | The owner's rule: Cerebro opts nothing out on its own. The spec has a fixed default list |
 | Unredactable bodies | With JSON keys configured, a JSON body that can't be parsed is withheld, form fields are redacted one by one, and other text that names a key is withheld | Stopping at the cap skips parsing, and redaction comes first |
-| Proto decoding | Stays at capture, and raw bytes are dropped when redaction changes the body | Undecoded bytes can't be redacted |
-| Undecoded protobuf | Withheld when JSON keys are configured, with or without a rule | The plan only named bodies over the cap, but no undecoded protobuf can be redacted |
+| Proto decoding | Stays at capture, and raw bytes are dropped whenever JSON keys are configured | A field the app's `.pb.swift` doesn't know is in the bytes but not in the JSON that was redacted |
+| Undecoded protobuf | Withheld when JSON keys are configured, with or without a rule, and so is gRPC-web's base64 text | The plan only named bodies over the cap, but no undecoded protobuf can be redacted |
 | Proto JSON keys | Proto field names, not lowerCamelCase | Redaction rules get written from the `.proto` file |
 | gRPC-web framing | With a 5-byte strip on a gRPC body, the header's length limits the message | A frame of trailers can follow it, and the plan's plain strip couldn't decode that |
 | Socket frames | Payloads use the stored-body cap | The spec caps frames by count only |

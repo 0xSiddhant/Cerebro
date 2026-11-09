@@ -220,7 +220,7 @@ Leave out `ProtoRule.generated` if you don't use a file. Code rules are checked 
 
 ### 3. Generate `ProtoRule.generated`
 
-You only need this step for `traffic_map.json`. A name that matches no type in your `.pb.swift` files fails the build and says which one.
+You only need this step for `traffic_map.json`. A name that matches no type in your `.pb.swift` files fails the build and says which one, and so does a key the format doesn't have, such as `pathprefix`.
 
 **Swift Package Manager.** Put `traffic_map.json` next to your `.xcodeproj`, or inside the target. In the target's **Build Phases**, add `CerebroProtoPlugin` under **Run Build Tool Plug-ins**. Xcode asks once to trust it, and command-line builds on CI need `-skipPackagePluginValidation`. A package target uses `plugins: [.plugin(name: "CerebroProtoPlugin", package: "Cerebro")]`.
 
@@ -241,18 +241,18 @@ You only need this step for `traffic_map.json`. A name that matches no type in y
 
 | In the Log Inspector | Meaning | Shown as |
 |---|---|---|
-| `decoded` | A rule matched and the body decoded | A collapsible tree, with Pretty and Raw alongside. Raw is the original bytes in hex |
+| `decoded` | A rule matched and the body decoded | A collapsible tree, with Pretty and Raw alongside. Raw is the original bytes in hex, or the redacted JSON with `jsonKeys` set |
 | `proto, no rule` | The content type says protobuf, but no rule matched | Hex |
-| `proto, too large to decode` | It's over `bodyLimit`, and a cut-off message can't be decoded | Hex, marked as truncated |
+| `proto, too large to decode` | The body, or the JSON it decodes to, is over `bodyLimit` | Hex, marked as truncated if it was cut off |
 | `proto, couldn't be decoded` | A rule matched, but the bytes aren't that message | Hex |
 
-The content types recognized without a rule are `application/x-protobuf`, `application/protobuf` and `application/grpc`. Binary socket frames that no rule matches also show as hex. With `consoleLevel: .full`, decoded bodies print as JSON.
+The content types recognized without a rule are `application/x-protobuf`, `application/protobuf` and `application/grpc`, except gRPC's `+json` and `-text` forms. A rule never applies to a body whose content type says it's text, so a JSON error from a protobuf endpoint still shows as JSON. Binary socket frames that no rule matches also show as hex. With `consoleLevel: .full`, decoded bodies print as JSON.
 
 The **Proto Config** tab lists each rule, what it maps to, whether it came from code or `traffic_map.json`, and how often it has matched. It's hidden when you have no rules.
 
 ### Redacting protobuf
 
-Decoded bodies are redacted like any other JSON, and the keys are the field names in your `.proto` file, such as `card_number` rather than `cardNumber`. If redaction changes a decoded body, its original bytes are dropped, so the hex view can't reveal what was removed. With `jsonKeys` set, protobuf that wasn't decoded is withheld, because its values can't be matched to keys.
+Decoded bodies are redacted like any other JSON, and the keys are the field names in your `.proto` file, such as `card_number` rather than `cardNumber`. With `jsonKeys` set, a decoded body's original bytes aren't kept, because a field your `.pb.swift` files don't know is in those bytes but not in the JSON that was redacted. Protobuf that wasn't decoded is withheld, because its values can't be matched to keys, and so is gRPC-web's base64 text form.
 
 ## When Cerebro runs
 
