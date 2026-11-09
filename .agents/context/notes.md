@@ -28,6 +28,7 @@ These win over the spec, which is older.
 | Socket frames | Payloads use the stored-body cap | The spec caps frames by count only |
 | Socket store | Also capped at 100 connections and 100 times the body cap of payload in all, taking from the socket idle longest | A reconnecting socket would otherwise fill a fresh 1,000-frame timeline every time |
 | WebSocket open | Shown as Connecting at `resume`, and Opened at the first frame or pong | Only the app's delegate sees the handshake, and a refused upgrade must never look open |
+| Server-Sent Events | Capture `text/event-stream` responses through the existing URLSession path as bounded, live parsed events | SSE is a long-lived HTTP response; waiting for completion can hide it indefinitely |
 | Branches and releases | `develop` flow, with releases automated on `main` | The owner's rule. `rules/git.md` has it |
 | Versions | Breaking commits are a minor bump below 1.0, and `1.0.0` needs a `Release-As` footer | The spec makes `v1.0.0` a deliberate Plan 5 step |
 
