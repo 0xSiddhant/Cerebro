@@ -1,10 +1,15 @@
 import UIKit
 
-/// One body, as pretty JSON or raw. A text view lays out long text lazily, so a 1 MB body stays quick.
+/// One body, as pretty JSON, raw, or a tree for a decoded body. A text view lays out long text lazily,
+/// so a 1 MB body stays quick.
 final class BodyViewerViewController: UIViewController {
+    private static let treeCellIdentifier = "tree"
+
     private let viewModel: BodyViewerViewModel
     private let textView = UITextView()
-    private let modes = UISegmentedControl(items: ["Pretty", "Raw"])
+    private let treeView = UITableView(frame: .zero, style: .plain)
+    private lazy var modes = UISegmentedControl(items: viewModel.modes.map(\.title))
+    private var tree: JSONTree?
     private var loading: Task<Void, Never>?
     private lazy var copyButton: UIBarButtonItem = {
         let button = UIBarButtonItem(
@@ -45,12 +50,21 @@ final class BodyViewerViewController: UIViewController {
         textView.isEditable = false
         textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
-        view = textView
+        treeView.register(UITableViewCell.self, forCellReuseIdentifier: Self.treeCellIdentifier)
+        treeView.dataSource = self
+        treeView.delegate = self
+        let container = UIView()
+        for content in [textView, treeView] {
+            content.frame = container.bounds
+            content.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            container.addSubview(content)
+        }
+        view = container
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        modes.selectedSegmentIndex = BodyViewerViewModel.Mode.pretty.rawValue
+        modes.selectedSegmentIndex = 0
         modes.addAction(UIAction { [weak self] _ in self?.showSelectedMode() }, for: .valueChanged)
         navigationItem.titleView = modes
         navigationItem.rightBarButtonItems = [shareButton, copyButton]
@@ -58,15 +72,25 @@ final class BodyViewerViewController: UIViewController {
     }
 
     private func showSelectedMode() {
-        let mode = BodyViewerViewModel.Mode(rawValue: modes.selectedSegmentIndex) ?? .raw
+        let mode = viewModel.modes[modes.selectedSegmentIndex]
         setActionsEnabled(false)
         loading?.cancel()
         loading = Task { [weak self, viewModel] in
             let text = await viewModel.text(for: mode)
+            let tree = mode == .tree ? await viewModel.tree() : nil
             guard !Task.isCancelled else { return }
-            self?.textView.text = text
-            self?.setActionsEnabled(!text.isEmpty)
+            self?.show(text: text, tree: tree)
         }
+    }
+
+    /// The text stays behind a tree, because it's what copy and share use.
+    private func show(text: String, tree: JSONTree?) {
+        textView.text = text
+        self.tree = tree
+        treeView.isHidden = tree == nil
+        textView.isHidden = tree != nil
+        treeView.reloadData()
+        setActionsEnabled(!text.isEmpty)
     }
 
     private func setActionsEnabled(_ isEnabled: Bool) {
@@ -87,5 +111,36 @@ final class BodyViewerViewController: UIViewController {
             from: self,
             anchor: shareButton
         )
+    }
+}
+
+extension BodyViewerViewController: UITableViewDataSource, UITableViewDelegate {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        tree?.rows.count ?? 0
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: Self.treeCellIdentifier, for: indexPath)
+        guard let row = tree?.rows[indexPath.row] else { return cell }
+        var content = UIListContentConfiguration.cell()
+        content.text = row.key.map { "\($0): \(row.value)" } ?? row.value
+        content.textProperties.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        content.directionalLayoutMargins.leading = CGFloat(row.depth) * 16 + 12
+        cell.contentConfiguration = content
+        cell.accessoryView = row.canExpand ? chevron(isExpanded: row.isExpanded) : nil
+        cell.selectionStyle = row.canExpand ? .default : .none
+        return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        tree?.toggle(rowAt: indexPath.row)
+        tableView.reloadData()
+    }
+
+    private func chevron(isExpanded: Bool) -> UIImageView {
+        let view = UIImageView(image: UIImage(systemName: isExpanded ? "chevron.down" : "chevron.right"))
+        view.tintColor = .tertiaryLabel
+        return view
     }
 }

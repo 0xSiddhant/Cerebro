@@ -82,12 +82,12 @@ final class SocketTimelineViewModel {
 
     private static func text(of frame: SocketFrame) -> String {
         guard let payload = frame.payload else { return "Empty frame" }
-        guard let data = payload.data else {
+        guard payload.data != nil else {
             return payload.content == .withheld
                 ? "Withheld, because it couldn't be redacted"
                 : "Not stored, because frames arrived too fast"
         }
-        return DisplayFormat.preview(of: data) ?? "Binary data"
+        return DisplayFormat.preview(of: payload) ?? "Empty frame"
     }
 
     private static func detail(of frame: SocketFrame) -> String {
@@ -100,6 +100,9 @@ final class SocketTimelineViewModel {
         }
         if let compression = frame.payload?.compression {
             parts.append(compression.rawValue)
+        }
+        if let decoding = frame.payload.flatMap(DisplayFormat.decodingLabel) {
+            parts.append(decoding)
         }
         if frame.didFail {
             parts.append("failed")

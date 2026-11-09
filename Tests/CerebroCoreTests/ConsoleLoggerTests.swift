@@ -74,3 +74,29 @@ private let transaction = HTTPTransaction(
 
     #expect(logged(cancelled, level: .summary).first?.contains("cancelled") == true)
 }
+
+private func fullLog(of body: CapturedBody) -> String {
+    let request = CapturedRequest(url: URL(string: "https://a.com"), method: "POST", body: body, startDate: Date())
+    return logged(HTTPTransaction(request: request), level: .full).joined(separator: "\n")
+}
+
+@Test func decodedProtobufPrintsAsPrettyJSONAtFull() {
+    let body = CapturedBody(content: .complete(Data(#"{"a":1}"#.utf8)), byteCount: 2, isDecoded: true)
+
+    #expect(fullLog(of: body).contains("{\n  \"a\" : 1\n}"))
+}
+
+@Test func protobufWithNoRulePrintsAsHexAtFull() {
+    let body = CapturedBody(content: .complete(Data("123".utf8)), byteCount: 3, undecoded: .noRule)
+
+    #expect(fullLog(of: body).contains("313233"))
+}
+
+@Test func truncatedProtobufPrintsAsHexAtFull() {
+    let body = CapturedBody(content: .truncated(Data("123".utf8)), byteCount: 500, undecoded: .truncated)
+
+    let log = fullLog(of: body)
+
+    #expect(log.contains("truncated"))
+    #expect(log.contains("313233"))
+}

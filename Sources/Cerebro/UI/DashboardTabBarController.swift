@@ -4,14 +4,19 @@ import UIKit
 import CerebroCore
 #endif
 
-/// The dashboard's shell. PLAN-03 and PLAN-04 add the Proto Config and System Info tabs.
+/// The dashboard's shell. PLAN-04 adds the System Info tab.
 final class DashboardTabBarController: UITabBarController {
     private let onClose: () -> Void
 
-    init(store: TransactionStore, socketStore: SocketStore, onClose: @escaping () -> Void) {
+    init(
+        store: TransactionStore,
+        socketStore: SocketStore,
+        decoders: [any BodyDecoder],
+        onClose: @escaping () -> Void
+    ) {
         self.onClose = onClose
         super.init(nibName: nil, bundle: nil)
-        viewControllers = [
+        var tabs = [
             makeTab(
                 root: HTTPListViewController(viewModel: HTTPListViewModel(store: store)),
                 title: "HTTP",
@@ -23,6 +28,14 @@ final class DashboardTabBarController: UITabBarController {
                 image: "bolt.horizontal"
             ),
         ]
+        if ProtoConfigViewModel.hasMappings(in: decoders) {
+            let viewModel = ProtoConfigViewModel(decoders: decoders, store: store, socketStore: socketStore)
+            tabs.append(
+                makeTab(
+                    root: ProtoConfigViewController(viewModel: viewModel), title: "Proto Config", image: "curlybraces")
+            )
+        }
+        viewControllers = tabs
     }
 
     @available(*, unavailable)

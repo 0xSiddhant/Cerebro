@@ -26,6 +26,7 @@ public enum Cerebro {
             dashboard = DashboardWindowManager(
                 store: started.store,
                 socketStore: started.socketStore,
+                decoders: configuration.decoders,
                 isShakeGestureEnabled: configuration.isShakeGestureEnabled
             )
         }
