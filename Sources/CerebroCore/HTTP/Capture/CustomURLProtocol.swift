@@ -24,7 +24,7 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
     ]
 
     /// How long to wait for metrics that haven't arrived by completion, which some OS versions do.
-    private static let metricsGrace: DispatchTimeInterval = .milliseconds(250)
+    static let metricsGrace: DispatchTimeInterval = .milliseconds(250)
 
     /// How long a 3xx waits for the app's session to follow it. Following calls `stopLoading` at once,
     /// but refusing sends no signal, so the 3xx is delivered as the final response once this passes.
