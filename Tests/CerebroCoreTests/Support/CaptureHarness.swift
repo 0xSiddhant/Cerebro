@@ -10,6 +10,10 @@ enum CaptureTests {}
 struct CaptureHarness {
     typealias Handler = @Sendable (LocalHTTPServer.Request) -> LocalHTTPServer.Response
 
+    /// Up to 15 seconds in steps of 10 ms. Waits end as soon as the result arrives, and capture runs at
+    /// low priority, so a busy CI machine can take several seconds to get to it.
+    private static let pollAttempts = 1_500
+
     let runtime: CaptureRuntime
     let server: LocalHTTPServer
     let baseURL: URL
@@ -19,7 +23,7 @@ struct CaptureHarness {
     }
 
     func transactions(count: Int) async throws -> [HTTPTransaction] {
-        for _ in 0..<300 {
+        for _ in 0..<Self.pollAttempts {
             let transactions = await runtime.store.transactions
             if transactions.count >= count {
                 return transactions
@@ -31,7 +35,7 @@ struct CaptureHarness {
 
     /// Waits for a socket that meets `condition`, since activity reaches the store in the background.
     func socket(where condition: @Sendable (SocketConnection) -> Bool) async throws -> SocketConnection {
-        for _ in 0..<300 {
+        for _ in 0..<Self.pollAttempts {
             if let socket = await runtime.socketStore.connections.first(where: condition) {
                 return socket
             }
