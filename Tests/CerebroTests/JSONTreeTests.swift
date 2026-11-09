@@ -82,3 +82,23 @@ private func tree(_ json: String) throws -> JSONTree {
 
     #expect(tree.rows == before)
 }
+
+@Test func aLongStringIsCutShortInItsRow() throws {
+    let long = String(repeating: "a", count: 2_000)
+
+    let row = try tree(#"{"a":"\#(long)"}"#).rows[1]
+
+    #expect(row.value == "\"" + String(repeating: "a", count: 500) + "…\"")
+}
+
+@Test func aStringAtTheLimitIsLeftAlone() throws {
+    let text = String(repeating: "a", count: 500)
+
+    #expect(try tree(#"{"a":"\#(text)"}"#).rows[1].value == "\"\(text)\"")
+}
+
+@Test func aLongKeyIsCutShortInItsRow() throws {
+    let long = String(repeating: "k", count: 2_000)
+
+    #expect(try tree(#"{"\#(long)":1}"#).rows[1].key == String(repeating: "k", count: 500) + "…")
+}

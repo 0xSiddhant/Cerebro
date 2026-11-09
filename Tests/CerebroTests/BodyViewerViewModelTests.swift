@@ -30,8 +30,34 @@ private func viewModel(_ text: String) -> BodyViewerViewModel {
     let json = CapturedBody(content: .complete(Data("  {\"a\":1}".utf8)), byteCount: 8)
     let plain = CapturedBody(content: .complete(Data("hello".utf8)), byteCount: 5)
 
-    #expect(BodyViewerViewModel(title: "Response body", body: json).fileName == "response-body.json")
-    #expect(BodyViewerViewModel(title: "Request body", body: plain).fileName == "request-body.txt")
+    #expect(BodyViewerViewModel(title: "Response body", body: json).fileName(for: .pretty) == "response-body.json")
+    #expect(BodyViewerViewModel(title: "Request body", body: plain).fileName(for: .pretty) == "request-body.txt")
+}
+
+@Test @MainActor func fileNameFollowsWhatTheModeShows() {
+    let decoded = CapturedBody(
+        content: .complete(Data(#"{"a":1}"#.utf8)),
+        byteCount: 4,
+        isDecoded: true,
+        rawData: Data([0x0A])
+    )
+    let viewModel = BodyViewerViewModel(title: "Body", body: decoded)
+
+    #expect(viewModel.fileName(for: .tree) == "body.json")
+    #expect(viewModel.fileName(for: .pretty) == "body.json")
+    #expect(viewModel.fileName(for: .raw) == "body.txt")
+}
+
+@Test @MainActor func rawModeIsJSONWhenTheOriginalBytesWerentKept() {
+    let decoded = CapturedBody(content: .complete(Data(#"{"a":1}"#.utf8)), byteCount: 4, isDecoded: true)
+
+    #expect(BodyViewerViewModel(title: "Body", body: decoded).fileName(for: .raw) == "body.json")
+}
+
+@Test @MainActor func undecodedProtobufThatStartsLikeJSONIsStillAHexFile() {
+    let undecoded = CapturedBody(content: .complete(Data("{oops".utf8)), byteCount: 5, undecoded: .noRule)
+
+    #expect(BodyViewerViewModel(title: "Body", body: undecoded).fileName(for: .pretty) == "body.txt")
 }
 
 @Test @MainActor func copyMessageWarnsAboutATruncatedBody() {

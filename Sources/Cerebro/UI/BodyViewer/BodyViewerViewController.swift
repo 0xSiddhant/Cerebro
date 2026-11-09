@@ -107,7 +107,7 @@ final class BodyViewerViewController: UIViewController {
         CapturedContentSharing.share(
             textView.text,
             as: format,
-            fileName: viewModel.fileName,
+            fileName: viewModel.fileName(for: viewModel.modes[modes.selectedSegmentIndex]),
             from: self,
             anchor: shareButton
         )

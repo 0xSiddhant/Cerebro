@@ -24,9 +24,6 @@ final class BodyViewerViewModel {
 
     let title: String
 
-    /// A name for this body when it's shared as a file.
-    let fileName: String
-
     /// What the copy confirmation says, which warns when part of the body was never stored.
     let copyMessage: String
 
@@ -39,14 +36,19 @@ final class BodyViewerViewModel {
         self.title = title
         self.body = body
         modes = body.isDecoded ? [.tree, .pretty, .raw] : [.pretty, .raw]
-        let content = body.data ?? Data()
-        let stem = title.lowercased().replacingOccurrences(of: " ", with: "-")
-        fileName = stem + (Self.looksLikeJSON(content) ? ".json" : ".txt")
         if case .truncated = body.content {
             copyMessage = "Copied. This body was cut off at capture, so it's incomplete."
         } else {
             copyMessage = "Copied."
         }
+    }
+
+    /// A name for this body when it's shared as a file from a mode. Hex is never JSON, even when the
+    /// stored bytes are.
+    func fileName(for mode: Mode) -> String {
+        let stem = title.lowercased().replacingOccurrences(of: " ", with: "-")
+        let isHex = body.undecoded != nil || (mode == .raw && body.rawData != nil)
+        return stem + (!isHex && Self.looksLikeJSON(body.data ?? Data()) ? ".json" : ".txt")
     }
 
     private static func looksLikeJSON(_ data: Data) -> Bool {

@@ -25,6 +25,10 @@ struct JSONTree: Equatable {
     /// Objects and arrays deeper than this start folded, so a large body opens as a short outline.
     private static let initialExpandedDepth = 2
 
+    /// A table cell lays out all of its text on the main thread, so long strings are cut short here. Pretty
+    /// and Raw still show them in full.
+    private static let rowTextLimit = 500
+
     private let nodes: [Node]
     private var folded: Set<Int>
 
@@ -78,7 +82,7 @@ struct JSONTree: Equatable {
 
     private static func append(_ value: Any, key: String?, depth: Int, to nodes: inout [Node]) {
         let index = nodes.count
-        nodes.append(Node(key: key, value: summary(of: value), depth: depth, end: index + 1))
+        nodes.append(Node(key: key.map(clipped), value: summary(of: value), depth: depth, end: index + 1))
         if let object = value as? [String: Any] {
             for (name, child) in object.sorted(by: { $0.key < $1.key }) {
                 append(child, key: name, depth: depth + 1, to: &nodes)
@@ -91,11 +95,16 @@ struct JSONTree: Equatable {
         nodes[index].end = nodes.count
     }
 
+    private static func clipped(_ text: String) -> String {
+        let start = text.prefix(rowTextLimit)
+        return start.endIndex == text.endIndex ? text : start + "…"
+    }
+
     private static func summary(of value: Any) -> String {
         switch value {
         case let object as [String: Any]: return "{\(object.count)}"
         case let array as [Any]: return "[\(array.count)]"
-        case let text as String: return "\"\(text)\""
+        case let text as String: return "\"\(clipped(text))\""
         case let number as NSNumber:
             return CFGetTypeID(number) == CFBooleanGetTypeID()
                 ? (number.boolValue ? "true" : "false") : number.stringValue
