@@ -35,12 +35,21 @@ struct TransactionBuilder: Sendable {
             method: method,
             headers: redactor.redact(headers: fields),
             queryParameters: redactor.queryParameters(of: url),
-            body: processor.process(
-                exchange.requestBody,
-                context: context,
-                declared: Decompressor.compression(fromContentEncoding: encoding)
-            ),
+            body: requestBody(of: exchange, context: context, encoding: encoding),
             startDate: exchange.startDate
+        )
+    }
+
+    private func requestBody(of exchange: RawExchange, context: BodyContext, encoding: String?) -> CapturedBody? {
+        guard let raw = exchange.requestBody else {
+            let byteCount = Int(exchange.metrics?.requestBodyBytes ?? 0)
+            return byteCount > 0
+                ? CapturedBody(content: .notStored, byteCount: byteCount, contentType: context.contentType) : nil
+        }
+        return processor.process(
+            raw,
+            context: context,
+            declared: Decompressor.compression(fromContentEncoding: encoding)
         )
     }
 

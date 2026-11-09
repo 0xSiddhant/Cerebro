@@ -4,7 +4,10 @@ import Foundation
 struct RawExchange: Sendable {
     let id: UUID
     let request: URLRequest
-    let requestBody: RawBody
+
+    /// `nil` when the body exists but Cerebro never saw it, as with a background upload's file.
+    let requestBody: RawBody?
+
     let response: URLResponse?
     let responseBody: RawBody?
     let error: (any Error)?
