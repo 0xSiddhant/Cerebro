@@ -276,12 +276,13 @@ extension CaptureTests {
             }
         }
 
-        @Test func aBackgroundSessionWithNoDelegateReportsNone() async throws {
+        // This crashed the process when the session reported `nil` while a proxy was really installed.
+        @Test func aBackgroundSessionWithNoDelegateCanBeInvalidated() async throws {
             try await withCapture { _ in
                 let session = URLSession(configuration: background())
-                defer { session.invalidateAndCancel() }
 
-                #expect(session.delegate == nil)
+                session.invalidateAndCancel()
+                try await Task.sleep(for: .milliseconds(100))
             }
         }
 

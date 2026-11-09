@@ -54,6 +54,9 @@ enum BackgroundSessionHooks {
 
     /// Without this, code that casts `session.delegate` back to its own class would break. The class comes
     /// from a real session, so no private name is needed, and a missing method just means no hook.
+    ///
+    /// A session whose app passed no delegate keeps reporting its proxy. Reporting `nil` while a proxy is
+    /// really installed over-released the session when it was invalidated.
     private static func hideProxy(on sessionClass: AnyClass) {
         guard classesHidingProxy.withLock({ $0.insert(ObjectIdentifier(sessionClass)).inserted }) else { return }
         let selector = NSSelectorFromString("delegate")
@@ -61,8 +64,8 @@ enum BackgroundSessionHooks {
         let original = unsafeBitCast(method_getImplementation(inherited), to: DelegateGetter.self)
         let hook: @convention(block) (AnyObject) -> AnyObject? = { session in
             let delegate = original(session, selector)
-            if let proxy = delegate as? BackgroundSessionProxy {
-                return proxy.target
+            if let proxy = delegate as? BackgroundSessionProxy, let target = proxy.target {
+                return target
             }
             return delegate
         }
