@@ -107,7 +107,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         let redaction = RedactionRules(
             sensitiveHeaders: [.authorization, .proxyAuthorization, .cookie, .setCookie, .xAPIKey],
             headers: ["X-Cerebro-Example-Session"],
-            jsonKeys: ["password", "ssn"],
+            jsonKeys: ["password", "ssn", "delete_token"],
             queryParameters: ["token"]
         )
 
