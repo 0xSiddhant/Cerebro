@@ -44,10 +44,32 @@ struct TrafficMap: Decodable {
         guard map.version == supportedVersion else {
             throw GeneratorError.invalidMap("version \(map.version) isn't supported, only \(supportedVersion)")
         }
+        try checkKeys(in: data)
         for (index, rule) in map.rules.enumerated() {
             try rule.check(label: rule.name ?? "rule \(index + 1)")
         }
         return map
+    }
+
+    /// `JSONDecoder` ignores keys it doesn't know, so a typo like `pathprefix` would silently widen a rule.
+    private static func checkKeys(in data: Data) throws {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        try check(root, allows: ["version", "rules"], in: "the file")
+        for (index, rule) in (root["rules"] as? [[String: Any]] ?? []).enumerated() {
+            let label = rule["name"] as? String ?? "rule \(index + 1)"
+            try check(
+                rule, allows: ["name", "match", "methods", "request", "response", "socket", "framing"], in: label)
+            try check(rule["match"], allows: ["host", "path", "pathPrefix", "regex"], in: label)
+            try check(rule["socket"], allows: ["outgoing", "incoming"], in: label)
+            try check(rule["framing"], allows: ["stripPrefixBytes"], in: label)
+        }
+    }
+
+    private static func check(_ section: Any?, allows known: Set<String>, in label: String) throws {
+        let unknown = ((section as? [String: Any])?.keys.sorted() ?? []).filter { !known.contains($0) }
+        guard unknown.isEmpty else {
+            throw GeneratorError.invalidMap("\(label) has an unknown key: \(unknown.joined(separator: ", "))")
+        }
     }
 }
 

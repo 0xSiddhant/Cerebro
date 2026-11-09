@@ -114,6 +114,23 @@ private let quoteRule = #"{"name":"Quote","match":{"host":"a.com"},"response":"m
     }
 }
 
+@Test(arguments: [
+    #"{"version":1,"rulez":[],"rules":[]}"#,
+    map(rules: #"{"match":{"host":"a"},"respnse":"a.B","response":"a.B"}"#),
+    map(rules: #"{"match":{"host":"a","pathprefix":"/v1"},"response":"a.B"}"#),
+    map(rules: #"{"match":{"host":"a"},"socket":{"incoming":"a.B","incomming":"a.B"}}"#),
+    map(rules: #"{"match":{"host":"a"},"framing":{"stripPrefix":5},"response":"a.B"}"#),
+])
+func anUnknownKeyFailsAtEveryLevel(json: String) {
+    #expect(throws: GeneratorError.self) { try parse(json) }
+}
+
+@Test func anUnknownKeyIsNamedWithItsRule() {
+    #expect(throws: GeneratorError.invalidMap("Orders has an unknown key: pathprefix")) {
+        try parse(map(rules: #"{"name":"Orders","match":{"host":"a","pathprefix":"/v1"},"response":"a.B"}"#))
+    }
+}
+
 @Test func unknownMessagesFailListingEveryOne() throws {
     let parsed = try parse(
         map(
