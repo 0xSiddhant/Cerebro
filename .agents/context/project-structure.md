@@ -4,7 +4,7 @@
 Cerebro/
 ├── AGENTS.md                  # instructions for any coding agent
 ├── CLAUDE.md                  # Claude-specific notes; imports AGENTS.md
-├── README.md                  # setup, configuration, what Cerebro can't capture
+├── README.md                  # overview, screenshots, install and first steps
 ├── LICENSE                    # MIT
 ├── Package.swift              # SPM targets and products
 ├── Package.resolved           # pins the SwiftProtobuf version the XCFramework ships
@@ -24,7 +24,7 @@ Cerebro/
 ├── .github/workflows/         # ci.yml on PRs and develop; release.yml when develop merges into main
 ├── Scripts/                   # build-xcframework.sh, next-version.sh, set-version.sh, release-notes.sh;
 │                              # build-generator.sh arrives in PLAN-03
-├── docs/screenshots/          # the README's images; not built into any install option
+├── docs/                      # GUIDE.md for everything past setup, and the README's screenshots
 ├── Example/                   # example app using the package by local path
 │   └── traffic_map.json       # proto mappings; PLAN-03 wires it to the build plugin
 ├── Sources/

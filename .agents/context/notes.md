@@ -49,7 +49,7 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 
 ## Worth knowing
 
-- A URLProtocol can't read the app's session, so the side effects in the README's "What changes while Cerebro captures" follow from the design. Don't try to fix them without a new idea.
+- A URLProtocol can't read the app's session, so the side effects in the "What changes while Cerebro captures" section of `docs/GUIDE.md` follow from the design. Don't try to fix them without a new idea.
 - Copy as cURL and the share sheet (for cURL and bodies) shipped with PLAN-01 at the owner's request, ahead of PLAN-04. PLAN-04 reuses `CurlCommand` and `CapturedContentSharing`, and still adds raw JSON and HAR export.
 - A session delegate that answers a redirect just as the held 3xx goes out, about 500 ms in, can still crash `URLSession.data(for:)`. Nothing public can close that window, because a refusal sends no signal. Delegates that answer sooner never reach it.
 - `Cerebro.xcodeproj` leaves out `SWIFT_APPROACHABLE_CONCURRENCY` and member import visibility on purpose, so the same sources compile the same way as in SPM.
