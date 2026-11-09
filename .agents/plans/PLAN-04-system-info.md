@@ -6,7 +6,7 @@ Show the network context a failure happened in, using only what iOS exposes publ
 
 ## Gate
 
-PLAN-03 merged. Single PR on `plan/4-system-info`.
+PLAN-07 merged. Single PR on `plan/4-system-info`.
 
 ## Scope
 
@@ -42,7 +42,7 @@ Session totals are the sum of captured requests, from metrics. Device interface 
 
 ### Downloads keep metadata only
 
-Download tasks and image loaders that use URLSession, like Kingfisher or SDWebImage, record size, duration, throughput and MIME type. In-flight downloads show live progress. Bodies are not stored.
+Download tasks and image loaders that use URLSession, like Kingfisher or SDWebImage, record size, duration, throughput and MIME type. In-flight foreground downloads show live progress, because a background transfer has no row until it ends (PLAN-07). Bodies are not stored.
 
 ### Live numbers are batched, and exports stay off the main thread
 
@@ -93,7 +93,7 @@ Redaction runs before storage, so exports never hold a raw value. Export still s
 2. With the public IP setting off, no external call is made. With it on, the call is absent from the logs.
 3. Connection quality updates per request, with a rolling average.
 4. Session totals break down by host and by connection type, and match the captured requests.
-5. An in-flight download shows live progress, and its body is not stored.
+5. An in-flight foreground download shows live progress, and its body is not stored.
 6. A request copies as a working cURL command, and a session exports as valid HAR.
 7. A redacted value never appears in any export.
 8. Every export shows a warning before sharing.
