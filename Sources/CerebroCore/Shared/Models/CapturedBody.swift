@@ -22,7 +22,7 @@ public struct CapturedBody: Sendable, Equatable {
         /// Its content type says protobuf, but no rule matched.
         case noRule
 
-        /// It was over the stored-body cap, and a cut-off message can't be decoded.
+        /// It, or the JSON it decodes to, was over the stored-body cap.
         case truncated
 
         /// A rule matched, but the bytes didn't decode as that message.
@@ -47,8 +47,8 @@ public struct CapturedBody: Sendable, Equatable {
     /// Whether a decoder turned this body into the JSON in `content`.
     public let isDecoded: Bool
 
-    /// The bytes a decoder started from, for the hex view. `nil` if redaction changed the decoded body,
-    /// so the hex view can't reveal what was removed.
+    /// The bytes a decoder started from, for the hex view. `nil` when JSON keys are configured, because
+    /// a field the app's types don't know is in these bytes but not in the JSON that was redacted.
     public let rawData: Data?
 
     /// Why this body wasn't decoded, if it should have been.

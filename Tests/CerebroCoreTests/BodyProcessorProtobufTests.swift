@@ -139,13 +139,15 @@ func otherContentTypesAreNotMarkedAsProtobuf(contentType: String) {
     #expect(BodyFormatter.raw(body) == "0a03616263")
 }
 
-@Test func aDecodedBodyKeepsItsBytesWhenRedactionChangesNothing() {
+@Test func aDecodedBodyDropsItsBytesWheneverJSONKeysAreSet() {
+    // An unknown field could hold the secret, and it's in these bytes but never in the JSON.
     let decoded = Data(#"{"name":"ada"}"#.utf8)
 
     let body = processor(decoders: [ClaimingDecoder(output: decoded)], rules: RedactionRules(jsonKeys: ["password"]))
         .process(Fixtures.raw(protobufBytes), context: Fixtures.context())
 
-    #expect(body?.rawData == protobufBytes)
+    #expect(body?.isDecoded == true)
+    #expect(body?.rawData == nil)
 }
 
 @Test func aDecodedBodyDropsItsBytesWhenRedactionChangesIt() throws {
@@ -168,4 +170,66 @@ func otherContentTypesAreNotMarkedAsProtobuf(contentType: String) {
 
     #expect(body?.isDecoded == true)
     #expect(body?.data == decoded)
+}
+
+@Test func decodedJSONOverTheCapIsNotKeptAndTheBodyStaysHex() throws {
+    let decoded = Data(repeating: UInt8(ascii: "a"), count: 11)
+
+    let body = try #require(
+        processor(limit: 10, decoders: [ClaimingDecoder(output: decoded)])
+            .process(Fixtures.raw(protobufBytes), context: Fixtures.context())
+    )
+
+    #expect(!body.isDecoded)
+    #expect(body.undecoded == .truncated)
+    #expect(body.data == protobufBytes)
+    #expect(body.rawData == nil)
+}
+
+@Test func decodedJSONAtTheCapIsKept() {
+    let decoded = Data(repeating: UInt8(ascii: "1"), count: 10)
+
+    let body = processor(limit: 10, decoders: [ClaimingDecoder(output: decoded)])
+        .process(Fixtures.raw(protobufBytes), context: Fixtures.context())
+
+    #expect(body?.isDecoded == true)
+    #expect(body?.data == decoded)
+}
+
+@Test func decodedJSONOverTheCapIsWithheldWhenJSONKeysAreSet() {
+    let decoded = Data(repeating: UInt8(ascii: "a"), count: 11)
+
+    let body = processor(
+        limit: 10, decoders: [ClaimingDecoder(output: decoded)], rules: RedactionRules(jsonKeys: ["a"])
+    )
+    .process(Fixtures.raw(protobufBytes), context: Fixtures.context())
+
+    #expect(body?.content == .withheld)
+}
+
+@Test(arguments: [
+    "application/grpc+json",
+    "application/grpc-web+json",
+    "application/grpc-web-text",
+    "application/grpc-web-text+proto",
+])
+func gRPCJSONAndTextFormsAreNotBinaryProtobuf(contentType: String) {
+    let body = processor().process(Fixtures.raw(protobufBytes), context: Fixtures.context(contentType: contentType))
+
+    #expect(body?.undecoded == nil)
+}
+
+@Test func aParameterCantMakeProtobufLookLikeText() {
+    let context = Fixtures.context(contentType: "application/x-protobuf; messageType=json.Quote")
+
+    #expect(processor().process(Fixtures.raw(protobufBytes), context: context)?.undecoded == .noRule)
+}
+
+@Test func gRPCWebTextIsWithheldWhenJSONKeysAreSet() {
+    // Base64 hides the field names, so a search of the text would find nothing and store it.
+    let body = processor(rules: RedactionRules(jsonKeys: ["password"]))
+        .process(
+            Fixtures.raw(Data("AAAAAAU=".utf8)), context: Fixtures.context(contentType: "application/grpc-web-text"))
+
+    #expect(body?.content == .withheld)
 }

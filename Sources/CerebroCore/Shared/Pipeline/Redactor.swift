@@ -92,17 +92,6 @@ struct Redactor: Sendable {
         return items.map { NamedValue(name: $0.name, value: $0.value ?? "") }
     }
 
-    /// Whether a parsed JSON value holds a configured key at any depth, which redacting it would change.
-    func redactsAnything(in json: Any) -> Bool {
-        if let object = json as? [String: Any] {
-            return object.contains { jsonKeys.contains($0.key.lowercased()) || redactsAnything(in: $0.value) }
-        }
-        if let array = json as? [Any] {
-            return array.contains { redactsAnything(in: $0) }
-        }
-        return false
-    }
-
     /// Replaces configured keys at any depth of a parsed JSON value.
     func redact(json: Any) -> Any {
         if let object = json as? [String: Any] {

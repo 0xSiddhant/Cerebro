@@ -237,3 +237,29 @@ private actor BatchCounter {
         values.append(value)
     }
 }
+
+@Test func payloadByteLimitCountsAFramesOriginalBytes() async throws {
+    let store = store(bytes: 100)
+    let socket = identity()
+    let decoded = SocketTimelineItem.frame(
+        SocketFrame(
+            direction: .received,
+            kind: .binary,
+            byteCount: 40,
+            date: start,
+            payload: CapturedBody(
+                content: .complete(Data(count: 40)),
+                byteCount: 40,
+                isDecoded: true,
+                rawData: Data(count: 40)
+            ),
+            didFail: false
+        )
+    )
+
+    await store.record(decoded, on: socket)
+    await store.record(decoded, on: socket)
+
+    let connection = try #require(await store.connections.first)
+    #expect(connection.timeline.count == 1)
+}

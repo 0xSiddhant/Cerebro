@@ -27,7 +27,7 @@ struct SocketActivityBuilder: Sendable {
             return frame.byteCount > 0 ? CapturedBody(content: .notStored, byteCount: frame.byteCount) : nil
         }
         let context = BodyContext(
-            url: URL(string: socket.name),
+            url: Self.url(fromName: socket.name),
             method: "SOCKET",
             contentType: nil,
             direction: frame.direction == .sent ? .request : .response,
@@ -39,6 +39,15 @@ struct SocketActivityBuilder: Sendable {
             context: context,
             detectsCompression: frame.kind == .binary
         )
+    }
+
+    /// A WebSocket's name is a URL, but NWConnection's is `host:port` and a bridge's can be a bare host.
+    /// Neither of those parses with a host, and a rule that names a host needs one.
+    private static func url(fromName name: String) -> URL? {
+        if let url = URL(string: name), url.host != nil {
+            return url
+        }
+        return URL(string: "socket://\(name)")
     }
 
     /// These strings can come straight from a server or an engine, so they get the same protection.

@@ -8,6 +8,9 @@ public protocol BodyDecoder: Sendable {
     /// Whether this decoder is responsible for bodies like this one, even when it can't decode them.
     func claims(_ context: BodyContext) -> Bool
 
+    /// Tells this decoder about a body it claims that was too large to try.
+    func noteSkippedBody(context: BodyContext)
+
     /// What this decoder applies to, for the dashboard to list.
     var mappings: [DecoderMapping] { get }
 }
@@ -17,6 +20,9 @@ extension BodyDecoder {
     public func claims(_ context: BodyContext) -> Bool {
         false
     }
+
+    /// Ignores the body, for decoders that keep no count.
+    public func noteSkippedBody(context: BodyContext) {}
 
     /// Lists nothing, for decoders with no rules to show.
     public var mappings: [DecoderMapping] {
@@ -121,10 +127,28 @@ public struct BodyContext: Sendable, Equatable {
 
 extension BodyContext {
     private static let protobufContentTypes = ["application/x-protobuf", "application/protobuf", "application/grpc"]
+    private static let base64ProtobufContentType = "application/grpc-web-text"
+    private static let textSubtypes = ["json", "xml", "html", "form-urlencoded", base64ProtobufContentType]
 
-    /// Whether the content type says this body is protobuf, with or without a rule for it.
+    /// The content type without its parameters, so a parameter's value can't be mistaken for the type.
+    private var mediaType: String? {
+        contentType?.split(separator: ";").first?.trimmingCharacters(in: .whitespaces).lowercased()
+    }
+
+    /// Whether the content type says this body is text, which no binary decoder can read.
+    public var declaresText: Bool {
+        guard let mediaType else { return false }
+        return mediaType.hasPrefix("text/") || Self.textSubtypes.contains { mediaType.contains($0) }
+    }
+
+    /// Whether the content type says this body is binary protobuf, with or without a rule for it.
     var isProtobuf: Bool {
-        guard let type = contentType?.trimmingCharacters(in: .whitespaces).lowercased() else { return false }
-        return Self.protobufContentTypes.contains { type.hasPrefix($0) }
+        guard let mediaType, !declaresText else { return false }
+        return Self.protobufContentTypes.contains { mediaType.hasPrefix($0) }
+    }
+
+    /// Whether this is gRPC-web's base64 form, which hides field names from a search of its text.
+    var isBase64Protobuf: Bool {
+        mediaType?.hasPrefix(Self.base64ProtobufContentType) == true
     }
 }
