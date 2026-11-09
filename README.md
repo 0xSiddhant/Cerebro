@@ -52,10 +52,10 @@ The [Example](Example) app produced these, and it's a quick way to try Cerebro: 
 - **Socket timeline:** each socket as a conversation with its frames, pings and state changes. Tap a frame to open it in the Body Viewer.
 - **Copy and share:** copy any request as cURL from its page, or by swiping or long-pressing it in the list, and share a command or body as text or a file.
 
-**Safe by default**
+**Safety**
 
 - Stays off in Ad Hoc, TestFlight and App Store builds unless you opt in. See [When Cerebro runs](#when-cerebro-runs).
-- Redacts `Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie` before anything is stored, plus any headers, JSON keys and query parameters you add. Cerebro warns you before anything is shared.
+- Redacts only what you select, before anything is stored: common credential headers, your own headers, body fields and query parameters. With no rules, `Authorization` and cookies are stored and shown as sent. See [Redaction](#redaction). Cerebro warns you before anything is shared.
 - Keeps everything in memory, capped by count and size, and sends nothing off the device.
 - Lives in its own window, so it never touches your navigation stack or takes touches outside its own views.
 
@@ -201,7 +201,7 @@ Every setting is optional. `Cerebro.start()` uses the defaults, and calling it a
 | `requestLimit` | `500` | Requests kept. The oldest is dropped first |
 | `bodyLimit` | `1_048_576` (1 MB) | Bytes stored for each request body, response body or socket frame. Longer ones are marked as truncated |
 | `socketFrameLimit` | `1_000` | Frames and events kept for each socket. The oldest is dropped first |
-| `redaction` | `RedactionRules()` | Extra headers, JSON keys and query parameters to redact |
+| `redaction` | `RedactionRules()`, which redacts nothing | Headers, body fields and query parameters to redact. See [Redaction](#redaction) |
 | `isShakeGestureEnabled` | `true` | Whether a shake shows or hides the floating button |
 | `decoders` | `[]` | Your own `BodyDecoder`s, tried in order, that turn a body Cerebro can't read into JSON |
 
@@ -215,21 +215,35 @@ Cerebro.start(CerebroConfiguration(
 
 ### Redaction
 
-`Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie` are always replaced with `[redacted]` before anything is stored. Add your own, in any letter case:
+Cerebro redacts nothing until you select it. With no rules, `Authorization`, cookies and API keys appear in the dashboard, the console, Copy cURL and share exactly as sent. What you select is replaced with `[redacted]` before anything is stored (in a URL it reads `%5Bredacted%5D`), and names match in any letter case.
 
 ```swift
 Cerebro.start(CerebroConfiguration(
     redaction: RedactionRules(
-        headers: ["X-Api-Key"],
+        sensitiveHeaders: [.authorization, .cookie, .setCookie],
+        headers: ["X-Session-Id"],
         jsonKeys: ["password", "token"],
         queryParameters: ["api_key"]
     )
 ))
 ```
 
-- `jsonKeys` match at any depth, in HTTP bodies and socket frames. Setting them makes Cerebro parse JSON bodies at capture.
-- A JSON body it can't parse or that passed `bodyLimit` is withheld rather than stored unredacted.
-- Redaction only reads headers, query parameters and JSON. An HTTP body in another format, such as a URL-encoded form, is stored as it is.
+| Rule | Use it for |
+|---|---|
+| `sensitiveHeaders` | Common credential headers, picked from `SensitiveHeader`. Use `Set(SensitiveHeader.allCases)` for all of them |
+| `headers` | Any header `SensitiveHeader` doesn't have |
+| `jsonKeys` | Body fields: JSON keys at any depth in HTTP bodies and socket frames, and form-encoded fields in HTTP bodies |
+| `queryParameters` | Secrets in URLs |
+
+`SensitiveHeader` has `.authorization`, `.proxyAuthorization`, `.cookie`, `.setCookie`, `.apiKey`, `.xAPIKey`, `.xAuthToken`, `.xAccessToken`, `.xCSRFToken`, `.xXSRFToken`, `.xAmzSecurityToken` and `.xGoogAPIKey`.
+
+Setting `jsonKeys` makes Cerebro parse bodies at capture, and a body it can't safely redact isn't stored:
+
+- JSON that can't be parsed, and a JSON or form body that passed `bodyLimit`, is withheld.
+- Other text that contains a key name anywhere is withheld whole, because it can't be redacted field by field. That includes a login page with `name="password"` and a form sent with no `Content-Type`. A short key such as `id` can hide a lot.
+- Other text that names no key is stored as sent. So are binary bodies, including a multipart upload with a binary part.
+
+Redaction never touches the URL path or fragment, so keep secrets out of them.
 
 ## Traffic that needs code
 
@@ -352,7 +366,8 @@ Cerebro keeps both the request and response body of up to 500 requests, so it ca
 | Some requests are missing | Their session or configuration was made before `Cerebro.start()` | Call it earlier, and check stored properties on your `AppDelegate` or `App` |
 | One session's requests are all missing | Your code assigned `protocolClasses`, which removes Cerebro's | Add to the array instead: `configuration.protocolClasses = (configuration.protocolClasses ?? []) + [MyProtocol.self]` |
 | A socket is missing | It's a raw `NWConnection` or a third-party engine | See [Traffic that needs code](#traffic-that-needs-code) |
-| A body says it's withheld | `jsonKeys` are set and the body couldn't be parsed or passed `bodyLimit` | Expected, because a body that can't be redacted isn't stored. Raise `bodyLimit` if it was cut off |
+| `Authorization`, cookies or tokens are visible | Cerebro redacts nothing until you select it | Select them in `RedactionRules`. See [Redaction](#redaction) |
+| A body says it's withheld | `jsonKeys` are set and the body couldn't be redacted: it couldn't be parsed, it passed `bodyLimit`, or it's other text containing a key name | Expected, because a body that can't be redacted isn't stored. Raise `bodyLimit` if it was cut off, or use a longer key if a short one matches too much |
 | `No such module 'Cerebro'` | The product isn't linked to this target, or you opened the `.xcodeproj` of a CocoaPods app | Add the `Cerebro` product to the target, or open the `.xcworkspace` |
 | Crash at launch: `Library not loaded: @rpath/Cerebro.framework/Cerebro` | The XCFramework isn't embedded | Set it to **Embed & Sign** |
 | Timeouts or cookies behave differently | Cerebro sends requests through its own session | See [What changes while Cerebro captures](#what-changes-while-cerebro-captures) |
