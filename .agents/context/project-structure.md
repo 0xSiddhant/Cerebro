@@ -24,6 +24,7 @@ Cerebro/
 ├── .github/workflows/         # ci.yml on PRs and develop; release.yml when develop merges into main
 ├── Scripts/                   # build-xcframework.sh, next-version.sh, set-version.sh, release-notes.sh;
 │                              # build-generator.sh arrives in PLAN-03
+├── docs/screenshots/          # the README's images; not built into any install option
 ├── Example/                   # example app using the package by local path
 │   └── traffic_map.json       # proto mappings; PLAN-03 wires it to the build plugin
 ├── Sources/
