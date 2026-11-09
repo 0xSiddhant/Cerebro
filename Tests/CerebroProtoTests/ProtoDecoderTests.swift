@@ -173,3 +173,46 @@ private func grpcFrame(_ payload: Data, flag: UInt8 = 0) -> Data {
 
     #expect(body?.isDecoded == true)
 }
+
+@Test func bytesThatAreAllUnknownFieldsDontCountAsDecoded() {
+    // Field 15 as a varint, which `SourceContext` doesn't have.
+    #expect(decoder().decode(Data([0x78, 0x01]), context: response()) == nil)
+}
+
+@Test func anEmptyMessageStillDecodes() throws {
+    let json = try #require(decoder(stripPrefixBytes: 5).decode(Data(count: 5), context: response()))
+
+    #expect(String(data: json, encoding: .utf8) == "{}")
+}
+
+@Test func aBodyOverTheCapStillCountsAsAMatch() {
+    let decoder = decoder()
+    let processor = BodyProcessor(limit: 3, decoders: [decoder], redactor: Redactor(rules: .init()))
+
+    let body = processor.process(RawBody(data: Data(count: 10), limit: 3), context: response())
+
+    #expect(body?.undecoded == .truncated)
+    #expect(decoder.mappings.first?.matchCount == 1)
+}
+
+@Test func aJSONErrorFromAProtobufEndpointStaysJSON() throws {
+    let processor = BodyProcessor(
+        limit: 1_000,
+        decoders: [decoder()],
+        redactor: Redactor(rules: RedactionRules(jsonKeys: ["token"]))
+    )
+    let error = Data(#"{"error":"expired","token":"secret"}"#.utf8)
+
+    let body = try #require(
+        processor.process(
+            RawBody(data: error, limit: 1_000),
+            context: response(contentType: "application/json; charset=utf-8")
+        )
+    )
+
+    #expect(body.undecoded == nil)
+    #expect(!body.isDecoded)
+    let stored = String(data: try #require(body.data), encoding: .utf8)
+    #expect(stored?.contains("expired") == true)
+    #expect(stored?.contains("secret") == false)
+}

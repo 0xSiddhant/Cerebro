@@ -123,3 +123,54 @@ private func rule(
     #expect(configuration.decoders.count == 2)
     #expect(configuration.decoders.first is Other)
 }
+
+@Test(arguments: [
+    "application/json",
+    "application/json; charset=utf-8",
+    "application/problem+json",
+    "text/html",
+    "text/plain",
+    "application/xml",
+    "application/x-www-form-urlencoded",
+    "application/grpc+json",
+    "application/grpc-web-text",
+])
+func aRuleSkipsBodiesDeclaredAsText(contentType: String) {
+    #expect(!rule().applies(to: context(contentType: contentType)))
+}
+
+@Test(arguments: [
+    "application/x-protobuf",
+    "application/x-protobuf; messageType=json.Quote",
+    "application/grpc-web+proto",
+    "application/octet-stream",
+    "application/vnd.example.quote",
+])
+func aRuleAppliesToAnythingElse(contentType: String) {
+    #expect(rule().applies(to: context(contentType: contentType)))
+}
+
+@Test func aRuleAppliesWithNoContentType() {
+    #expect(rule().applies(to: context(contentType: nil)))
+}
+
+@Test func aTrailingSlashOnAPathMakesNoDifference() {
+    let plain = "https://api.example.com/v1/quotes"
+    let slashed = plain + "/"
+
+    #expect(rule(match: .init(path: "/v1/quotes/")).applies(to: context(plain)))
+    #expect(rule(match: .init(path: "/v1/quotes/")).applies(to: context(slashed)))
+    #expect(rule(match: .init(path: "/v1/quotes")).applies(to: context(slashed)))
+}
+
+@Test func theRootPathKeepsItsSlash() {
+    #expect(rule(match: .init(path: "/")).applies(to: context("https://api.example.com/")))
+    #expect(!rule(match: .init(path: "/")).applies(to: context("https://api.example.com/v1")))
+}
+
+@Test func aPrefixAndARegexSeeATrailingSlash() {
+    let slashed = context("https://api.example.com/v1/quotes/")
+
+    #expect(rule(match: .init(pathPrefix: "/v1/quotes/")).applies(to: slashed))
+    #expect(rule(match: .init(regex: "/quotes/$")).applies(to: slashed))
+}

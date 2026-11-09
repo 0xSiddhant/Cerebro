@@ -15,7 +15,7 @@ public struct ProtoRule: Sendable {
         /// The URL's host, ignoring case.
         public let host: String?
 
-        /// The URL's exact path.
+        /// The URL's exact path. A trailing slash on either makes no difference.
         public let path: String?
 
         /// The start of the URL's path.
@@ -39,8 +39,9 @@ public struct ProtoRule: Sendable {
             if let host, url?.host?.caseInsensitiveCompare(host) != .orderedSame {
                 return false
             }
-            let urlPath = url?.path ?? ""
-            if let path, urlPath != path {
+            // `URL.path` would drop a trailing slash that a prefix or regex can name.
+            let urlPath = url?.path(percentEncoded: false) ?? ""
+            if let path, Self.withoutTrailingSlash(urlPath) != Self.withoutTrailingSlash(path) {
                 return false
             }
             if let pathPrefix, !urlPath.hasPrefix(pathPrefix) {
@@ -49,6 +50,10 @@ public struct ProtoRule: Sendable {
             guard regex != nil else { return true }
             let range = NSRange(urlPath.startIndex..., in: urlPath)
             return expression?.firstMatch(in: urlPath, range: range) != nil
+        }
+
+        private static func withoutTrailingSlash(_ path: String) -> String {
+            path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
         }
 
         var summary: String {
@@ -131,7 +136,8 @@ public struct ProtoRule: Sendable {
     }
 
     func applies(to context: BodyContext) -> Bool {
-        guard direction.fits(context), match.matches(context.url) else { return false }
+        // A JSON error from a protobuf endpoint is still JSON, and should show and redact as JSON.
+        guard !context.declaresText, direction.fits(context), match.matches(context.url) else { return false }
         return context.carrier != .http || methods.isEmpty || methods.contains(context.method.uppercased())
     }
 

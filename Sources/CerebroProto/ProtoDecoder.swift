@@ -23,9 +23,18 @@ struct ProtoDecoder: BodyDecoder {
     }
 
     func decode(_ body: Data, context: BodyContext) -> Data? {
+        guard let index = countMatch(for: context) else { return nil }
+        return Self.json(from: body, rule: rules[index], context: context)
+    }
+
+    func noteSkippedBody(context: BodyContext) {
+        _ = countMatch(for: context)
+    }
+
+    private func countMatch(for context: BodyContext) -> Int? {
         guard let index = rules.firstIndex(where: { $0.applies(to: context) }) else { return nil }
         matchCounts.withLock { $0[index] += 1 }
-        return Self.json(from: body, rule: rules[index], context: context)
+        return index
     }
 
     func claims(_ context: BodyContext) -> Bool {
@@ -53,7 +62,9 @@ struct ProtoDecoder: BodyDecoder {
         // Proto field names, so the keys match the `.proto` file and redaction rules written from it.
         var options = JSONEncodingOptions()
         options.preserveProtoFieldNames = true
-        return (try? message.jsonString(options: options)).map { Data($0.utf8) }
+        guard let json = try? message.jsonString(options: options) else { return nil }
+        // Bytes that are all unknown fields aren't this message, and `{}` would say they decoded.
+        return json == "{}" && !payload.isEmpty ? nil : Data(json.utf8)
     }
 
     private static func payload(of body: Data, rule: ProtoRule, context: BodyContext) -> Data? {
