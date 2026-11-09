@@ -71,9 +71,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .sharedSession: try await sendRequest(to: address, through: .shared)
         case .mockEcho: try await postToMockEcho()
         case .mockUpload: try await uploadMockJSON()
-        case .mockPut: try await sendBlackholeRequest(method: "PUT", acceptedStatusCodes: [200, 201, 204])
-        case .mockPatch: try await sendBlackholeRequest(method: "PATCH", acceptedStatusCodes: [200, 204])
-        case .mockDelete: try await sendBlackholeRequest(method: "DELETE", acceptedStatusCodes: [200, 202, 204])
+        case .mockPut, .mockPatch, .mockDelete: try await sendBlackholeRequest()
         case .redaction: try await postFakeSecrets()
         case .webSocket: try await exchangeWebSocketMessage()
         case .nwConnection: try await NWConnectionExchange().run()
@@ -117,7 +115,20 @@ enum TrafficSample: CaseIterable, Sendable {
         return "Mock URL: \(result.data.url)"
     }
 
-    private func sendBlackholeRequest(method: String, acceptedStatusCodes: Set<Int>) async throws -> String {
+    /// The HTTP method and accepted statuses of the blackhole samples, and `nil` for every other sample.
+    private var blackholeRequest: (method: String, acceptedStatusCodes: Set<Int>)? {
+        switch self {
+        case .mockPut: ("PUT", [200, 201, 204])
+        case .mockPatch: ("PATCH", [200, 204])
+        case .mockDelete: ("DELETE", [200, 202, 204])
+        default: nil
+        }
+    }
+
+    private func sendBlackholeRequest() async throws -> String {
+        guard let (method, acceptedStatusCodes) = blackholeRequest else {
+            throw URLError(.unsupportedURL)
+        }
         var request = URLRequest(url: try Self.url("\(Self.mockAPI)/blackhole"))
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
