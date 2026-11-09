@@ -2,23 +2,23 @@ import Foundation
 
 /// The contents of `traffic_map.json`.
 struct TrafficMap: Decodable {
+    struct Match: Decodable {
+        let host: String?
+        let path: String?
+        let pathPrefix: String?
+        let regex: String?
+    }
+
+    struct Socket: Decodable {
+        let outgoing: String?
+        let incoming: String?
+    }
+
+    struct Framing: Decodable {
+        let stripPrefixBytes: Int?
+    }
+
     struct Rule: Decodable {
-        struct Match: Decodable {
-            let host: String?
-            let path: String?
-            let pathPrefix: String?
-            let regex: String?
-        }
-
-        struct Socket: Decodable {
-            let outgoing: String?
-            let incoming: String?
-        }
-
-        struct Framing: Decodable {
-            let stripPrefixBytes: Int?
-        }
-
         let name: String?
         let match: Match
         let methods: [String]?
@@ -34,10 +34,10 @@ struct TrafficMap: Decodable {
     let rules: [Rule]
 
     /// Reads and checks a map, so a mistake fails the build rather than a rule silently never matching.
-    static func parse(_ data: Data) throws -> TrafficMap {
-        let map: TrafficMap
+    static func parse(_ data: Data) throws -> Self {
+        let map: Self
         do {
-            map = try JSONDecoder().decode(TrafficMap.self, from: data)
+            map = try JSONDecoder().decode(Self.self, from: data)
         } catch {
             throw GeneratorError.invalidMap("it isn't valid: \(error)")
         }

@@ -60,10 +60,12 @@ final class DashboardWindowManager: NSObject {
         // Text fields need a key window. The app gets it back when the dashboard closes.
         previousKeyWindow = window.windowScene?.keyWindow
         window.makeKey()
-        let dashboard = DashboardTabBarController(store: store, socketStore: socketStore, decoders: decoders) {
-            [weak self] in
-            self?.previousKeyWindow?.makeKey()
-        }
+        let dashboard = DashboardTabBarController(
+            store: store,
+            socketStore: socketStore,
+            decoders: decoders,
+            onClose: { [weak self] in self?.previousKeyWindow?.makeKey() }
+        )
         dashboard.modalPresentationStyle = .fullScreen
         overlay.present(dashboard, animated: true)
     }

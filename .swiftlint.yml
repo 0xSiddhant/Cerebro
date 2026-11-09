@@ -6,6 +6,10 @@ included:
   - Tests
   - Example
 
+excluded:
+  # Output of protoc-gen-swift, which writes its own blanket disable.
+  - Example/CerebroExample/quote.pb.swift
+
 disabled_rules:
   - force_cast
   - force_try
