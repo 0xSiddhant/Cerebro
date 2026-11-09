@@ -68,6 +68,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				7C1A000000000000000000B1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7C1A00000000000000000041 /* CerebroExample */,
@@ -138,6 +139,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7C1A000000000000000000B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = 7C1A000000000000000000B2 /* CerebroProtoPlugin */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		7C1A00000000000000000083 /* Debug */ = {
@@ -262,6 +270,10 @@
 		7C1A00000000000000000023 /* SwiftProtobuf */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftProtobuf;
+		};
+		7C1A000000000000000000B2 /* CerebroProtoPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = "plugin:CerebroProtoPlugin";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

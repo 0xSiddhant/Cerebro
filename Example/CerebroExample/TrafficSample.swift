@@ -21,6 +21,7 @@ enum TrafficSample: CaseIterable, Sendable {
     case nwConnection
     case externalBridge
     case protobuf
+    case protobufFromMap
 
     private static let session = URLSession(configuration: .default)
     private static let mockAPI = "https://mock.0xsiddhant.com"
@@ -43,7 +44,8 @@ enum TrafficSample: CaseIterable, Sendable {
         case .webSocket: "URLSessionWebSocketTask"
         case .nwConnection: "NWConnection"
         case .externalBridge: "ExternalNetworkBridge"
-        case .protobuf: "Protobuf over HTTP"
+        case .protobuf: "Protobuf: code rule"
+        case .protobufFromMap: "Protobuf: traffic_map.json"
         }
     }
 
@@ -58,7 +60,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockSlowFlights: "\(Self.mockAPI)/api/v1/flights?delay=1500"
         case .mockUnauthorized: "\(Self.mockAPI)/api/v1/flights?status=401"
         case .mockEcho, .mockUpload, .mockPut, .mockPatch, .mockDelete, .redaction, .webSocket, .nwConnection,
-            .externalBridge, .protobuf:
+            .externalBridge, .protobuf, .protobufFromMap:
             ""
         }
     }
@@ -76,7 +78,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .webSocket: try await exchangeWebSocketMessage()
         case .nwConnection: try await NWConnectionExchange().run()
         case .externalBridge: logExternalSocket()
-        case .protobuf: try await sendProtobuf()
+        case .protobuf, .protobufFromMap: try await sendProtobuf()
         }
     }
 
@@ -250,10 +252,16 @@ enum TrafficSample: CaseIterable, Sendable {
         var message = Google_Protobuf_Struct()
         message.fields["greeting"] = Google_Protobuf_Value(stringValue: "hello from Cerebro")
 
+        var quote = Market_V1_Quote()
+        quote.symbol = "CRBR"
+        quote.price = 123.45
+        quote.volume = 1_000
+
+        let usesMap = self == .protobufFromMap
         return try await post(
-            try message.serializedData(),
+            usesMap ? try quote.serializedData() : try message.serializedData(),
             contentType: "application/x-protobuf",
-            to: "https://httpbin.org/post"
+            to: usesMap ? "https://httpbin.org/anything/quote" : "https://httpbin.org/post"
         )
     }
 

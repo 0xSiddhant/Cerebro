@@ -29,11 +29,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //
         //     Cerebro.start()
         //
-        // With protobuf rules. Decoding arrives in a later release. Add `import CerebroProto`, except with
-        // CocoaPods, where `ProtoRule` comes from `import Cerebro`:
+        // With protobuf rules, in code, generated from `traffic_map.json`, or both. Add `import CerebroProto`,
+        // except with CocoaPods, where `ProtoRule` comes from `import Cerebro`:
         //
-        //     let rule = ProtoRule(messageType: MyResponse.self)
-        //     Cerebro.start(CerebroConfiguration().registering([rule]))
+        //     let rule = ProtoRule(match: .init(host: "api.example.com"), direction: .response, messageType: MyResponse.self)
+        //     Cerebro.start(CerebroConfiguration().registering([rule] + ProtoRule.generated))
         //
         // HTTP only, or WebSockets only: there's no setting for either. `Cerebro.start()` captures both.
         // `NWConnection` traffic needs `MonitoredNWConnection`, as `NWConnectionExchange` shows, and other
@@ -111,9 +111,19 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
             queryParameters: ["token"]
         )
 
-        // This app registers a protobuf rule so it exercises that path:
-        let rule = ProtoRule(messageType: Google_Protobuf_Struct.self)
-        Cerebro.start(CerebroConfiguration(consoleLevel: .summary, redaction: redaction).registering([rule]))
+        // A rule in code, for the "Protobuf: code rule" sample. Code rules are checked first. The
+        // "Protobuf: traffic_map.json" sample is decoded by `ProtoRule.generated`, which this app's build
+        // generates from `traffic_map.json` with the CerebroProtoPlugin build-tool plugin.
+        let rule = ProtoRule(
+            name: "Greeting",
+            match: .init(host: "httpbin.org", path: "/post"),
+            methods: ["POST"],
+            direction: .request,
+            messageType: Google_Protobuf_Struct.self
+        )
+        Cerebro.start(
+            CerebroConfiguration(consoleLevel: .summary, redaction: redaction).registering([rule] + ProtoRule.generated)
+        )
         return true
     }
 
