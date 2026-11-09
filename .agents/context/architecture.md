@@ -84,7 +84,8 @@ Every install option uses the same runtime check, because `#if DEBUG` inside a p
 | `Cerebro` | Public facade, triggers, dashboard UI | `CerebroCore`, UIKit |
 | `CerebroProto` | Proto rules and decoder | `CerebroCore`, SwiftProtobuf |
 | `CerebroProtoPlugin` | Build-tool plugin that runs the generator on the app's target | SPM only |
-| `CerebroProtoGenerator` | Reads `traffic_map.json` and `.pb.swift` files, writes `ProtoRule.generated`; shipped as `cerebro-proto-gen` for Run Script phases | Foundation |
+| `CerebroProtoGeneratorCore` | Reads `traffic_map.json` and `.pb.swift` files, writes `ProtoRule.generated`. A library so tests can link it on iOS | Foundation |
+| `CerebroProtoGenerator` | Thin executable over that library, run by the plugin and shipped as `cerebro-proto-gen` for Run Script phases | `CerebroProtoGeneratorCore` |
 
 The split keeps SwiftProtobuf out of apps that don't use protobuf, and lets the core be tested without UIKit.
 

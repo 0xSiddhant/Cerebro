@@ -23,10 +23,10 @@ Cerebro/
 ├── .githooks/                 # pre-commit hook; a contributor tool, enabled once per clone
 ├── .github/workflows/         # ci.yml on PRs and develop; release.yml when develop merges into main
 ├── Scripts/                   # build-xcframework.sh, next-version.sh, set-version.sh, release-notes.sh;
-│                              # build-generator.sh arrives in PLAN-03
+│                              # build-generator.sh
 ├── docs/                      # GUIDE.md for everything past setup, and the README's screenshots
 ├── Example/                   # example app using the package by local path
-│   └── traffic_map.json       # proto mappings; PLAN-03 wires it to the build plugin
+│   └── traffic_map.json       # proto rules the build plugin turns into ProtoRule.generated
 ├── Sources/
 │   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
 │   │   ├── HTTP/
@@ -50,9 +50,10 @@ Cerebro/
 │   │   ├── Triggers/          # shake hook, floating trigger, PassthroughWindow, DashboardWindowManager
 │   │   └── UI/                # tab bar shell, then one folder per screen holding its view controller,
 │   │                          # view model and views (HTTPList, LogInspector, BodyViewer, SocketList,
-│   │                          # SocketTimeline); Shared for the rest
+│   │                          # SocketTimeline, ProtoConfig); Shared for the rest
 │   ├── CerebroProto/          # proto rules and decoder
-│   └── CerebroProtoGenerator/ # reads traffic_map.json and .pb.swift files, writes ProtoRule.generated
+│   ├── CerebroProtoGenerator/ # the generator executable
+│   └── CerebroProtoGeneratorCore/ # reads traffic_map.json and .pb.swift files, writes ProtoRule.generated
 ├── Plugins/
 │   └── CerebroProtoPlugin/    # SPM build-tool plugin that runs the generator
 └── Tests/

@@ -14,13 +14,14 @@ private func capture(
     limit: Int,
     jsonKeys: Set<String>,
     didFail: Bool = false,
-    backlog: SocketBacklog = SocketBacklog(frameLimit: 10, byteLimit: 1_048_576)
+    backlog: SocketBacklog = SocketBacklog(frameLimit: 10, byteLimit: 1_048_576),
+    on identity: SocketIdentity = socket
 ) throws -> RawSocketActivity {
     let captured = OSAllocatedUnfairLock<RawSocketActivity?>(initialState: nil)
     let engine = SocketCaptureEngine(bodyLimit: limit, backlog: backlog, redactor: redactor(jsonKeys)) { activity in
         captured.withLock { $0 = activity }
     }
-    engine.submit(payload, .received, didFail: didFail, on: socket)
+    engine.submit(payload, .received, didFail: didFail, on: identity)
     let activity = captured.withLock { $0 }
     return try #require(activity)
 }
@@ -202,4 +203,35 @@ private func redacted(_ event: SocketEvent, jsonKeys: Set<String>) -> SocketEven
     #expect(redacted(.closed(code: 1000, reason: "done"), jsonKeys: ["token"]) == .closed(code: 1000, reason: "done"))
     #expect(redacted(.closed(code: nil, reason: nil), jsonKeys: ["token"]) == .closed(code: nil, reason: nil))
     #expect(redacted(.failed("token expired"), jsonKeys: []) == .failed("token expired"))
+}
+
+/// Decodes only frames whose URL has this host and path, as a rule naming them does.
+private struct AddressDecoder: BodyDecoder {
+    let host: String
+    let path: String
+
+    func decode(_ body: Data, context: BodyContext) -> Data? {
+        context.url?.host == host && context.url?.path == path ? Data("{}".utf8) : nil
+    }
+}
+
+@Test(arguments: [
+    ("wss://api.example.com/feed", "/feed"),
+    ("api.example.com:443", ""),
+    ("api.example.com", ""),
+])
+func aRuleCanMatchTheHostOfEachKindOfSocketName(name: String, path: String) throws {
+    let identity = SocketIdentity(id: UUID(), source: .external, name: name)
+    let activity = try capture(.binary(Data([1])), limit: 1_000, jsonKeys: [], on: identity)
+    let decoder = AddressDecoder(host: "api.example.com", path: path)
+    let builder = SocketActivityBuilder(
+        processor: BodyProcessor(limit: 1_000, decoders: [decoder], redactor: redactor([]))
+    )
+
+    guard case .frame(let frame) = builder.item(from: activity) else {
+        Issue.record("expected a frame")
+        return
+    }
+
+    #expect(frame.payload?.isDecoded == true)
 }

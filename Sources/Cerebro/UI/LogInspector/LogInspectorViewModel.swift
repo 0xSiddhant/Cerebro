@@ -157,7 +157,7 @@ final class LogInspectorViewModel {
                 value: DisplayFormat.bytes(Int64(body.byteCount)),
                 body: body.data == nil ? nil : body,
                 isBodyRow: true,
-                preview: body.data.flatMap(DisplayFormat.preview)
+                preview: DisplayFormat.preview(of: body)
             )
         ]
     }
@@ -172,6 +172,9 @@ final class LogInspectorViewModel {
         }
         if let compression = body.compression {
             parts.append("\(compression.rawValue), \(body.isDecompressed ? "decompressed for display" : "shown raw")")
+        }
+        if let decoding = DisplayFormat.decodingLabel(of: body) {
+            parts.append(decoding)
         }
         return parts.joined(separator: " · ")
     }

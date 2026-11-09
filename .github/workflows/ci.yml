@@ -51,7 +51,13 @@ jobs:
             -workspace .swiftpm/xcode/package.xcworkspace \
             -scheme Cerebro-Package \
             -destination "$DESTINATION" \
+            -skipPackagePluginValidation \
+            -resultBundlePath build/package-tests.xcresult \
             -quiet
+      # -quiet prints which tests failed but not why.
+      - name: Show why tests failed
+        if: failure()
+        run: xcrun xcresulttool get test-results summary --path build/package-tests.xcresult
 
   example:
     name: Example app
@@ -64,6 +70,7 @@ jobs:
             -project Example/CerebroExample.xcodeproj \
             -scheme CerebroExample \
             -destination "$DESTINATION" \
+            -skipPackagePluginValidation \
             -quiet
 
   pod:

@@ -20,7 +20,24 @@ public enum BodyFormatter {
         String(data: data, encoding: .utf8) ?? hex(data)
     }
 
-    private static func hex(_ data: Data) -> String {
+    /// A stored body in its raw form: the bytes a decoder started from, or the stored bytes, with
+    /// protobuf that wasn't decoded always as hex, because it can pass for text by chance.
+    public static func raw(_ body: CapturedBody) -> String {
+        if let rawData = body.rawData {
+            return hex(rawData)
+        }
+        guard let data = body.data else { return "" }
+        return body.undecoded == nil ? text(data) : hex(data)
+    }
+
+    /// Formats a body with indentation if it's JSON, and in its raw form if it isn't.
+    public static func pretty(_ body: CapturedBody) -> String {
+        guard body.undecoded == nil, let data = body.data, let pretty = prettyJSON(data) else { return raw(body) }
+        return pretty
+    }
+
+    /// Writes bytes as lowercase hex digits.
+    public static func hex(_ data: Data) -> String {
         var digits = [UInt8]()
         digits.reserveCapacity(data.count * 2)
         for byte in data {

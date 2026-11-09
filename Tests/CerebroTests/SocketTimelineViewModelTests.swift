@@ -61,12 +61,12 @@ private func eventText(_ event: SocketEvent) throws -> String {
     #expect(row.body == text("hello"))
 }
 
-@Test @MainActor func binaryFrameIsNamed() throws {
+@Test @MainActor func binaryFrameShowsAsHex() throws {
     let payload = CapturedBody(content: .complete(Data([0, 255])), byteCount: 2)
 
     let row = try frameRow(frame(kind: .binary, payload: payload))
 
-    #expect(row.text == "Binary data")
+    #expect(row.text == "00ff")
     #expect(row.detail.hasPrefix("Binary ·"))
     #expect(row.body == payload)
 }

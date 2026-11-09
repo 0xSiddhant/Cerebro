@@ -10,6 +10,7 @@ import CerebroCore
 final class DashboardWindowManager: NSObject {
     private let store: TransactionStore
     private let socketStore: SocketStore
+    private let decoders: [any BodyDecoder]
     private let overlay = OverlayViewController()
     private var window: PassthroughWindow?
     private weak var previousKeyWindow: UIWindow?
@@ -17,9 +18,15 @@ final class DashboardWindowManager: NSObject {
     private var badgeUpdates: Task<Void, Never>?
     private var unseenRequests = UnseenRequestCounter()
 
-    init(store: TransactionStore, socketStore: SocketStore, isShakeGestureEnabled: Bool) {
+    init(
+        store: TransactionStore,
+        socketStore: SocketStore,
+        decoders: [any BodyDecoder],
+        isShakeGestureEnabled: Bool
+    ) {
         self.store = store
         self.socketStore = socketStore
+        self.decoders = decoders
         super.init()
         overlay.trigger.onTap = { [weak self] in self?.present() }
         if isShakeGestureEnabled {
@@ -53,9 +60,12 @@ final class DashboardWindowManager: NSObject {
         // Text fields need a key window. The app gets it back when the dashboard closes.
         previousKeyWindow = window.windowScene?.keyWindow
         window.makeKey()
-        let dashboard = DashboardTabBarController(store: store, socketStore: socketStore) { [weak self] in
-            self?.previousKeyWindow?.makeKey()
-        }
+        let dashboard = DashboardTabBarController(
+            store: store,
+            socketStore: socketStore,
+            decoders: decoders,
+            onClose: { [weak self] in self?.previousKeyWindow?.makeKey() }
+        )
         dashboard.modalPresentationStyle = .fullScreen
         overlay.present(dashboard, animated: true)
     }

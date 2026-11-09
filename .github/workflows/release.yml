@@ -59,6 +59,10 @@ jobs:
       # Built before anything is pushed, so a failed build can't leave a tag with no release.
       - name: Build XCFrameworks
         run: Scripts/build-xcframework.sh
+      - name: Build the generator
+        run: |
+          Scripts/build-generator.sh build/generator
+          (cd build/generator && zip -q cerebro-proto-gen.zip cerebro-proto-gen)
       - name: Commit and tag
         run: |
           git config user.name "github-actions[bot]"
@@ -74,6 +78,7 @@ jobs:
           Scripts/release-notes.sh "v$VERSION" > build/release-notes.md
           gh release create "v$VERSION" \
             build/xcframeworks/*.xcframework.zip \
+            build/generator/cerebro-proto-gen.zip \
             --title "v$VERSION" \
             --notes-file build/release-notes.md \
             --generate-notes \

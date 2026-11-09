@@ -171,3 +171,27 @@ private func bytesBody(_ bytes: [UInt8]) -> CapturedBody {
     #expect(command.text.contains("Authorization: [redacted]"))
     #expect(command.caveats == ["Redacted values are placeholders."])
 }
+
+@Test func decodedBodyReplaysItsOriginalBytes() {
+    let body = CapturedBody(
+        content: .complete(Data(#"{"a":1}"#.utf8)),
+        byteCount: 4,
+        isDecoded: true,
+        rawData: Data([0x0A, 0x20, 0x08, 0x41])
+    )
+
+    let command = CurlCommand(request: request(method: "POST", body: body))
+
+    #expect(command.text.contains("CiAIQQ=="))
+    #expect(!command.text.contains(#"{"a":1}"#))
+    #expect(command.caveats.isEmpty)
+}
+
+@Test func decodedBodyWithoutItsBytesSendsTheJSONAndIsFlagged() {
+    let body = CapturedBody(content: .complete(Data(#"{"a":1}"#.utf8)), byteCount: 4, isDecoded: true)
+
+    let command = CurlCommand(request: request(method: "POST", body: body))
+
+    #expect(command.text.contains(#"--data-raw '{"a":1}'"#))
+    #expect(command.caveats == ["The body is decoded JSON, not the bytes the app sent, so a server may reject it."])
+}

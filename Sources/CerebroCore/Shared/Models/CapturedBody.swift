@@ -17,6 +17,18 @@ public struct CapturedBody: Sendable, Equatable {
         case notStored
     }
 
+    /// Why a body that should be protobuf wasn't decoded. Such a body shows as hex.
+    public enum Undecoded: Sendable, Equatable {
+        /// Its content type says protobuf, but no rule matched.
+        case noRule
+
+        /// It, or the JSON it decodes to, was over the stored-body cap.
+        case truncated
+
+        /// A rule matched, but the bytes didn't decode as that message.
+        case failed
+    }
+
     /// What was kept.
     public let content: Content
 
@@ -32,19 +44,35 @@ public struct CapturedBody: Sendable, Equatable {
     /// The content type the body arrived with.
     public let contentType: String?
 
+    /// Whether a decoder turned this body into the JSON in `content`.
+    public let isDecoded: Bool
+
+    /// The bytes a decoder started from, for the hex view. `nil` when JSON keys are configured, because
+    /// a field the app's types don't know is in these bytes but not in the JSON that was redacted.
+    public let rawData: Data?
+
+    /// Why this body wasn't decoded, if it should have been.
+    public let undecoded: Undecoded?
+
     /// Creates a body.
     public init(
         content: Content,
         byteCount: Int,
         compression: BodyCompression? = nil,
         isDecompressed: Bool = false,
-        contentType: String? = nil
+        contentType: String? = nil,
+        isDecoded: Bool = false,
+        rawData: Data? = nil,
+        undecoded: Undecoded? = nil
     ) {
         self.content = content
         self.byteCount = byteCount
         self.compression = compression
         self.isDecompressed = isDecompressed
         self.contentType = contentType
+        self.isDecoded = isDecoded
+        self.rawData = rawData
+        self.undecoded = undecoded
     }
 
     /// The stored bytes, if any were kept.

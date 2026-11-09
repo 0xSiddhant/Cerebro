@@ -8,6 +8,10 @@ struct BodyProcessor: Sendable {
         var isTruncated: Bool
         var compression: BodyCompression?
         var isDecompressed = false
+
+        /// The bytes a decoder started from, once one has succeeded.
+        var decodedFrom: Data?
+        var undecoded: CapturedBody.Undecoded?
     }
 
     let limit: Int
@@ -33,7 +37,11 @@ struct BodyProcessor: Sendable {
             byteCount: raw.byteCount,
             compression: working.compression,
             isDecompressed: working.isDecompressed,
-            contentType: context.contentType
+            contentType: context.contentType,
+            isDecoded: working.decodedFrom != nil,
+            // A field the app's types don't know is in these bytes but not in the JSON redaction checked.
+            rawData: redactor.redactsJSON ? nil : working.decodedFrom,
+            undecoded: working.undecoded
         )
     }
 
@@ -51,13 +59,29 @@ struct BodyProcessor: Sendable {
     }
 
     private func decode(_ body: Working, context: BodyContext) -> Working {
-        guard !body.isTruncated else { return body }
         var working = body
+        guard !body.isTruncated else {
+            let claimant = decoders.first { $0.claims(context) }
+            claimant?.noteSkippedBody(context: context)
+            working.undecoded = claimant != nil || context.isProtobuf ? .truncated : nil
+            return working
+        }
         for decoder in decoders {
             if let decoded = decoder.decode(body.data, context: context) {
+                // JSON can be several times the size of its protobuf, and the cap holds either way.
+                guard decoded.count <= limit else {
+                    working.undecoded = .truncated
+                    return working
+                }
                 working.data = decoded
-                break
+                working.decodedFrom = body.data
+                return working
             }
+        }
+        if decoders.contains(where: { $0.claims(context) }) {
+            working.undecoded = .failed
+        } else if context.isProtobuf {
+            working.undecoded = .noRule
         }
         return working
     }
@@ -66,8 +90,12 @@ struct BodyProcessor: Sendable {
     private func redact(_ body: Working, context: BodyContext) -> CapturedBody.Content {
         let stored: CapturedBody.Content = body.isTruncated ? .truncated(body.data) : .complete(body.data)
         guard redactor.redactsJSON else { return stored }
+        // Protobuf that wasn't decoded has no keys to find, so it can't be redacted.
+        if body.undecoded != nil || context.isBase64Protobuf {
+            return .withheld
+        }
         // JSON comes first, so JSON sent under a form content type is still redacted by key.
-        if looksLikeJSON(body.data, contentType: context.contentType) {
+        if body.decodedFrom != nil || looksLikeJSON(body.data, contentType: context.contentType) {
             return redactedJSON(body)
         }
         if isFormEncoded(context.contentType) {

@@ -25,7 +25,7 @@ Users choose one of three install options, and all three are first-class: SPM, C
 
 ## Current plan
 
-PLAN-03, protobuf decoding and the Proto Config tab, is next. See `.agents/plans/README.md` for the order and gates.
+PLAN-04, system info and export, is next. See `.agents/plans/README.md` for the order and gates.
 
 ## Commands
 
@@ -41,7 +41,7 @@ xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme Cerebro-Pa
 
 # Example app
 xcodebuild build -project Example/CerebroExample.xcodeproj -scheme CerebroExample \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+  -destination 'platform=iOS Simulator,name=iPhone 17' -skipPackagePluginValidation
 
 # Lint: formatting, crash paths and public docs (ships with Xcode)
 xcrun swift-format lint --strict --recursive Sources Tests Example
@@ -57,6 +57,9 @@ pod lib lint Cerebro.podspec
 
 # XCFrameworks: output in build/xcframeworks
 Scripts/build-xcframework.sh
+
+# The generator binary for Run Script phases: output in build/generator
+Scripts/build-generator.sh
 ```
 
 ## Code conventions

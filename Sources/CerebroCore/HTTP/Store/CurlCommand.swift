@@ -64,7 +64,12 @@ public struct CurlCommand: Sendable, Equatable {
             if case .truncated = body.content {
                 caveats.append("The body was cut off at capture, so it's incomplete.")
             }
-            return data.isEmpty ? nil : payload(of: data)
+            // The stored JSON isn't what the server expects, so replay the original bytes when they were kept.
+            if body.isDecoded, body.rawData == nil {
+                caveats.append("The body is decoded JSON, not the bytes the app sent, so a server may reject it.")
+            }
+            let bytes = body.rawData ?? data
+            return bytes.isEmpty ? nil : payload(of: bytes)
         }
         return nil
     }

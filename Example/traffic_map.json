@@ -1,4 +1,11 @@
 {
   "version": 1,
-  "rules": []
+  "rules": [
+    {
+      "name": "Stock quote",
+      "match": { "host": "httpbin.org", "path": "/anything/quote" },
+      "methods": ["POST"],
+      "request": "market.v1.Quote"
+    }
+  ]
 }

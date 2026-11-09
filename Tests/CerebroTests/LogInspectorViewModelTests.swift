@@ -171,10 +171,44 @@ private func withBody(_ body: CapturedBody?) -> HTTPTransaction {
     #expect(preview.utf8.count <= 403)
 }
 
-@Test @MainActor func binaryBodyHasNoPreview() throws {
+@Test @MainActor func binaryBodyPreviewsAsHex() throws {
     let body = CapturedBody(content: .complete(Data([0xFF, 0x00, 0xFE, 0x01])), byteCount: 4)
 
-    #expect(try requestBodyRow(body).preview == nil)
+    #expect(try requestBodyRow(body).preview == "ff00fe01")
+}
+
+@Test @MainActor func protobufWithNoRuleSaysSoAndPreviewsAsHexEvenWhenItPassesForText() throws {
+    let body = CapturedBody(content: .complete(Data("abc".utf8)), byteCount: 3, undecoded: .noRule)
+
+    let row = try requestBodyRow(body)
+
+    #expect(row.title.contains("proto, no rule"))
+    #expect(row.preview == "616263")
+}
+
+@Test @MainActor func protobufOverTheCapSaysSoAndStillOpens() throws {
+    let body = CapturedBody(content: .truncated(Data([0x0A, 0x01])), byteCount: 500, undecoded: .truncated)
+
+    let row = try requestBodyRow(body)
+
+    #expect(row.title.contains("truncated"))
+    #expect(row.title.contains("too large to decode"))
+    #expect(row.body == body)
+}
+
+@Test @MainActor func protobufThatWontDecodeSaysSo() throws {
+    let body = CapturedBody(content: .complete(Data([0xFF])), byteCount: 1, undecoded: .failed)
+
+    #expect(try requestBodyRow(body).title.contains("couldn't be decoded"))
+}
+
+@Test @MainActor func aDecodedBodySaysSoAndPreviewsItsJSON() throws {
+    let body = CapturedBody(content: .complete(Data(#"{"a":1}"#.utf8)), byteCount: 9, isDecoded: true)
+
+    let row = try requestBodyRow(body)
+
+    #expect(row.title.contains("decoded"))
+    #expect(row.preview == #"{"a":1}"#)
 }
 
 @Test @MainActor func truncatedBodyOpensAndSaysSo() throws {

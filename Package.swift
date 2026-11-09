@@ -14,6 +14,7 @@ let package = Package(
     products: [
         .library(name: "Cerebro", targets: ["Cerebro"]),
         .library(name: "CerebroProto", targets: ["CerebroProto"]),
+        .plugin(name: "CerebroProtoPlugin", targets: ["CerebroProtoPlugin"]),
     ],
     dependencies: [
         // Broad on purpose: the host app's generated `.pb.swift` files pin their own version.
@@ -37,6 +38,21 @@ let package = Package(
             ],
             swiftSettings: swiftSettings
         ),
+        // The logic is a library because an executable can't be linked into tests on iOS.
+        .target(
+            name: "CerebroProtoGeneratorCore",
+            swiftSettings: swiftSettings
+        ),
+        .executableTarget(
+            name: "CerebroProtoGenerator",
+            dependencies: ["CerebroProtoGeneratorCore"],
+            swiftSettings: swiftSettings
+        ),
+        .plugin(
+            name: "CerebroProtoPlugin",
+            capability: .buildTool(),
+            dependencies: ["CerebroProtoGenerator"]
+        ),
         .testTarget(
             name: "CerebroCoreTests",
             dependencies: ["CerebroCore"],
@@ -50,6 +66,11 @@ let package = Package(
         .testTarget(
             name: "CerebroProtoTests",
             dependencies: ["CerebroProto"],
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
+            name: "CerebroProtoGeneratorTests",
+            dependencies: ["CerebroProtoGeneratorCore"],
             swiftSettings: swiftSettings
         ),
     ]

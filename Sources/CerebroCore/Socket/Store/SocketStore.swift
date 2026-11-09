@@ -130,8 +130,8 @@ public actor SocketStore {
 
 extension SocketTimelineItem {
     fileprivate var storedBytes: Int {
-        guard case .frame(let frame) = self else { return 0 }
-        return frame.payload?.data?.count ?? 0
+        guard case .frame(let frame) = self, let payload = frame.payload else { return 0 }
+        return (payload.data?.count ?? 0) + (payload.rawData?.count ?? 0)
     }
 }
 
