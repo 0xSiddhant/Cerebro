@@ -49,6 +49,7 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 | Memory on a huge response? | Bounded. A 200 MB response arrived in full, and peak memory went from 408 MB to 429 MB |
 | Do the WebSocket hooks see `async` calls? | Yes, on iOS 18.5 and 26.4. The `async` forms call the same Objective-C methods as the completion-handler ones |
 | Cost of a fast socket stream? | 30,000 frames in 5.5 s, in a Release build. Behind the host app there were no slow frames and the worst took 17 ms. With the timeline open, 4 of 315 frames went over 34 ms and the worst took 72 ms |
+| Does a background transfer survive the app exiting? | Yes, on an iOS 26.4.1 simulator after `exit(0)` mid-transfer. iOS relaunched the app in the background, and the recreated session delivered full metrics for the whole transfer. A real device, a termination by the system and a force-quit are untested |
 | How should a URLProtocol handle redirects? | Tell the client, then hold the 3xx until `stopLoading` (followed) or 500 ms (refused, which sends no signal). Sending the 3xx straight away passed a small spike, but with a new session per request it failed about 1 run in 20 to 100: the app got the 302, or `URLSession.data(for:)` crashed. Never sending it hangs a refused redirect, and Apple's sample approach fails one with `NSCocoaErrorDomain 3072` |
 
 ## Worth knowing

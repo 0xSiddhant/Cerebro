@@ -30,7 +30,7 @@ Cerebro/
 ├── Sources/
 │   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
 │   │   ├── HTTP/
-│   │   │   ├── Capture/       # URLProtocol, config injection; background delegate proxy in PLAN-05
+│   │   │   ├── Capture/       # URLProtocol, config injection, background delegate proxy
 │   │   │   ├── Pipeline/      # raw exchange, transaction builder, console logger
 │   │   │   ├── Store/         # transaction store, cURL; persistence and export in later plans
 │   │   │   └── Models/        # transaction model and its metrics
