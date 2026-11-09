@@ -16,14 +16,12 @@ struct BodyProcessor: Sendable {
 
     /// Processes a body. `declared` is the compression named in the request's headers.
     ///
-    /// `detectsCompression` looks for compression in the body's first bytes. `withholdsKeyMentions` is
-    /// for formats that wrap JSON in a prefix, like Socket.IO's frames, which can't be parsed to redact.
+    /// `detectsCompression` looks for compression in the body's first bytes.
     func process(
         _ raw: RawBody,
         context: BodyContext,
         declared: BodyCompression? = nil,
-        detectsCompression: Bool = true,
-        withholdsKeyMentions: Bool = false
+        detectsCompression: Bool = true
     ) -> CapturedBody? {
         guard raw.byteCount > 0 else { return nil }
         let working = decode(
@@ -31,7 +29,7 @@ struct BodyProcessor: Sendable {
             context: context
         )
         return CapturedBody(
-            content: redact(working, context: context, withholdsKeyMentions: withholdsKeyMentions),
+            content: redact(working, context: context),
             byteCount: raw.byteCount,
             compression: working.compression,
             isDecompressed: working.isDecompressed,
@@ -64,17 +62,21 @@ struct BodyProcessor: Sendable {
         return working
     }
 
-    /// Redaction beats every shortcut: a JSON body that can't be redacted isn't stored at all.
-    private func redact(
-        _ body: Working,
-        context: BodyContext,
-        withholdsKeyMentions: Bool
-    ) -> CapturedBody.Content {
+    /// Redaction beats every shortcut: a body that can't be redacted isn't stored at all.
+    private func redact(_ body: Working, context: BodyContext) -> CapturedBody.Content {
         let stored: CapturedBody.Content = body.isTruncated ? .truncated(body.data) : .complete(body.data)
         guard redactor.redactsJSON else { return stored }
-        guard looksLikeJSON(body.data, contentType: context.contentType) else {
-            return withholdsKeyMentions && redactor.mentionsJSONKey(in: body.data) ? .withheld : stored
+        // JSON comes first, so JSON sent under a form content type is still redacted by key.
+        if looksLikeJSON(body.data, contentType: context.contentType) {
+            return redactedJSON(body)
         }
+        if isFormEncoded(context.contentType) {
+            return body.isTruncated ? .withheld : .complete(redactor.redact(form: body.data))
+        }
+        return redactor.mentionsJSONKey(in: body.data, isTruncated: body.isTruncated) ? .withheld : stored
+    }
+
+    private func redactedJSON(_ body: Working) -> CapturedBody.Content {
         guard !body.isTruncated,
             let object = try? JSONSerialization.jsonObject(with: body.data, options: .fragmentsAllowed),
             let redacted = try? JSONSerialization.data(
@@ -91,5 +93,9 @@ struct BodyProcessor: Sendable {
         }
         let first = data.first { ![0x20, 0x09, 0x0A, 0x0D].contains($0) }
         return first == UInt8(ascii: "{") || first == UInt8(ascii: "[")
+    }
+
+    private func isFormEncoded(_ contentType: String?) -> Bool {
+        contentType?.lowercased().contains("application/x-www-form-urlencoded") == true
     }
 }

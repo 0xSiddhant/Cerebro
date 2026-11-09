@@ -36,8 +36,7 @@ struct SocketActivityBuilder: Sendable {
         return processor.process(
             body,
             context: context,
-            detectsCompression: frame.kind == .binary,
-            withholdsKeyMentions: true
+            detectsCompression: frame.kind == .binary
         )
     }
 
