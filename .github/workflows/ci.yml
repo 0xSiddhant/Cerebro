@@ -51,6 +51,7 @@ jobs:
             -workspace .swiftpm/xcode/package.xcworkspace \
             -scheme Cerebro-Package \
             -destination "$DESTINATION" \
+            -skipPackagePluginValidation \
             -quiet
 
   example:
@@ -64,6 +65,7 @@ jobs:
             -project Example/CerebroExample.xcodeproj \
             -scheme CerebroExample \
             -destination "$DESTINATION" \
+            -skipPackagePluginValidation \
             -quiet
 
   pod:

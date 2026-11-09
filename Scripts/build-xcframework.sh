@@ -57,7 +57,16 @@ import Cerebro
 import CerebroProto
 import SwiftProtobuf
 
-let rule = ProtoRule(messageType: Google_Protobuf_Struct.self)
+// Written the way the generator writes a rule, so its output is proven against this interface too.
+let rule = ProtoRule(
+    name: "Example",
+    match: ProtoRule.Match(host: "example.com", path: nil, pathPrefix: "/v1", regex: nil),
+    methods: ["GET"],
+    direction: .response,
+    messageType: Google_Protobuf_Struct.self,
+    stripPrefixBytes: 0,
+    source: .file
+)
 Cerebro.start(CerebroConfiguration().registering([rule]))
 Cerebro.present()
 Cerebro.stop()

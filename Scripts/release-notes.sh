@@ -28,4 +28,6 @@ pod 'Cerebro', :git => '$repository.git', :tag => '$tag'
 ### XCFramework
 
 Download the \`.xcframework.zip\` files below, unzip them, and add them to your app target with **Embed & Sign**.
+
+To generate rules from \`traffic_map.json\` in a Run Script phase, also download \`cerebro-proto-gen.zip\`.
 NOTES

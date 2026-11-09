@@ -19,6 +19,10 @@ Pod::Spec.new do |s|
 
   s.default_subspecs = 'Core', 'UI'
 
+  # Run Script phases call this binary, because CocoaPods has no build-tool plugins.
+  s.prepare_command = 'Scripts/build-generator.sh bin'
+  s.preserve_paths = 'bin/cerebro-proto-gen'
+
   s.subspec 'Core' do |core|
     core.source_files = 'Sources/CerebroCore/**/*.swift'
     core.frameworks = 'Foundation', 'Network', 'Security'
