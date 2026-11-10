@@ -111,8 +111,8 @@ func anEnabledProxySwitchMeansAProxy(key: String) {
 
 @Test func qualityAveragesEachStageOverTheRequestsThatHadIt() {
     let quality = ConnectionQuality(recent: [
-        transaction(received: 1_000, timing: TransactionTiming(connect: 0.2, tls: 0.1, firstByte: 0.1, total: 1)),
-        transaction(received: 3_000, timing: TransactionTiming(firstByte: 0.3, total: 1)),
+        transaction(received: 100_000, timing: TransactionTiming(connect: 0.2, tls: 0.1, firstByte: 0.1, total: 1)),
+        transaction(received: 300_000, timing: TransactionTiming(firstByte: 0.3, total: 1)),
         transaction(timing: nil),
     ])
 
@@ -120,7 +120,17 @@ func anEnabledProxySwitchMeansAProxy(key: String) {
     #expect(quality.latency == 0.2)
     #expect(quality.connect == 0.2)
     #expect(quality.tls == 0.1)
-    #expect(quality.throughput == 2_000)
+    #expect(quality.throughput == 200_000)
+}
+
+@Test func smallResponsesDontCountTowardThroughput() {
+    let quality = ConnectionQuality(recent: [
+        transaction(received: 500, timing: TransactionTiming(firstByte: 0.9, total: 1)),
+        transaction(received: 131_072, timing: TransactionTiming(firstByte: 0.1, total: 2)),
+    ])
+
+    #expect(quality.throughput == 65_536)
+    #expect(ConnectionQuality(recent: [transaction(received: 500)]).throughput == nil)
 }
 
 @Test func qualityOnlyCoversTheNewestRequests() {

@@ -15,7 +15,11 @@ public struct ConnectionQuality: Sendable, Equatable {
     /// The average TLS handshake, in seconds, over requests that made one.
     public let tls: TimeInterval?
 
-    /// The average throughput, in bytes per second.
+    /// A response smaller than this says more about the server's delay than the network's speed, so
+    /// it's left out of `throughput`.
+    public static let throughputMinimumBytes: Int64 = 65_536
+
+    /// The average throughput, in bytes per second, over responses large enough to measure it.
     public let throughput: Double?
 
     /// How many requests the averages cover.
@@ -28,7 +32,9 @@ public struct ConnectionQuality: Sendable, Equatable {
         latency = Self.average(samples.compactMap { $0.timing?.firstByte })
         connect = Self.average(samples.compactMap { $0.timing?.connect })
         tls = Self.average(samples.compactMap { $0.timing?.tls })
-        throughput = Self.average(samples.compactMap(\.throughput))
+        throughput = Self.average(
+            samples.filter { ($0.size?.bytesReceived ?? 0) >= Self.throughputMinimumBytes }.compactMap(\.throughput)
+        )
     }
 
     private static func average(_ values: [Double]) -> Double? {
