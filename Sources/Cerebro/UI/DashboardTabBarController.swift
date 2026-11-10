@@ -4,18 +4,23 @@ import UIKit
 import CerebroCore
 #endif
 
-/// The dashboard's shell. PLAN-04 adds the System Info tab.
+/// Everything the dashboard reads from, which capture owns.
+struct DashboardSources {
+    let store: TransactionStore
+    let socketStore: SocketStore
+    let decoders: [any BodyDecoder]
+    let systemInfo: SystemInfoMonitor
+    let downloads: DownloadProgressStore
+}
+
+/// The dashboard's shell.
 final class DashboardTabBarController: UITabBarController {
     private let onClose: () -> Void
 
-    init(
-        store: TransactionStore,
-        socketStore: SocketStore,
-        decoders: [any BodyDecoder],
-        onClose: @escaping () -> Void
-    ) {
+    init(sources: DashboardSources, onClose: @escaping () -> Void) {
         self.onClose = onClose
         super.init(nibName: nil, bundle: nil)
+        let (store, socketStore, decoders) = (sources.store, sources.socketStore, sources.decoders)
         var tabs = [
             makeTab(
                 root: HTTPListViewController(viewModel: HTTPListViewModel(store: store)),
@@ -35,6 +40,13 @@ final class DashboardTabBarController: UITabBarController {
                     root: ProtoConfigViewController(viewModel: viewModel), title: "Proto Config", image: "curlybraces")
             )
         }
+        tabs.append(
+            makeTab(
+                root: SystemInfoViewController(viewModel: SystemInfoViewModel(sources: sources)),
+                title: "System Info",
+                image: "info.circle"
+            )
+        )
         viewControllers = tabs
     }
 

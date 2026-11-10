@@ -26,6 +26,11 @@ enum DisplayFormat {
         ByteCountFormatter.string(fromByteCount: count, countStyle: .file)
     }
 
+    /// A transfer speed, from bytes per second.
+    static func rate(_ bytesPerSecond: Double) -> String {
+        bytes(Int64(bytesPerSecond.rounded())) + "/s"
+    }
+
     /// The time of day on a 24-hour clock, to the millisecond, because frames can be that close together.
     static func time(_ date: Date) -> String {
         date.formatted(timeFormat)

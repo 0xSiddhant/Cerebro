@@ -71,6 +71,11 @@ final class HTTPListViewModel {
         updates?.cancel()
     }
 
+    /// Every request in the store, oldest first.
+    func sessionTransactions() async -> [HTTPTransaction] {
+        await store.transactions
+    }
+
     func startObserving() {
         guard updates == nil else { return }
         updates = Task { [weak self, store] in

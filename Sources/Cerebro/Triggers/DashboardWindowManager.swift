@@ -8,9 +8,7 @@ import CerebroCore
 /// the app's own view hierarchy or navigation stack.
 @MainActor
 final class DashboardWindowManager: NSObject {
-    private let store: TransactionStore
-    private let socketStore: SocketStore
-    private let decoders: [any BodyDecoder]
+    private let sources: DashboardSources
     private let overlay = OverlayViewController()
     private var window: PassthroughWindow?
     private weak var previousKeyWindow: UIWindow?
@@ -18,21 +16,14 @@ final class DashboardWindowManager: NSObject {
     private var badgeUpdates: Task<Void, Never>?
     private var unseenRequests = UnseenRequestCounter()
 
-    init(
-        store: TransactionStore,
-        socketStore: SocketStore,
-        decoders: [any BodyDecoder],
-        isShakeGestureEnabled: Bool
-    ) {
-        self.store = store
-        self.socketStore = socketStore
-        self.decoders = decoders
+    init(sources: DashboardSources, isShakeGestureEnabled: Bool) {
+        self.sources = sources
         super.init()
         overlay.trigger.onTap = { [weak self] in self?.present() }
         if isShakeGestureEnabled {
             ShakeDetector.install { [weak self] in self?.toggleTrigger() }
         }
-        badgeUpdates = Task { [weak self, store] in
+        badgeUpdates = Task { [weak self, store = sources.store] in
             for await transactions in await store.updates() {
                 self?.updateBadge(with: transactions)
             }
@@ -61,9 +52,7 @@ final class DashboardWindowManager: NSObject {
         previousKeyWindow = window.windowScene?.keyWindow
         window.makeKey()
         let dashboard = DashboardTabBarController(
-            store: store,
-            socketStore: socketStore,
-            decoders: decoders,
+            sources: sources,
             onClose: { [weak self] in self?.previousKeyWindow?.makeKey() }
         )
         dashboard.modalPresentationStyle = .fullScreen

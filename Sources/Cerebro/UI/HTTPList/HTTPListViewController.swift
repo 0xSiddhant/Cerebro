@@ -7,6 +7,17 @@ import CerebroCore
 /// The HTTP tab: every captured request, newest first, with search and filters.
 final class HTTPListViewController: UITableViewController {
     private let viewModel: HTTPListViewModel
+    private lazy var exportButton: UIBarButtonItem = {
+        let export = UIAction(
+            title: "Export Session as HAR",
+            image: UIImage(systemName: "doc.zipper"),
+            handler: { [weak self] _ in self?.exportSession() }
+        )
+        let button = UIBarButtonItem(
+            image: UIImage(systemName: "square.and.arrow.up"), menu: UIMenu(children: [export]))
+        button.accessibilityLabel = "Export"
+        return button
+    }()
     private lazy var dataSource = UITableViewDiffableDataSource<Int, UUID>(tableView: tableView) { [weak self] in
         self?.cell(in: $0, at: $1, for: $2)
     }
@@ -28,6 +39,7 @@ final class HTTPListViewController: UITableViewController {
         tableView.dataSource = dataSource
         navigationItem.searchController = makeSearchController()
         navigationItem.hidesSearchBarWhenScrolling = false
+        navigationItem.rightBarButtonItem = exportButton
         viewModel.onChange = { [weak self] in self?.showRows() }
         viewModel.startObserving()
     }
@@ -75,6 +87,15 @@ final class HTTPListViewController: UITableViewController {
 
     private func request(at indexPath: IndexPath) -> CapturedRequest? {
         dataSource.itemIdentifier(for: indexPath).flatMap { viewModel.transaction(id: $0)?.request }
+    }
+
+    /// The whole session, not just the rows the search and filter leave on screen.
+    private func exportSession() {
+        Task { [weak self, viewModel] in
+            let transactions = await viewModel.sessionTransactions()
+            guard let self else { return }
+            ExportActions.shareHAR(of: transactions, from: self, anchor: exportButton)
+        }
     }
 
     private func copyCurl(of request: CapturedRequest) {
