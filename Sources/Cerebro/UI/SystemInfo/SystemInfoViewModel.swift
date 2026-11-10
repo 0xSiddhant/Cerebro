@@ -317,7 +317,7 @@ extension SystemInfoViewModel {
             environment.modelIdentifier.map { SystemInfoRow(title: "Identifier", value: $0, symbol: "barcode") },
             SystemInfoRow(title: "System", value: environment.system, symbol: "gearshape"),
             SystemInfoRow(
-                title: "Memory", value: DisplayFormat.bytes(Int64(clamping: environment.memoryBytes)),
+                title: "Memory", value: DisplayFormat.memory(environment.memoryBytes),
                 symbol: "memorychip"),
             SystemInfoRow(title: "Processor cores", value: String(environment.processorCount), symbol: "cpu"),
             SystemInfoRow(

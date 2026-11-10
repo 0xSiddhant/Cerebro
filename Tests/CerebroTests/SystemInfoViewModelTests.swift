@@ -29,7 +29,7 @@ private let environment = AppEnvironment(
     modelIdentifier: "iPhone17,3",
     system: "iOS 26.4",
     isSimulator: false,
-    memoryBytes: 8_000_000_000,
+    memoryBytes: 8_589_934_592,
     processorCount: 6,
     isLowPowerModeOn: true,
     locale: "en_IN",

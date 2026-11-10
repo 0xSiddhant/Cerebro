@@ -4,6 +4,7 @@ import UIKit
 /// traffic, and the app and device.
 final class SystemInfoViewController: UITableViewController {
     private static let cellIdentifier = "info"
+    private static let longValueLength = 28
 
     private let viewModel: SystemInfoViewModel
     private let tabs = UISegmentedControl(items: SystemInfoTab.allCases.map(\.title))
@@ -86,8 +87,9 @@ final class SystemInfoViewController: UITableViewController {
         var content = UIListContentConfiguration.valueCell()
         content.text = row.title
         content.secondaryText = row.value
-        content.secondaryTextProperties.font = .monospacedDigitSystemFont(ofSize: 15, weight: .regular)
-        // An IPv6 address or a long host is wider than a phone.
+        // An IPv6 address is 39 characters, which only fits one line of a phone at a smaller size.
+        let isLong = row.value.split(separator: "\n").contains { $0.count > Self.longValueLength }
+        content.secondaryTextProperties.font = .monospacedDigitSystemFont(ofSize: isLong ? 12 : 15, weight: .regular)
         content.secondaryTextProperties.numberOfLines = 0
         content.image = row.symbol.flatMap { UIImage(systemName: $0) }
         content.imageProperties.tintColor = .secondaryLabel
