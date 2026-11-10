@@ -22,6 +22,8 @@ enum TrafficSample: CaseIterable, Sendable {
     case externalBridge
     case protobuf
     case protobufFromMap
+    case backgroundDownload
+    case backgroundUpload
 
     private static let session = URLSession(configuration: .default)
     private static let mockAPI = "https://mock.0xsiddhant.com"
@@ -46,6 +48,8 @@ enum TrafficSample: CaseIterable, Sendable {
         case .externalBridge: "ExternalNetworkBridge"
         case .protobuf: "Protobuf: code rule"
         case .protobufFromMap: "Protobuf: traffic_map.json"
+        case .backgroundDownload: "Background download"
+        case .backgroundUpload: "Background upload"
         }
     }
 
@@ -60,7 +64,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockSlowFlights: "\(Self.mockAPI)/api/v1/flights?delay=1500"
         case .mockUnauthorized: "\(Self.mockAPI)/api/v1/flights?status=401"
         case .mockEcho, .mockUpload, .mockPut, .mockPatch, .mockDelete, .redaction, .webSocket, .nwConnection,
-            .externalBridge, .protobuf, .protobufFromMap:
+            .externalBridge, .protobuf, .protobufFromMap, .backgroundDownload, .backgroundUpload:
             ""
         }
     }
@@ -75,11 +79,26 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockUpload: try await uploadMockJSON()
         case .mockPut, .mockPatch, .mockDelete: try await sendBlackholeRequest()
         case .redaction: try await postFakeSecrets()
+        case .webSocket, .nwConnection, .externalBridge: try await useSocket()
+        case .protobuf, .protobufFromMap: try await sendProtobuf()
+        case .backgroundDownload, .backgroundUpload: try await runBackgroundTransfer()
+        }
+    }
+
+    private func useSocket() async throws -> String {
+        switch self {
         case .webSocket: try await exchangeWebSocketMessage()
         case .nwConnection: try await NWConnectionExchange().run()
-        case .externalBridge: logExternalSocket()
-        case .protobuf, .protobufFromMap: try await sendProtobuf()
+        default: logExternalSocket()
         }
+    }
+
+    private func runBackgroundTransfer() async throws -> String {
+        let response =
+            self == .backgroundUpload
+            ? try await BackgroundTransfers.upload(Data(count: 4_096), to: Self.url("https://httpbin.org/post"))
+            : try await BackgroundTransfers.download(from: Self.url("https://httpbin.org/bytes/2048"))
+        return Self.summary(of: response)
     }
 
     private func sendRequest(to address: String, through session: URLSession) async throws -> String {

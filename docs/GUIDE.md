@@ -7,6 +7,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
   - [Redaction](#redaction)
 - [Traffic that needs code](#traffic-that-needs-code)
 - [Protobuf decoding](#protobuf-decoding)
+- [Background transfers](#background-transfers)
 - [When Cerebro runs](#when-cerebro-runs)
 - [What changes while Cerebro captures](#what-changes-while-cerebro-captures)
 - [What Cerebro can't capture](#what-cerebro-cant-capture)
@@ -17,6 +18,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 **Capture**
 
 - `URLSession` traffic with no code change, including `URLSession.shared` and sessions made from `.default` or `.ephemeral` configurations.
+- Background `URLSession` downloads and uploads with no code change, with their metrics but never their file or body.
 - `URLSessionWebSocketTask` frames, pings, opens and closes with no code change.
 - `NWConnection` through a drop-in wrapper, and any other socket engine through a one-line bridge.
 - For each request: URL, method, query, headers, bodies, status and errors, plus a timing breakdown, sizes on the wire and after decoding, addresses, HTTP and TLS versions, and connection reuse.
@@ -254,6 +256,17 @@ The **Proto Config** tab lists each rule, what it maps to, whether it came from 
 
 Decoded bodies are redacted like any other JSON, and the keys are the field names in your `.proto` file, such as `card_number` rather than `cardNumber`. With `jsonKeys` set, a decoded body's original bytes aren't kept, because a field your `.pb.swift` files don't know is in those bytes but not in the JSON that was redacted. Protobuf that wasn't decoded is withheld, because its values can't be matched to keys, and so is gRPC-web's base64 text form.
 
+## Background transfers
+
+Uploads and downloads through a background `URLSession` are captured with no code change. Each one appears in the HTTP list with its URL, status, headers, timing, connection details and sizes. Your session delegate still gets every callback, and `session.delegate` still returns it.
+
+- The file or body is never read or stored. It shows as not stored, with its size.
+- A redirected transfer is one row describing its last hop, and its sizes count every hop.
+- A transfer appears only once it finishes. One that iOS keeps retrying, such as a refused connection, stays unseen until it ends, which can take days.
+- `Cerebro.start()` has to run before the session is created. A session created in a property of your app delegate is too early.
+- If iOS relaunches your app to finish a transfer, the transfer appears in that launch's log, once your app recreates the session with the same identifier.
+- Rows are in memory, so they're lost if iOS later ends the app.
+
 ## When Cerebro runs
 
 `Cerebro.start()` decides from how the app is signed. Every install option uses the same check.
@@ -295,7 +308,7 @@ SPM and XCFrameworks link Cerebro in every configuration, so its code stays in t
 
 ## What changes while Cerebro captures
 
-Cerebro sends each request through its own session, which has these side effects in builds where it runs:
+Cerebro sends each request through its own session, which has these side effects in builds where it runs. Background sessions don't go through it, so they aren't affected:
 
 - Settings on your `URLSessionConfiguration` other than headers don't apply, such as timeouts, cellular access and cookie handling.
 - The `urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)` upload progress callback doesn't fire.
@@ -312,7 +325,6 @@ Cerebro keeps both the request and response body of up to 500 requests, so it ca
 - AVPlayer streams
 - gRPC over SwiftNIO
 - Sockets not routed through `MonitoredNWConnection` or `ExternalNetworkBridge`
-- Background `URLSession` transfers, for now
 
 ## Troubleshooting
 

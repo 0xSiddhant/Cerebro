@@ -41,6 +41,7 @@ final class HTTPCaptureEngine: Sendable {
         SessionConfigurationInjector.exchangeGetters()
         // The getters never reach URLSession.shared, but this does.
         URLProtocol.registerClass(CustomURLProtocol.self)
+        BackgroundSessionHooks.install()
     }
 
     func uninstall() {
@@ -50,6 +51,7 @@ final class HTTPCaptureEngine: Sendable {
             return true
         }
         guard removed else { return }
+        BackgroundSessionHooks.uninstall()
         URLProtocol.unregisterClass(CustomURLProtocol.self)
         SessionConfigurationInjector.exchangeGetters()
     }

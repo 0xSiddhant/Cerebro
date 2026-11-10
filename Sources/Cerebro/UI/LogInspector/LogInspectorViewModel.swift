@@ -168,7 +168,7 @@ final class LogInspectorViewModel {
         case .complete: parts.append("View body")
         case .truncated: parts.append("View start of body (truncated)")
         case .withheld: parts.append("Withheld, because it couldn't be redacted")
-        case .notStored: parts.append("Not stored, because it's a download")
+        case .notStored: parts.append("Not stored, because it's a download or background transfer")
         }
         if let compression = body.compression {
             parts.append("\(compression.rawValue), \(body.isDecompressed ? "decompressed for display" : "shown raw")")

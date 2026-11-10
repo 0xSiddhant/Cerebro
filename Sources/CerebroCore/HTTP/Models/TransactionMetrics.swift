@@ -48,6 +48,11 @@ extension URLSessionTaskMetrics {
         )
     }
 
+    /// Request body bytes across every attempt, for a body Cerebro never saw itself.
+    var requestBodyBytes: Int64 {
+        transactionMetrics.reduce(0) { $0 + $1.countOfRequestBodyBytesSent }
+    }
+
     private static func interval(_ start: Date?, _ end: Date?) -> TimeInterval? {
         guard let start, let end else { return nil }
         return end.timeIntervalSince(start)

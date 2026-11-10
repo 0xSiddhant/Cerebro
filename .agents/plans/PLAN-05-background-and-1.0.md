@@ -1,8 +1,8 @@
-# PLAN-05 — Background sessions, persistence and 1.0
+# PLAN-05 — Persistence and 1.0
 
 ## Goal
 
-Close the last capture gap, keep the previous session readable after a relaunch or crash, and ship `v1.0.0`.
+Keep the previous session readable after a relaunch or crash, and ship `v1.0.0`.
 
 ## Gate
 
@@ -10,15 +10,11 @@ PLAN-04 merged. Single PR on `plan/5-background-and-1.0`. Its `Release-As: 1.0.0
 
 ## Scope
 
-**In:** the delegate-proxy capture engine for background URLSessions, the on-disk session store with previous-session restore, the previous-session view, the notification redirect trigger, complete `README.md` setup and `docs/GUIDE.md` documentation, and the `v1.0.0` release.
+**In:** the on-disk session store with previous-session restore, the previous-session view, the notification redirect trigger, complete `README.md` setup and `docs/GUIDE.md` documentation, and the `v1.0.0` release.
 
 **Out:** mocking and replay (PLAN-99). Compile-time removal in Release, which was rejected.
 
 ## Decisions & reasoning
-
-### A second capture engine behind the same pipeline
-
-Background URLSessions get a delegate-proxy engine. Both engines feed the same pipeline, so other layers don't care how a request was captured.
 
 ### JSON Lines in Caches
 
@@ -46,9 +42,6 @@ The host app owns the notification delegate and permission, so it forwards taps 
 
 ## Task checklist
 
-**Capture (`Sources/CerebroCore/Capture/`)**
-- [ ] Delegate-proxy engine for background URLSessions, feeding the existing pipeline
-
 **Store (`Sources/CerebroCore/Store/`)**
 - [ ] Append each completed request to a JSON Lines file in Caches, on a background queue
 - [ ] Keep the configured number of sessions, replaced at each launch
@@ -64,17 +57,16 @@ The host app owns the notification delegate and permission, so it forwards taps 
 
 ## Acceptance criteria
 
-1. Traffic through a background URLSession appears in the HTTP tab with no app changes.
-2. After a relaunch or a crash, the previous session is readable and read-only in the HTTP and Sockets tabs.
-3. A crash loses at most the requests still in flight.
-4. Turning persistence off writes nothing to disk.
-5. One previous session is kept by default, and the count is configurable.
-6. No file on disk holds a redacted value in raw form.
-7. A forwarded notification tap opens the dashboard, and nothing happens with the trigger off.
-8. Disk writes never delay a request and never run on the main thread.
-9. The README and guide accurately document setup, configuration, persistence, background-session capture, and capture limits.
-10. Merging `develop` into `main` releases `v1.0.0` with all its binaries.
-11. The `build-and-test` skill passes in all channels.
+1. After a relaunch or a crash, the previous session is readable and read-only in the HTTP and Sockets tabs.
+2. A crash loses at most the requests still in flight.
+3. Turning persistence off writes nothing to disk.
+4. One previous session is kept by default, and the count is configurable.
+5. No file on disk holds a redacted value in raw form.
+6. A forwarded notification tap opens the dashboard, and nothing happens with the trigger off.
+7. Disk writes never delay a request and never run on the main thread.
+8. The README and guide accurately document setup, configuration, persistence, background-session capture, and capture limits.
+9. Merging `develop` into `main` releases `v1.0.0` with all its binaries.
+10. The `build-and-test` skill passes in all channels.
 
 ## Test checklist
 
@@ -84,7 +76,6 @@ The host app owns the notification delegate and permission, so it forwards taps 
 - [ ] Redaction before write, including withheld bodies
 
 **Integration**
-- [ ] A background download and upload are captured
 - [ ] Restore after a relaunch
 - [ ] Writes stay off the main thread
 
