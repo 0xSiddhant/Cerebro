@@ -25,7 +25,10 @@ These win over the spec, which is older.
 | Download progress | An Active downloads section on the System Info tab, for foreground downloads only | The spec doesn't say where. A row in the HTTP list would need PLAN-06's update-by-ID path, and a background transfer has no row until it ends |
 | Raw JSON export | One request as a JSON document, from the Log Inspector | The Body Viewer already shares a body as a file, and HAR covers the session |
 | Session totals | A running sum kept by the store, with hosts past 50 grouped together | Summing the stored requests would shrink as the oldest are dropped |
-| Throughput | Bytes received on the wire divided by the request's whole duration | Metrics have no separate download time, so small requests read low |
+| Throughput | Bytes received on the wire divided by the request's whole duration. The System Info average only counts responses of 64 KB or more | Metrics have no separate download time, so a small response measures the server's delay |
+| System Info layout | Three pages, Network, Traffic and Device, under a status card | The owner's rule: one long list was hard to use |
+| Connection quality | Shown as Performance, with a rating from the average response time: Good under 300 ms, Fair under 1 s, else Slow | The owner found averaged timings unclear. The thresholds are a judgement, not a measurement |
+| App and device info | A Device page with the app's name, version and bundle ID, and the device's model, system, memory and locale | The owner's rule. The spec has neither |
 | Pipeline | Decompress, proto decode, redact. Pretty-print only on open | Most requests are never opened |
 | Redacted headers | None by default. The developer selects `SensitiveHeader` cases, or names in `headers` | The owner's rule: Cerebro opts nothing out on its own. The spec has a fixed default list |
 | Unredactable bodies | With JSON keys configured, a JSON body that can't be parsed is withheld, form fields are redacted one by one, and other text that names a key is withheld | Stopping at the cap skips parsing, and redaction comes first |

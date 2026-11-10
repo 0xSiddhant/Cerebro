@@ -36,7 +36,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 - **Sockets list:** every connection with its source (`WS`, `NW` or `EXT`), status, frame count and bytes sent and received.
 - **Socket timeline:** each socket as a conversation with its frames, pings and state changes. Tap a frame to open it in the Body Viewer.
 - **Proto Config:** each protobuf rule, what it maps to, where it came from and how often it has matched. Hidden when you have no rules.
-- **System Info:** the network the device is on, connection quality, session byte totals and downloads in progress. See [System Info](#system-info).
+- **System Info:** the network the device is on, how your requests are performing, session byte totals, downloads in progress, and the app and device. See [System Info](#system-info).
 - **Copy and share:** copy any request as cURL from its page, or by swiping or long-pressing it in the list, and share a command or body as text or a file.
 - **Export:** share one request as JSON, or the whole session as a HAR file. See [Export](#export).
 
@@ -274,23 +274,29 @@ Uploads and downloads through a background `URLSession` are captured with no cod
 
 ## System Info
 
-The System Info tab shows the network a request ran on, using only what iOS exposes publicly. Nothing on it runs until you open the tab.
+The System Info tab shows the network a request ran on, what the session has moved, and the app and device, using only what iOS exposes publicly. Nothing on it runs until you open the tab. A card at the top says whether the device is online and over what, and flags a VPN, a proxy or Low Data Mode while one applies. Tap any row to copy its value.
 
-| Section | What it shows |
-|---|---|
-| Connection | Online, offline or requires connection, the type (Wi-Fi, cellular, wired or other), the cellular generation, Low Data Mode, whether the connection is expensive, and whether a VPN or proxy is active |
-| Addresses | The device's Wi-Fi (`en0`) and cellular (`pdp_ip0`) IPv4 and IPv6 addresses, and the public IP |
-| Connection quality | Latency (time to first byte), connect time, TLS time and throughput, averaged over the last 20 requests |
-| Session totals | Requests, bytes sent and bytes received since `Cerebro.start()`, then by host and by connection type |
-| Active downloads | Each foreground download still running, with its bytes so far and its progress if the server announced a size |
+| Page | Section | What it shows |
+|---|---|---|
+| Network | Connection | The type (Wi-Fi, cellular, wired or other), the cellular generation, Low Data Mode, whether the connection is metered, and whether a VPN or proxy is active |
+| Network | IP addresses | The device's Wi-Fi (`en0`) and cellular (`pdp_ip0`) IPv4 and IPv6 addresses, and the public IP |
+| Traffic | Downloads in progress | Each foreground download still running, with its bytes so far and its progress if the server announced a size |
+| Traffic | Performance | An overall rating, server response time, connection setup time and download speed, averaged over the last 20 requests |
+| Traffic | This session | Requests, bytes sent and bytes received since `Cerebro.start()`, then by host and by connection |
+| Device | App | Name, version and build, bundle ID and minimum iOS version |
+| Device | Device | Model, hardware identifier such as `iPhone17,3`, iOS version, memory, processor cores, Low Power Mode, locale and time zone |
 
 - **Public IP:** off by default, and the row says `Off`. Set `isPublicIPLookupEnabled` to turn it on. Cerebro then sends one request to `https://api.ipify.org` when you open the tab and each time the network changes. It's the only data Cerebro sends off the device, and that request never appears in the HTTP list or the console.
-- **Connection quality** stands in for signal strength, which iOS doesn't expose. Throughput is bytes received divided by the request's whole duration, so small requests read low.
+- **Performance** stands in for signal strength, which iOS doesn't expose. It describes your app's own requests, not the network alone, so a slow server reads as slow.
+  - The rating comes from the average response time: Good under 300 ms, Fair under 1 second, and Slow above that.
+  - Response time is how long a server took to start answering.
+  - Connection setup only counts requests that opened a new connection.
+  - Download speed only counts responses of 64 KB or more, because a small one measures the server's delay, not the network's speed. The row is hidden until there is one.
 - **Totals** are a running sum of captured requests, so they stay correct after old requests leave the list. They don't include sockets or other apps' traffic. Only the first 50 hosts get their own line.
 - **Downloads** made with a download task, including image loaders built on one, keep their size, duration, throughput and MIME type but never their body. A [background transfer](#background-transfers) has no progress, because it only appears once it finishes.
-- A VPN or proxy is detected from the system's proxy settings, so a VPN that doesn't register there isn't seen. On a simulator, these reflect the Mac.
+- A VPN or proxy is detected from the system's proxy settings, so a VPN that doesn't register there isn't seen. On a simulator, these and the memory and processor counts reflect the Mac.
 
-Signal strength, carrier name and Wi-Fi name aren't shown, because iOS has no public API for the first, deprecated the second, and needs an entitlement and location permission for the third.
+Signal strength, carrier name and Wi-Fi name aren't shown, because iOS has no public API for the first, deprecated the second, and needs an entitlement and location permission for the third. The device's own name, battery level and free storage aren't shown either: iOS returns a generic name, and the other two would need Cerebro to change app settings or declare a privacy reason on your app's behalf.
 
 ## Export
 
