@@ -53,6 +53,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //
         // Redact credentials and personal data, which Cerebro doesn't do on its own: `redaction` below shows how.
         //
+        // Show the device's public IP on the System Info tab. It's off by default, because it asks
+        // `api.ipify.org`, which is the only data Cerebro sends off the device:
+        //
+        //     Cerebro.start(CerebroConfiguration(isPublicIPLookupEnabled: true))
+        //
         // Stop a shake from showing and hiding the floating button:
         //
         //     Cerebro.start(CerebroConfiguration(isShakeGestureEnabled: false))

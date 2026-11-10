@@ -80,7 +80,7 @@ Every install option uses the same runtime check, because `#if DEBUG` inside a p
 
 | Module | Contains | Depends on |
 |---|---|---|
-| `CerebroCore` | Capture, pipeline, store, metrics, models, configuration | Foundation, Network, Compression, Security |
+| `CerebroCore` | Capture, pipeline, store, metrics, models, configuration | Foundation, Network, Compression, Security, CFNetwork, CoreTelephony |
 | `Cerebro` | Public facade, triggers, dashboard UI | `CerebroCore`, UIKit |
 | `CerebroProto` | Proto rules and decoder | `CerebroCore`, SwiftProtobuf |
 | `CerebroProtoPlugin` | Build-tool plugin that runs the generator on the app's target | SPM only |

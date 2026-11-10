@@ -25,7 +25,7 @@ Users choose one of three install options, and all three are first-class: SPM, C
 
 ## Current plan
 
-PLAN-04, system info and export, is next. See `.agents/plans/README.md` for the order and gates.
+PLAN-05, persistence and 1.0, is next. See `.agents/plans/README.md` for the order and gates.
 
 ## Commands
 
