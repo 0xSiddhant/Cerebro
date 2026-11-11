@@ -51,7 +51,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .protobufFromMap: "Protobuf: traffic_map.json"
         case .backgroundDownload: "Background download"
         case .backgroundUpload: "Background upload"
-        case .backgroundLargeDownload: "Background download: 1 GB"
+        case .backgroundLargeDownload: "Background download: 100 MB"
         }
     }
 
@@ -300,7 +300,7 @@ extension TrafficSample {
         }
     }
 
-    /// The large download is slow on purpose, to leave time to test it. Start it, go to the home screen
+    /// The large download takes several seconds, which leaves time to test it. Start it, go to the home screen
     /// and stop the app from Xcode. iOS finishes the transfer, relaunches the app in the background, and
     /// the request is in Cerebro's log when you open the app again. Quitting from the app switcher is
     /// different: iOS cancels the transfer.
@@ -311,7 +311,7 @@ extension TrafficSample {
             response = try await BackgroundTransfers.upload(
                 Data(count: 4_096), to: Self.url("https://httpbin.org/post"))
         case .backgroundLargeDownload:
-            response = try await BackgroundTransfers.download(from: Self.url("https://proof.ovh.net/files/1Gb.dat"))
+            response = try await BackgroundTransfers.download(from: Self.url("https://proof.ovh.net/files/100Mb.dat"))
         default:
             response = try await BackgroundTransfers.download(from: Self.url("https://httpbin.org/bytes/2048"))
         }
