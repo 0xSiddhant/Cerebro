@@ -286,7 +286,7 @@ The System Info tab shows the network a request ran on, what the session has mov
 | Device | App | Name, version and build, bundle ID and minimum iOS version |
 | Device | Device | Model, hardware identifier such as `iPhone17,3`, iOS version, memory, processor cores, Low Power Mode, locale and time zone |
 
-- **Public IP:** off by default, and the row says `Off`. Set `isPublicIPLookupEnabled` to turn it on. Cerebro then sends one request to `https://api.ipify.org` when you open the tab and each time the network changes. It's the only data Cerebro sends off the device, and that request never appears in the HTTP list or the console.
+- **Public IP:** off by default, and the row says `Off`. Set `isPublicIPLookupEnabled` to turn it on. Cerebro then sends one request to `https://api.ipify.org` when you open the tab, and again if the network changes while the dashboard is open. Nothing is sent while it's closed. It's the only data Cerebro sends off the device, and that request never appears in the HTTP list or the console.
 - **Performance** stands in for signal strength, which iOS doesn't expose. It describes your app's own requests, not the network alone, so a slow server reads as slow.
   - The rating comes from the average response time: Good under 300 ms, Fair under 1 second, and Slow above that.
   - Response time is how long a server took to start answering.

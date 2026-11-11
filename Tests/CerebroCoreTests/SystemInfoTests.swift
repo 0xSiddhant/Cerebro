@@ -218,3 +218,77 @@ func anEnabledProxySwitchMeansAProxy(key: String) {
 
     #expect(info.publicIP == .off)
 }
+
+@Test func cellularGenerationIsOnlyReportedOnCellular() {
+    let technologies = ["sim1": CTRadioAccessTechnologyNR]
+
+    #expect(CellularGeneration.current(technologies: technologies, dataService: "sim1", isCellular: true) == "5G")
+    #expect(CellularGeneration.current(technologies: technologies, dataService: "sim1", isCellular: false) == nil)
+    #expect(CellularGeneration.current(technologies: nil, dataService: nil, isCellular: true) == nil)
+}
+
+@Test func withTwoSIMsTheOneCarryingDataIsUsed() {
+    let technologies = ["voice": CTRadioAccessTechnologyLTE, "data": CTRadioAccessTechnologyNR]
+
+    #expect(CellularGeneration.current(technologies: technologies, dataService: "data", isCellular: true) == "5G")
+    #expect(CellularGeneration.current(technologies: technologies, dataService: "voice", isCellular: true) == "4G")
+    // With no data service named, guessing between two would be wrong half the time.
+    #expect(CellularGeneration.current(technologies: technologies, dataService: nil, isCellular: true) == nil)
+    #expect(
+        CellularGeneration.current(
+            technologies: ["only": CTRadioAccessTechnologyLTE], dataService: nil, isCellular: true)
+            == "4G")
+}
+
+@Test func aReaderGetsNothingUntilThereIsSomethingToSend() async {
+    var observers = SnapshotObservers<Int>()
+    var updates = observers.add(startingWith: nil) { _ in }.makeAsyncIterator()
+
+    observers.publish(7)
+
+    #expect(await updates.next() == 7)
+}
+
+@Test func aSnapshotIsntBuiltWhenNobodyIsReading() {
+    var observers = SnapshotObservers<Int>()
+    var builds = 0
+
+    observers.publish(
+        {
+            builds += 1; return 1
+        }())
+
+    #expect(builds == 0)
+}
+
+@Test func theMonitorStopsWhenItsLastReaderLeaves() async throws {
+    let monitor = SystemInfoMonitor(lookup: nil)
+
+    let reading = Task {
+        for await _ in await monitor.updates() {}
+    }
+    for _ in 0..<500 where await !monitor.isRunning {
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(await monitor.isRunning)
+
+    reading.cancel()
+    for _ in 0..<500 where await monitor.isRunning {
+        try await Task.sleep(for: .milliseconds(10))
+    }
+
+    #expect(await !monitor.isRunning)
+}
+
+@Test func anOvertakenLookupCantOverwriteTheNewerState() async throws {
+    let monitor = SystemInfoMonitor(lookup: nil)
+    defer { Task { await monitor.stop() } }
+    var updates = await monitor.updates().makeAsyncIterator()
+    _ = await updates.next()
+
+    await monitor.finishLookup(with: "203.0.113.7", generation: -1)
+    await monitor.stop()
+    var again = await monitor.updates().makeAsyncIterator()
+
+    #expect(try #require(await again.next()).publicIP == .off)
+}

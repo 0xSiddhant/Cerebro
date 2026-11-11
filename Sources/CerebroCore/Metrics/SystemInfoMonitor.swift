@@ -40,9 +40,12 @@ public actor SystemInfoMonitor {
     private var telephony: CTTelephonyNetworkInfo?
     private var pathMonitor: NWPathMonitor?
     private var pathUpdates: Task<Void, Never>?
-    private var path = Path()
+    /// `nil` until the system reports one, so nothing claims the device is offline before it's known.
+    private var path: Path?
     private var publicIP: SystemInfo.PublicIP
     private var runningLookup: Task<Void, Never>?
+    /// Which lookup is current, so one that was overtaken can't overwrite the newer result.
+    private var lookupGeneration = 0
     private var observers = SnapshotObservers<SystemInfo>()
 
     /// `lookup` is `nil` unless the developer opted in, and then no external call is ever made.
@@ -51,12 +54,16 @@ public actor SystemInfoMonitor {
         publicIP = lookup == nil ? .off : .loading
     }
 
-    /// Delivers the current network now, then again whenever it changes.
+    /// Delivers the network once it's known, then again whenever it changes.
     public func updates() -> AsyncStream<SystemInfo> {
         startIfNeeded()
         return observers.add(startingWith: snapshot()) { [weak self] id in
             Task { await self?.removeObserver(id) }
         }
+    }
+
+    var isRunning: Bool {
+        pathMonitor != nil
     }
 
     func stop() {
@@ -66,10 +73,19 @@ public actor SystemInfoMonitor {
         pathUpdates = nil
         runningLookup?.cancel()
         runningLookup = nil
+        lookupGeneration += 1
+        path = nil
+        telephony = nil
+        publicIP = lookup == nil ? .off : .loading
     }
 
+    /// Stops when the last reader leaves, so nothing runs, and no lookup leaves the device, while the
+    /// dashboard is closed.
     private func removeObserver(_ id: UUID) {
         observers.remove(id)
+        if observers.isEmpty {
+            stop()
+        }
     }
 
     private func startIfNeeded() {
@@ -89,41 +105,55 @@ public actor SystemInfoMonitor {
     }
 
     private func pathChanged(to newPath: Path) {
+        guard isRunning else { return }
         path = newPath
-        lookUpPublicIP()
-        observers.publish(snapshot())
+        lookUpPublicIP(isOnline: newPath.status == .online)
+        publishSnapshot()
+    }
+
+    private func publishSnapshot() {
+        if let snapshot = snapshot() {
+            observers.publish(snapshot)
+        }
     }
 
     /// The public address can change with the network, so each change looks it up again.
-    private func lookUpPublicIP() {
+    private func lookUpPublicIP(isOnline: Bool) {
         guard let lookup else { return }
         runningLookup?.cancel()
-        guard path.status == .online else {
+        lookupGeneration += 1
+        guard isOnline else {
             publicIP = .unavailable
             return
         }
         publicIP = .loading
-        runningLookup = Task { [weak self] in
+        runningLookup = Task { [weak self, generation = lookupGeneration] in
             let address = await lookup.address()
-            guard !Task.isCancelled else { return }
-            await self?.finishLookup(with: address)
+            await self?.finishLookup(with: address, generation: generation)
         }
     }
 
-    private func finishLookup(with address: String?) {
+    /// Checked here, on the actor, because a lookup can be overtaken while it waits to get in.
+    func finishLookup(with address: String?, generation: Int) {
+        guard generation == lookupGeneration else { return }
         publicIP = address.map(SystemInfo.PublicIP.address) ?? .unavailable
-        observers.publish(snapshot())
+        publishSnapshot()
     }
 
-    private func snapshot() -> SystemInfo {
+    private func snapshot() -> SystemInfo? {
+        guard let path else { return nil }
         let proxySettings = ProxySettings.current()
-        let technology = telephony?.serviceCurrentRadioAccessTechnology?.values.first
+        let generation = CellularGeneration.current(
+            technologies: telephony?.serviceCurrentRadioAccessTechnology,
+            dataService: telephony?.dataServiceIdentifier,
+            isCellular: path.connectionType == .cellular
+        )
         return SystemInfo(
             status: path.status,
             connectionType: path.connectionType,
             isLowDataMode: path.isLowDataMode,
             isExpensive: path.isExpensive,
-            cellularGeneration: technology.flatMap(CellularGeneration.name(forRadioAccessTechnology:)),
+            cellularGeneration: generation,
             addresses: NetworkInterfaces.local(from: NetworkInterfaces.all()),
             isVPNActive: ProxySettings.isVPNActive(in: proxySettings),
             isProxyActive: ProxySettings.isProxyActive(in: proxySettings),
