@@ -11,6 +11,7 @@ extension URLSessionTaskMetrics {
             tls: Self.interval(last?.secureConnectionStartDate, last?.secureConnectionEndDate),
             requestSent: Self.interval(last?.requestStartDate, last?.requestEndDate),
             firstByte: Self.interval(last?.requestStartDate, last?.responseStartDate),
+            receive: Self.interval(last?.responseStartDate, last?.responseEndDate),
             total: taskInterval.duration
         )
     }

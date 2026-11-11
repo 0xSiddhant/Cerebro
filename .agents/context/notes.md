@@ -21,6 +21,14 @@ These win over the spec, which is older.
 | WebSocket hooks | Also hook `resume`, `sendPing`, `cancel(with:reason:)` and plain `cancel` | `send` and `receive` can't see open, close or ping |
 | Trigger badge | Counts requests since the dashboard was last opened, not errors | The owner's rule |
 | Dashboard | Four tabs, with Proto Config hidden when no decoder is registered | The spec says five but lists four |
+| Public IP | Looked up at `https://api.ipify.org`, one fixed address | The spec names no service, and the owner chose it |
+| Download progress | An Active downloads section on the System Info tab, for foreground downloads only | The spec doesn't say where. A row in the HTTP list would need PLAN-06's update-by-ID path, and a background transfer has no row until it ends |
+| Raw JSON export | One request as a JSON document, from the Log Inspector | The Body Viewer already shares a body as a file, and HAR covers the session |
+| Session totals | A running sum kept by the store, with hosts past 50 grouped together | Summing the stored requests would shrink as the oldest are dropped |
+| Throughput | Bytes received on the wire divided by the request's whole duration. The System Info average only counts responses of 64 KB or more | Metrics have no separate download time, so a small response measures the server's delay |
+| System Info layout | Three pages, Network, Traffic and Device, under a status card | The owner's rule: one long list was hard to use |
+| Connection quality | Shown as Performance, with a rating from the average response time: Good under 300 ms, Fair under 1 s, else Slow | The owner found averaged timings unclear. The thresholds are a judgement, not a measurement |
+| App and device info | A Device page with the app's name, version and bundle ID, and the device's model, system, memory and locale | The owner's rule. The spec has neither |
 | Pipeline | Decompress, proto decode, redact. Pretty-print only on open | Most requests are never opened |
 | Redacted headers | None by default. The developer selects `SensitiveHeader` cases, or names in `headers` | The owner's rule: Cerebro opts nothing out on its own. The spec has a fixed default list |
 | Unredactable bodies | With JSON keys configured, a JSON body that can't be parsed is withheld, form fields are redacted one by one, and other text that names a key is withheld | Stopping at the cap skips parsing, and redaction comes first |
@@ -55,6 +63,6 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 ## Worth knowing
 
 - A URLProtocol can't read the app's session, so the side effects in the "What changes while Cerebro captures" section of `docs/GUIDE.md` follow from the design. Don't try to fix them without a new idea.
-- Copy as cURL and the share sheet (for cURL and bodies) shipped with PLAN-01 at the owner's request, ahead of PLAN-04. PLAN-04 reuses `CurlCommand` and `CapturedContentSharing`, and still adds raw JSON and HAR export.
+- A whole-session HAR is built in memory, so at the worst case of 500 requests with two 1 MB bodies each it needs about as much again as the store holds. Streaming it to a file is the fix if that ever matters.
 - A session delegate that answers a redirect just as the held 3xx goes out, about 500 ms in, can still crash `URLSession.data(for:)`. Nothing public can close that window, because a refusal sends no signal. Delegates that answer sooner never reach it.
 - `Cerebro.xcodeproj` leaves out `SWIFT_APPROACHABLE_CONCURRENCY` and member import visibility on purpose, so the same sources compile the same way as in SPM.

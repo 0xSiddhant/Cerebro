@@ -24,9 +24,13 @@ public enum Cerebro {
         guard let started else { return }
         Task { @MainActor in
             dashboard = DashboardWindowManager(
-                store: started.store,
-                socketStore: started.socketStore,
-                decoders: configuration.decoders,
+                sources: DashboardSources(
+                    store: started.store,
+                    socketStore: started.socketStore,
+                    decoders: configuration.decoders,
+                    systemInfo: started.systemInfo,
+                    downloads: started.downloads
+                ),
                 isShakeGestureEnabled: configuration.isShakeGestureEnabled
             )
         }

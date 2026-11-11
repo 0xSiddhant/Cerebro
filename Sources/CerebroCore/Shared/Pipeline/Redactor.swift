@@ -35,7 +35,7 @@ struct Redactor: Sendable {
 
     /// Reads bytes as text. A body cut off at the cap can end partway through a character, which alone
     /// doesn't make it binary. A UTF-8 character is four bytes at most, so that leaves three at most.
-    private static func text(of data: Data, isTruncated: Bool) -> String? {
+    static func text(of data: Data, isTruncated: Bool) -> String? {
         for cutBytes in 0...(isTruncated ? 3 : 0) {
             if let text = String(data: data.dropLast(cutBytes), encoding: .utf8) {
                 return text

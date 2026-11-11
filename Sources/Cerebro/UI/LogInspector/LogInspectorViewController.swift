@@ -23,9 +23,10 @@ final class LogInspectorViewController: UITableViewController {
         let button = UIButton(configuration: Self.actionButtonConfiguration(image: "square.and.arrow.up"))
         button.menu = UIMenu(
             children: CurlActions.shareActions(for: viewModel.request, from: self) { [weak button] in button }
+                + ExportActions.jsonActions(for: viewModel.transaction, from: self) { [weak button] in button }
         )
         button.showsMenuAsPrimaryAction = true
-        button.accessibilityLabel = "Share cURL"
+        button.accessibilityLabel = "Share"
         return button
     }()
 

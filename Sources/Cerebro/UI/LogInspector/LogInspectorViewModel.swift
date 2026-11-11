@@ -63,12 +63,14 @@ final class LogInspectorViewModel {
     let title: String
     let summary: InspectorSummary
     let request: CapturedRequest
+    let transaction: HTTPTransaction
     private let pages: [InspectorTab: [InspectorSection]]
 
     init(transaction: HTTPTransaction) {
         title = transaction.request.url?.lastPathComponent ?? transaction.request.method
         summary = Self.summary(of: transaction)
         request = transaction.request
+        self.transaction = transaction
         pages = [
             .response: Self.nonEmpty([
                 InspectorSection(title: "Error", rows: Self.error(of: transaction)),
@@ -229,6 +231,7 @@ final class LogInspectorViewModel {
             row("Body after decoding", DisplayFormat.bytes(size.decodedBodyBytes)),
             row("Encoding", transaction.response?.contentEncoding),
             row("Compression ratio", size.compressionRatio.map { String(format: "%.1fx", $0) }),
+            row("Throughput", transaction.throughput.map(DisplayFormat.rate)),
         ]
         .compactMap { $0 }
     }

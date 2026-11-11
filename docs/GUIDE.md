@@ -8,6 +8,8 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 - [Traffic that needs code](#traffic-that-needs-code)
 - [Protobuf decoding](#protobuf-decoding)
 - [Background transfers](#background-transfers)
+- [System Info](#system-info)
+- [Export](#export)
 - [When Cerebro runs](#when-cerebro-runs)
 - [What changes while Cerebro captures](#what-changes-while-cerebro-captures)
 - [What Cerebro can't capture](#what-cerebro-cant-capture)
@@ -28,13 +30,15 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 **Dashboard**
 
 - **Floating trigger:** sits above your app, drags anywhere and snaps to the nearest side, and counts the requests since you last looked.
-- **HTTP list:** newest first and live, with search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests.
+- **HTTP list:** newest first and live, with search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests. The trash button clears every request and resets the session totals, after asking. Sockets are kept.
 - **Log Inspector:** Response, Request and Metrics pages for each request. Tap a row to expand it, or long-press to copy it.
 - **Body Viewer:** pretty JSON or raw text, plus a collapsible tree for decoded protobuf, with copy and share buttons.
 - **Sockets list:** every connection with its source (`WS`, `NW` or `EXT`), status, frame count and bytes sent and received.
 - **Socket timeline:** each socket as a conversation with its frames, pings and state changes. Tap a frame to open it in the Body Viewer.
 - **Proto Config:** each protobuf rule, what it maps to, where it came from and how often it has matched. Hidden when you have no rules.
+- **System Info:** the network the device is on, how your requests are performing, session byte totals, downloads in progress, and the app and device. See [System Info](#system-info).
 - **Copy and share:** copy any request as cURL from its page, or by swiping or long-pressing it in the list, and share a command or body as text or a file.
+- **Export:** share one request as JSON, or the whole session as a HAR file. See [Export](#export).
 
 **Safety**
 
@@ -57,6 +61,7 @@ Every setting is optional. `Cerebro.start()` uses the defaults, and calling it a
 | `redaction` | `RedactionRules()`, which redacts nothing | Headers, body fields and query parameters to redact. See [Redaction](#redaction) |
 | `isShakeGestureEnabled` | `true` | Whether a shake shows or hides the floating button |
 | `decoders` | `[]` | `BodyDecoder`s, tried in order, that turn a body Cerebro can't read into JSON. `registering(_:)` adds the [protobuf](#protobuf-decoding) one |
+| `isPublicIPLookupEnabled` | `false` | Whether the System Info tab asks `api.ipify.org` for the device's public IP. See [System Info](#system-info) |
 
 ```swift
 Cerebro.start(CerebroConfiguration(
@@ -266,6 +271,47 @@ Uploads and downloads through a background `URLSession` are captured with no cod
 - `Cerebro.start()` has to run before the session is created. A session created in a property of your app delegate is too early.
 - If iOS relaunches your app to finish a transfer, the transfer appears in that launch's log, once your app recreates the session with the same identifier.
 - Rows are in memory, so they're lost if iOS later ends the app.
+
+## System Info
+
+The System Info tab shows the network a request ran on, what the session has moved, and the app and device, using only what iOS exposes publicly. Nothing on it runs until you open the tab. A card at the top says whether the device is online and over what, and flags a VPN, a proxy or Low Data Mode while one applies. Tap any row to copy its value.
+
+| Page | Section | What it shows |
+|---|---|---|
+| Network | Connection | The type (Wi-Fi, cellular, wired or other), the cellular generation, Low Data Mode, whether the connection is metered, and whether a VPN or proxy is active |
+| Network | IP addresses | The device's Wi-Fi (`en0`) and cellular (`pdp_ip0`) IPv4 and IPv6 addresses, and the public IP |
+| Traffic | Downloads in progress | Each foreground download still running, with its bytes so far and its progress if the server announced a size |
+| Traffic | Performance | An overall rating, server response time, connection setup time and download speed, averaged over the last 20 requests |
+| Traffic | This session | Requests, bytes sent and bytes received since `Cerebro.start()`, then by host and by connection |
+| Device | App | Name, version and build, bundle ID and minimum iOS version |
+| Device | Device | Model, hardware identifier such as `iPhone17,3`, iOS version, memory, processor cores, Low Power Mode, locale and time zone |
+
+- **Public IP:** off by default, and the row says `Off`. Set `isPublicIPLookupEnabled` to turn it on. Cerebro then sends one request to `https://api.ipify.org` when you open the tab, and again if the network changes while the dashboard is open. Nothing is sent while it's closed. It's the only data Cerebro sends off the device, and that request never appears in the HTTP list or the console.
+- **Performance** stands in for signal strength, which iOS doesn't expose. It describes your app's own requests, not the network alone, so a slow server reads as slow.
+  - The rating comes from the average response time: Good under 300 ms, Fair under 1 second, and Slow above that.
+  - Response time is how long a server took to start answering.
+  - Connection setup only counts requests that opened a new connection.
+  - Download speed only counts responses of 64 KB or more, because a small one measures the server's delay, not the network's speed. The row is hidden until there is one.
+- **Totals** are a running sum of captured requests, so they stay correct after old requests leave the list. Clearing the HTTP list starts them again. They don't include sockets or other apps' traffic. Only the first 50 hosts get their own line.
+- **Downloads** made with a download task, including image loaders built on one, keep their size, duration, throughput and MIME type but never their body. A [background transfer](#background-transfers) has no progress, because it only appears once it finishes.
+- While the tab shows the device as offline, it checks the network again every 2 seconds, because iOS can miss the connection coming back, most often on a simulator.
+- A VPN or proxy is detected from the system's proxy settings, so a VPN that doesn't register there isn't seen. On a simulator, these and the memory and processor counts reflect the Mac.
+
+Signal strength, carrier name and Wi-Fi name aren't shown, because iOS has no public API for the first, deprecated the second, and needs an entitlement and location permission for the third. The device's own name, battery level and free storage aren't shown either: iOS returns a generic name, and the other two would need Cerebro to change app settings or declare a privacy reason on your app's behalf.
+
+## Export
+
+Every export goes through the share sheet, which warns first, because captured data can hold anything you didn't [redact](#redaction). Redacted values are never in an export, since they were removed before storage.
+
+| Export | Where | Format |
+|---|---|---|
+| cURL | A request's page, or a swipe or long-press in the HTTP list | A command to paste into a terminal |
+| One request as JSON | The share button on a request's page | One document with the URL, headers, bodies, status, timing, connection and sizes |
+| The session as HAR | The share button at the top of the HTTP list | HAR 1.2, which browser developer tools, Charles and Proxyman can open |
+
+- A HAR export holds every request in the list, not only the ones your search or filter shows.
+- A body that isn't text is written as Base64. One that was cut off, withheld or not stored has a comment saying so.
+- A whole session can be large: up to twice `bodyLimit` for each of `requestLimit` requests. Lower either if exports are too big to share.
 
 ## When Cerebro runs
 

@@ -30,6 +30,9 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
     /// but refusing sends no signal, so the 3xx is delivered as the final response once this passes.
     private static let redirectGrace: DispatchTimeInterval = .milliseconds(500)
 
+    /// The least time between two progress reports for one download, so a fast one can't flood the store.
+    private static let progressInterval: TimeInterval = 0.25
+
     class var sessionKind: SessionKind { .standard }
 
     private let engine: HTTPCaptureEngine?
@@ -51,6 +54,9 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
     private var metrics: URLSessionTaskMetrics?
     private var completion: (error: (any Error)?, date: Date)?
     private var isRecorded = false
+    private var isTrackedDownload = false
+    private var downloadedBytes: Int64 = 0
+    private var lastProgressReport = Date.distantPast
 
     override init(request: URLRequest, cachedResponse: CachedURLResponse?, client: (any URLProtocolClient)?) {
         // Held for the request's whole life, so it can still be cancelled after `stop`.
@@ -148,6 +154,11 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
         }
         let task = session.makeTask(for: outgoing as URLRequest, spooledFile: spooledFile, owner: self)
         runningTask = task
+        // Reported only once a task exists, because its completion is what ends the progress entry.
+        if self.task is URLSessionDownloadTask {
+            isTrackedDownload = true
+            engine?.report(.started(id: id, url: request.url, date: startDate))
+        }
         task.resume()
     }
 
@@ -161,6 +172,24 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
     func didReceive(_ data: Data) {
         sendToClient { $0.urlProtocol(self, didLoad: data) }
         responseBody?.append(data)
+        reportProgress(adding: data.count)
+    }
+
+    private func reportProgress(adding byteCount: Int) {
+        guard isTrackedDownload else { return }
+        downloadedBytes += Int64(byteCount)
+        let now = Date()
+        guard now.timeIntervalSince(lastProgressReport) >= Self.progressInterval else { return }
+        lastProgressReport = now
+        let expected = response?.expectedContentLength ?? -1
+        engine?.report(
+            .received(
+                id: id,
+                bytes: downloadedBytes,
+                expectedBytes: expected > 0 ? expected : nil,
+                mimeType: response?.mimeType
+            )
+        )
     }
 
     /// Hands the decision to the app's session. If it follows the redirect, it stops this load and starts
@@ -217,6 +246,9 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
 
     func didComplete(error: (any Error)?) {
         spooledFile.map(RequestBodyReader.remove)
+        if isTrackedDownload {
+            engine?.report(.finished(id: id))
+        }
         sendToClient { client in
             if let error {
                 client.urlProtocol(self, didFailWithError: error)

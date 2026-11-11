@@ -14,10 +14,16 @@ final class HTTPCaptureEngine: Sendable {
     private let standardSession: CaptureSession
     private let ephemeralSession: CaptureSession
     private let record: @Sendable (RawExchange) -> Void
+    private let reportDownload: @Sendable (DownloadEvent) -> Void
 
     /// Must run before `install`, because the sessions need configurations with nothing injected.
-    init(bodyLimit: Int, record: @escaping @Sendable (RawExchange) -> Void) {
+    init(
+        bodyLimit: Int,
+        reportDownload: @escaping @Sendable (DownloadEvent) -> Void = { _ in },
+        record: @escaping @Sendable (RawExchange) -> Void
+    ) {
         self.bodyLimit = bodyLimit
+        self.reportDownload = reportDownload
         self.record = record
         standardSession = CaptureSession(configuration: .default)
         ephemeralSession = CaptureSession(configuration: .ephemeral)
@@ -29,6 +35,10 @@ final class HTTPCaptureEngine: Sendable {
 
     func submit(_ exchange: RawExchange) {
         record(exchange)
+    }
+
+    func report(_ event: DownloadEvent) {
+        reportDownload(event)
     }
 
     func install() {

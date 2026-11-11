@@ -11,7 +11,7 @@
 
 A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app, and decodes protobuf to JSON when you add rules for it. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
 
-**Status:** early development. HTTP, WebSocket and NWConnection capture, protobuf decoding and the dashboard work today.
+**Status:** early development. HTTP, WebSocket and NWConnection capture, protobuf decoding, the dashboard, System Info and export work today.
 
 ## Screenshots
 
@@ -152,6 +152,8 @@ The [guide](docs/GUIDE.md) covers everything past setup:
 | [Redaction](docs/GUIDE.md#redaction) | Hiding tokens, cookies and body fields. Nothing is redacted until you select it |
 | [Traffic that needs code](docs/GUIDE.md#traffic-that-needs-code) | `NWConnection`, Starscream and Socket.IO |
 | [Protobuf decoding](docs/GUIDE.md#protobuf-decoding) | Showing binary protobuf as JSON, with rules in code or in a `traffic_map.json` file |
+| [System Info](docs/GUIDE.md#system-info) | Network status, addresses, performance, session totals, app and device info, and the opt-in public IP |
+| [Export](docs/GUIDE.md#export) | Sharing a request as cURL or JSON, or the whole session as HAR |
 | [When Cerebro runs](docs/GUIDE.md#when-cerebro-runs) | On in simulators and development-signed builds, off elsewhere unless you opt in |
 | [What changes while Cerebro captures](docs/GUIDE.md#what-changes-while-cerebro-captures) | Side effects on your app's requests |
 | [What Cerebro can't capture](docs/GUIDE.md#what-cerebro-cant-capture) | WKWebView, AVPlayer and other limits |

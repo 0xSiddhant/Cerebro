@@ -14,6 +14,29 @@ enum BackgroundTransfers {
         delegateQueue: nil
     )
 
+    /// What iOS wants called once every event from a relaunch has been delivered.
+    @MainActor private static var finishEvents: (() -> Void)?
+
+    /// Called with how far a large download has got, such as "Downloading 42%".
+    @MainActor static var onProgress: ((String) -> Void)?
+
+    /// Creates the session again, which is what makes iOS deliver transfers that finished while the app
+    /// wasn't running. Call it at launch, after `Cerebro.start()`, so Cerebro sees the session too.
+    static func reconnect() {
+        session.getAllTasks { tasks in
+            // A transfer outlives the app, so one started by an earlier launch can still be running.
+            for task in tasks {
+                print("Background transfer still running from an earlier launch:", task.originalRequest?.url ?? "")
+            }
+        }
+    }
+
+    /// Call from `application(_:handleEventsForBackgroundURLSession:completionHandler:)`.
+    @MainActor static func handleEvents(completionHandler: @escaping () -> Void) {
+        finishEvents = completionHandler
+        reconnect()
+    }
+
     static func download(from url: URL) async throws -> URLResponse {
         try await delegate.run(session.downloadTask(with: url))
     }
@@ -34,6 +57,7 @@ enum BackgroundTransfers {
     private final class Delegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
         private let lock = NSLock()
         private var waiting: [Int: CheckedContinuation<URLResponse, Error>] = [:]
+        private var reportedPercent: [Int: Int] = [:]
 
         func run(_ task: URLSessionTask) async throws -> URLResponse {
             try await withCheckedThrowingContinuation { continuation in
@@ -50,8 +74,40 @@ enum BackgroundTransfers {
             // A real app moves the file here, because iOS deletes it as soon as this returns.
         }
 
+        /// Reports each whole percent of a download once, which is often enough to see it moving.
+        func urlSession(
+            _ session: URLSession,
+            downloadTask: URLSessionDownloadTask,
+            didWriteData bytesWritten: Int64,
+            totalBytesWritten: Int64,
+            totalBytesExpectedToWrite: Int64
+        ) {
+            guard totalBytesExpectedToWrite > 1_000_000 else { return }
+            let percent = Int(totalBytesWritten * 100 / totalBytesExpectedToWrite)
+            let isNew = lock.withLock { () -> Bool in
+                guard reportedPercent[downloadTask.taskIdentifier] != percent else { return false }
+                reportedPercent[downloadTask.taskIdentifier] = percent
+                return true
+            }
+            if isNew {
+                Task { @MainActor in BackgroundTransfers.onProgress?("Downloading \(percent)%") }
+            }
+        }
+
+        func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+            Task { @MainActor in
+                BackgroundTransfers.finishEvents?()
+                BackgroundTransfers.finishEvents = nil
+            }
+        }
+
         func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
             let continuation = lock.withLock { waiting.removeValue(forKey: task.taskIdentifier) }
+            if continuation == nil {
+                // Nothing is waiting, so the transfer was started by an earlier launch of the app.
+                let status = (task.response as? HTTPURLResponse)?.statusCode
+                print("Background transfer from an earlier launch finished:", status ?? error ?? "no response")
+            }
             if let response = task.response, error == nil {
                 continuation?.resume(returning: response)
             } else {

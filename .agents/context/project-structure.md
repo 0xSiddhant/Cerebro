@@ -44,7 +44,7 @@ Cerebro/
 │   │   │   ├── Store/         # ring buffer, snapshot observers
 │   │   │   ├── Models/        # captured body, named value
 │   │   │   └── Configuration/ # CerebroConfiguration, redaction rules, release gate
-│   │   └── Metrics/           # PLAN-04: NWPathMonitor, getifaddrs, public IP
+│   │   └── Metrics/           # network path, interfaces, public IP, totals, connection quality, download progress
 │   ├── Cerebro/
 │   │   ├── Facade/            # Cerebro.start / stop / present
 │   │   ├── Triggers/          # shake hook, floating trigger, PassthroughWindow, DashboardWindowManager

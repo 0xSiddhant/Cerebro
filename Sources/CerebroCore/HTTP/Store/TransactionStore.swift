@@ -3,8 +3,8 @@ import Foundation
 /// Holds the session's transactions. It's an actor because capture finishes on arbitrary threads.
 public actor TransactionStore {
     private var buffer: RingBuffer<HTTPTransaction>
+    private var runningTotals = SessionTotals()
     private var observers = SnapshotObservers<[HTTPTransaction]>()
-    private var pendingPublish: Task<Void, Never>?
     private let updateInterval: Duration
 
     /// Creates a store. Changes publish at most once per `updateInterval`, so a burst can't flood the UI.
@@ -18,10 +18,24 @@ public actor TransactionStore {
         buffer.elements
     }
 
+    /// Bytes moved by every request added this session, including ones the store has since dropped.
+    public var totals: SessionTotals {
+        runningTotals
+    }
+
     /// Adds a finished transaction, dropping the oldest if the store is full.
     public func append(_ transaction: HTTPTransaction) {
         buffer.append(transaction)
+        runningTotals.add(transaction)
         schedulePublish()
+    }
+
+    /// Removes every transaction and starts the totals again, as if the session had just begun. Readers
+    /// are told at once, not with the next batch, because someone asked for this and is watching.
+    public func removeAll() {
+        buffer.removeAll()
+        runningTotals = SessionTotals()
+        publish()
     }
 
     /// Delivers the current transactions now, then again after each batch of changes.
@@ -37,15 +51,10 @@ public actor TransactionStore {
     }
 
     private func schedulePublish() {
-        guard pendingPublish == nil else { return }
-        pendingPublish = Task { [updateInterval] in
-            try? await Task.sleep(for: updateInterval)
-            publish()
-        }
+        observers.schedulePublish(after: updateInterval) { [weak self] in await self?.publish() }
     }
 
     private func publish() {
-        pendingPublish = nil
         observers.publish(buffer.elements)
     }
 }

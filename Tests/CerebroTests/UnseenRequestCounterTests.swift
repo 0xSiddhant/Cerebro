@@ -52,3 +52,15 @@ private func requests(_ count: Int) -> [HTTPTransaction] {
 
     #expect(counter.unseenCount == 4)
 }
+
+@Test func clearingTheListEmptiesTheBadgeAndNewRequestsCountAgain() {
+    let all = requests(3)
+    var counter = UnseenRequestCounter()
+    counter.update(with: all)
+
+    counter.update(with: [])
+    #expect(counter.unseenCount == 0)
+
+    counter.update(with: requests(2))
+    #expect(counter.unseenCount == 2)
+}

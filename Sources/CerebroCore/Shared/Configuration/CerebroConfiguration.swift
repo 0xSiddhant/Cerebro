@@ -24,6 +24,10 @@ public struct CerebroConfiguration: Sendable {
     /// Decoders tried in order on each body. `registering(_:)` adds the proto decoder here.
     public var decoders: [any BodyDecoder]
 
+    /// Whether the System Info tab asks `api.ipify.org` for the device's public IP. Off by default,
+    /// because it's the only data Cerebro sends off the device.
+    public var isPublicIPLookupEnabled: Bool
+
     /// Creates a configuration. Every argument has a working default.
     public init(
         allowsDistributionBuilds: Bool = false,
@@ -33,7 +37,8 @@ public struct CerebroConfiguration: Sendable {
         socketFrameLimit: Int = 1_000,
         redaction: RedactionRules = RedactionRules(),
         isShakeGestureEnabled: Bool = true,
-        decoders: [any BodyDecoder] = []
+        decoders: [any BodyDecoder] = [],
+        isPublicIPLookupEnabled: Bool = false
     ) {
         self.allowsDistributionBuilds = allowsDistributionBuilds
         self.consoleLevel = consoleLevel
@@ -43,5 +48,6 @@ public struct CerebroConfiguration: Sendable {
         self.redaction = redaction
         self.isShakeGestureEnabled = isShakeGestureEnabled
         self.decoders = decoders
+        self.isPublicIPLookupEnabled = isPublicIPLookupEnabled
     }
 }

@@ -71,6 +71,16 @@ final class HTTPListViewModel {
         updates?.cancel()
     }
 
+    /// Removes every request from the store. Every screen that reads the store hears about it.
+    func clear() async {
+        await store.removeAll()
+    }
+
+    /// Every request in the store, oldest first.
+    func sessionTransactions() async -> [HTTPTransaction] {
+        await store.transactions
+    }
+
     func startObserving() {
         guard updates == nil else { return }
         updates = Task { [weak self, store] in

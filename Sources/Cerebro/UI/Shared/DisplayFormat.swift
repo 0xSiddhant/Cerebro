@@ -26,6 +26,16 @@ enum DisplayFormat {
         ByteCountFormatter.string(fromByteCount: count, countStyle: .file)
     }
 
+    /// Installed memory, which is sold in powers of two, so 8 GB reads as 8 GB.
+    static func memory(_ byteCount: UInt64) -> String {
+        ByteCountFormatter.string(fromByteCount: Int64(clamping: byteCount), countStyle: .memory)
+    }
+
+    /// A transfer speed, from bytes per second.
+    static func rate(_ bytesPerSecond: Double) -> String {
+        bytes(Int64(bytesPerSecond.rounded())) + "/s"
+    }
+
     /// The time of day on a 24-hour clock, to the millisecond, because frames can be that close together.
     static func time(_ date: Date) -> String {
         date.formatted(timeFormat)
