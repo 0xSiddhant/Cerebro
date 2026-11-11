@@ -9,6 +9,8 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 - [Protobuf decoding](#protobuf-decoding)
 - [Background transfers](#background-transfers)
 - [System Info](#system-info)
+- [Previous sessions](#previous-sessions)
+- [Opening the dashboard from a notification](#opening-the-dashboard-from-a-notification)
 - [Export](#export)
 - [When Cerebro runs](#when-cerebro-runs)
 - [What changes while Cerebro captures](#what-changes-while-cerebro-captures)
@@ -44,7 +46,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 
 - Stays off in Ad Hoc, TestFlight and App Store builds unless you opt in. See [When Cerebro runs](#when-cerebro-runs).
 - Redacts only what you select, before anything is stored: common credential headers, your own headers, body fields and query parameters. With no rules, `Authorization` and cookies are stored and shown as sent. See [Redaction](#redaction). Cerebro warns you before anything is shared.
-- Keeps everything in memory, capped by count and size, and sends nothing off the device.
+- Keeps the live session in memory, capped by count and size, and sends nothing off the device. A redacted copy goes to the app's Caches folder, so the previous session survives a relaunch. See [Previous sessions](#previous-sessions).
 - Lives in its own window, so it never touches your navigation stack or takes touches outside its own views.
 
 ## Configuration
@@ -62,6 +64,9 @@ Every setting is optional. `Cerebro.start()` uses the defaults, and calling it a
 | `isShakeGestureEnabled` | `true` | Whether a shake shows or hides the floating button |
 | `decoders` | `[]` | `BodyDecoder`s, tried in order, that turn a body Cerebro can't read into JSON. `registering(_:)` adds the [protobuf](#protobuf-decoding) one |
 | `isPublicIPLookupEnabled` | `false` | Whether the System Info tab asks `api.ipify.org` for the device's public IP. See [System Info](#system-info) |
+| `isPersistenceEnabled` | `true` | Whether each session is also kept on disk. See [Previous sessions](#previous-sessions) |
+| `previousSessionLimit` | `1` | How many earlier sessions stay on disk |
+| `isNotificationTriggerEnabled` | `false` | Whether Cerebro posts a notification that opens the dashboard. See [Opening the dashboard from a notification](#opening-the-dashboard-from-a-notification) |
 
 ```swift
 Cerebro.start(CerebroConfiguration(
@@ -270,7 +275,7 @@ Uploads and downloads through a background `URLSession` are captured with no cod
 - A transfer appears only once it finishes. One that iOS keeps retrying, such as a refused connection, stays unseen until it ends, which can take days.
 - `Cerebro.start()` has to run before the session is created. A session created in a property of your app delegate is too early.
 - If iOS relaunches your app to finish a transfer, the transfer appears in that launch's log, once your app recreates the session with the same identifier.
-- Rows are in memory, so they're lost if iOS later ends the app.
+- A transfer is saved to the session file when it finishes, like any other request, so it's still in that launch's [saved session](#previous-sessions) if iOS later ends the app.
 
 ## System Info
 
@@ -298,6 +303,41 @@ The System Info tab shows the network a request ran on, what the session has mov
 - A VPN or proxy is detected from the system's proxy settings, so a VPN that doesn't register there isn't seen. On a simulator, these and the memory and processor counts reflect the Mac.
 
 Signal strength, carrier name and Wi-Fi name aren't shown, because iOS has no public API for the first, deprecated the second, and needs an entitlement and location permission for the third. The device's own name, battery level and free storage aren't shown either: iOS returns a generic name, and the other two would need Cerebro to change app settings or declare a privacy reason on your app's behalf.
+
+## Previous sessions
+
+Cerebro keeps each session on disk as well as in memory, so you can still read what happened before a crash or a relaunch. Tap the clock button at the top of the HTTP or Sockets list and pick a session. It opens in the same list, read-only: you can open requests and export them, but not clear them.
+
+- **What's saved:** every finished HTTP request and every socket frame and event, exactly as the dashboard shows them. Redaction ran first, so a redacted value never reaches the disk.
+- **Where:** one JSON Lines file per session in `Library/Caches/Cerebro/Sessions`, inside your app's own container. Nothing leaves the device, and iOS may delete Caches when the device is short of space.
+- **When:** each request or frame is written as it finishes, on a background queue, so a crash loses at most what was still in flight.
+- **How much:** a session's file keeps the newest `requestLimit` requests and at most 50 MB. Past either, the oldest lines are dropped. One earlier session is kept by default, and older ones are removed at each launch. Raise `previousSessionLimit` to keep more.
+- **Clearing** the HTTP list also clears those requests from the saved session.
+- **Turning it off:** `isPersistenceEnabled: false` writes nothing, and removes what earlier launches saved.
+
+A request that hadn't finished when the app ended isn't in the file, and neither is a download still in progress.
+
+## Opening the dashboard from a notification
+
+With `isNotificationTriggerEnabled` set, Cerebro posts one local notification when it starts, "Cerebro is capturing", and tapping it opens the dashboard. Your app owns notifications, so two things stay with it:
+
+- **Permission:** Cerebro never asks. It only posts if your app already has permission.
+- **The tap:** forward it from your notification delegate with one call.
+
+```swift
+func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+) {
+    if !Cerebro.handleNotificationResponse(response) {
+        // Not Cerebro's notification, so handle your own here.
+    }
+    completionHandler()
+}
+```
+
+`handleNotificationResponse` returns `true` only for Cerebro's own notification, and does nothing with the setting off. iOS doesn't show a notification posted while your app is in the foreground unless your delegate's `willPresent` asks for it, so you'll usually see this one after leaving the app. `Cerebro.stop()` removes it.
 
 ## Export
 
