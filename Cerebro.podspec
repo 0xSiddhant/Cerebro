@@ -32,7 +32,7 @@ Pod::Spec.new do |s|
   s.subspec 'UI' do |ui|
     ui.dependency 'Cerebro/Core'
     ui.source_files = 'Sources/Cerebro/**/*.swift'
-    ui.frameworks = 'UIKit'
+    ui.frameworks = 'UIKit', 'UserNotifications'
   end
 
   s.subspec 'Proto' do |proto|

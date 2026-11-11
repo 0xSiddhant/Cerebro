@@ -30,10 +30,17 @@ final class HTTPListViewController: UITableViewController {
         self?.cell(in: $0, at: $1, for: $2)
     }
 
-    init(viewModel: HTTPListViewModel) {
+    private let archive: SessionArchive?
+    private let previousSessionTitle: String?
+
+    /// `previousSessionTitle` makes this a read-only view of a saved session, which can be exported but
+    /// not cleared.
+    init(viewModel: HTTPListViewModel, archive: SessionArchive? = nil, previousSessionTitle: String? = nil) {
         self.viewModel = viewModel
+        self.archive = archive
+        self.previousSessionTitle = previousSessionTitle
         super.init(style: .plain)
-        title = "HTTP"
+        title = previousSessionTitle ?? "HTTP"
     }
 
     @available(*, unavailable)
@@ -47,7 +54,7 @@ final class HTTPListViewController: UITableViewController {
         tableView.dataSource = dataSource
         navigationItem.searchController = makeSearchController()
         navigationItem.hidesSearchBarWhenScrolling = false
-        navigationItem.rightBarButtonItems = [exportButton, clearButton]
+        navigationItem.rightBarButtonItems = barButtons()
         viewModel.onChange = { [weak self] in self?.showRows() }
         viewModel.startObserving()
     }
@@ -104,6 +111,20 @@ final class HTTPListViewController: UITableViewController {
             guard let self else { return }
             ExportActions.shareHAR(of: transactions, from: self, anchor: exportButton)
         }
+    }
+
+    private func barButtons() -> [UIBarButtonItem] {
+        guard previousSessionTitle == nil else { return [exportButton] }
+        let history = archive.map { archive in
+            PreviousSessions.button(archive: archive) { [weak self] session in
+                let list = HTTPListViewController(
+                    viewModel: HTTPListViewModel(store: session.store),
+                    previousSessionTitle: PreviousSessions.title(for: session)
+                )
+                self?.navigationController?.pushViewController(list, animated: true)
+            }
+        }
+        return [exportButton, clearButton] + [history].compactMap { $0 }
     }
 
     /// Clearing can't be undone, so it asks first.
