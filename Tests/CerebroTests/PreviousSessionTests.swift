@@ -28,6 +28,7 @@ private func request(_ path: String) -> HTTPTransaction {
     // Export only: a saved session can't be cleared, and has no earlier sessions of its own.
     #expect(list.navigationItem.rightBarButtonItems?.count == 1)
     #expect(list.navigationItem.rightBarButtonItems?.first?.accessibilityLabel == "Export")
+    #expect(list.hidesBottomBarWhenPushed)
 }
 
 @Test @MainActor func theLiveListOffersClearAndNoHistoryWithoutAnArchive() {
@@ -37,6 +38,7 @@ private func request(_ path: String) -> HTTPTransaction {
 
     #expect(list.title == "HTTP")
     #expect(list.navigationItem.rightBarButtonItems?.compactMap(\.accessibilityLabel) == ["Export", "Clear requests"])
+    #expect(!list.hidesBottomBarWhenPushed)
 }
 
 @Test @MainActor func aSavedSocketSessionHasNoHistoryButtonOfItsOwn() {
@@ -48,6 +50,7 @@ private func request(_ path: String) -> HTTPTransaction {
 
     #expect(list.title == "Previous: 11 Nov, 14:02")
     #expect(list.navigationItem.rightBarButtonItem == nil)
+    #expect(list.hidesBottomBarWhenPushed)
 }
 
 @Test func aSessionStartIsShortEnoughForATitle() {
