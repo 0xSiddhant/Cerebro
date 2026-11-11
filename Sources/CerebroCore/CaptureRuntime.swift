@@ -20,6 +20,9 @@ public final class CaptureRuntime: Sendable {
     /// The foreground downloads still running.
     public let downloads: DownloadProgressStore
 
+    /// The sessions kept on disk, or `nil` if persistence is off.
+    public let archive: SessionArchive?
+
     private let engine: HTTPCaptureEngine
     private let exchanges: AsyncStream<RawExchange>.Continuation
     private let processing: Task<Void, Never>
@@ -41,11 +44,21 @@ public final class CaptureRuntime: Sendable {
         self.init(unchecked: configuration)
     }
 
-    init(unchecked configuration: CerebroConfiguration, console: ConsoleLogger? = nil) {
-        let store = TransactionStore(requestLimit: configuration.requestLimit)
+    /// `sessionsDirectory` is where sessions are kept. `nil` keeps nothing and removes nothing.
+    init(
+        unchecked configuration: CerebroConfiguration,
+        console: ConsoleLogger? = nil,
+        sessionsDirectory: URL? = SessionArchive.defaultDirectory
+    ) {
         let redactor = Redactor(rules: configuration.redaction)
         // A limit below zero means store nothing, and must never reach code that assumes a size.
         let bodyLimit = max(configuration.bodyLimit, 0)
+        let payloadByteLimit = Self.socketPayloadByteLimit(forBodyLimit: bodyLimit)
+        let archive = Self.makeArchive(configuration, in: sessionsDirectory, socketPayloadBytes: payloadByteLimit)
+        self.archive = archive
+        // Everything the stores hold is already redacted, so that's all that can reach the disk.
+        let journal = archive.map { archive in { @Sendable record in archive.append(record) } }
+        let store = TransactionStore(requestLimit: configuration.requestLimit, journal: journal)
         let processor = BodyProcessor(limit: bodyLimit, decoders: configuration.decoders, redactor: redactor)
         let builder = TransactionBuilder(processor: processor, redactor: redactor)
         let console = console ?? ConsoleLogger(level: configuration.consoleLevel)
@@ -74,7 +87,6 @@ public final class CaptureRuntime: Sendable {
         )
         systemInfo = SystemInfoMonitor(lookup: .ifEnabled(configuration.isPublicIPLookupEnabled))
 
-        let payloadByteLimit = Self.socketPayloadByteLimit(forBodyLimit: bodyLimit)
         let socketStore = SocketStore(frameLimit: configuration.socketFrameLimit, payloadByteLimit: payloadByteLimit)
         let socketBuilder = SocketActivityBuilder(processor: processor)
         let backlog = SocketBacklog(frameLimit: Self.socketBacklogFrames, byteLimit: payloadByteLimit)
@@ -85,6 +97,7 @@ public final class CaptureRuntime: Sendable {
         socketActivity = activityInput
         // One detached task, so frames stay in order and never run on the main thread.
         socketProcessing = Task.detached(priority: .utility) {
+            await socketStore.setJournal(journal)
             for await activity in activities {
                 await socketStore.record(socketBuilder.item(from: activity), on: activity.socket)
                 backlog.finish(bytes: activity.backlogBytes)
@@ -93,6 +106,28 @@ public final class CaptureRuntime: Sendable {
         socketEngine = SocketCaptureEngine(bodyLimit: bodyLimit, backlog: backlog, redactor: redactor) {
             activityInput.yield($0)
         }
+    }
+
+    /// With persistence off, what earlier launches saved is removed too, so nothing stays on disk.
+    private static func makeArchive(
+        _ configuration: CerebroConfiguration,
+        in directory: URL?,
+        socketPayloadBytes: Int
+    ) -> SessionArchive? {
+        guard let directory else { return nil }
+        guard configuration.isPersistenceEnabled else {
+            SessionArchive.removeAll(in: directory)
+            return nil
+        }
+        return SessionArchive(
+            directory: directory,
+            previousSessionLimit: configuration.previousSessionLimit,
+            limits: SessionArchive.Limits(
+                requests: configuration.requestLimit,
+                socketFrames: configuration.socketFrameLimit,
+                socketPayloadBytes: socketPayloadBytes
+            )
+        )
     }
 
     private static func socketPayloadByteLimit(forBodyLimit bodyLimit: Int) -> Int {

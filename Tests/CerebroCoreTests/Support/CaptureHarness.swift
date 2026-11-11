@@ -58,7 +58,8 @@ func withCapture(
 ) async throws {
     let server = try LocalHTTPServer(handler: handler)
     let baseURL = try await server.start()
-    let runtime = CaptureRuntime(unchecked: configuration)
+    // No sessions directory, so tests leave nothing on disk.
+    let runtime = CaptureRuntime(unchecked: configuration, sessionsDirectory: nil)
     runtime.start()
     defer {
         runtime.stop()

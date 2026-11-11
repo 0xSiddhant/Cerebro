@@ -1,7 +1,7 @@
 import Foundation
 
 /// One finished request, already redacted.
-public struct HTTPTransaction: Sendable, Identifiable, Equatable {
+public struct HTTPTransaction: Sendable, Identifiable, Equatable, Codable {
     /// Identifies this transaction.
     public let id: UUID
 
@@ -79,7 +79,7 @@ public enum TransactionOutcome: Sendable, Equatable {
 }
 
 /// What the app sent.
-public struct CapturedRequest: Sendable, Equatable {
+public struct CapturedRequest: Sendable, Equatable, Codable {
     /// The URL, with matching query parameters redacted.
     public let url: URL?
 
@@ -117,7 +117,7 @@ public struct CapturedRequest: Sendable, Equatable {
 }
 
 /// What came back.
-public struct CapturedResponse: Sendable, Equatable {
+public struct CapturedResponse: Sendable, Equatable, Codable {
     /// The HTTP status code.
     public let statusCode: Int
 
@@ -155,7 +155,7 @@ public struct CapturedResponse: Sendable, Equatable {
 }
 
 /// Why a request didn't finish.
-public struct CapturedFailure: Sendable, Equatable {
+public struct CapturedFailure: Sendable, Equatable, Codable {
     /// The error domain.
     public let domain: String
 
@@ -179,7 +179,7 @@ public struct CapturedFailure: Sendable, Equatable {
 }
 
 /// How long each stage of a request took, in seconds. A stage that didn't happen is `nil`.
-public struct TransactionTiming: Sendable, Equatable {
+public struct TransactionTiming: Sendable, Equatable, Codable {
     /// The DNS lookup.
     public let dns: TimeInterval?
 
@@ -222,7 +222,7 @@ public struct TransactionTiming: Sendable, Equatable {
 }
 
 /// Which connection carried a request.
-public struct ConnectionDetails: Sendable, Equatable {
+public struct ConnectionDetails: Sendable, Equatable, Codable {
     /// The server's address.
     public let remoteAddress: String?
 
@@ -280,7 +280,7 @@ public struct ConnectionDetails: Sendable, Equatable {
 }
 
 /// How many bytes moved, from request metrics.
-public struct TransferSize: Sendable, Equatable {
+public struct TransferSize: Sendable, Equatable, Codable {
     /// Header and body bytes sent.
     public let bytesSent: Int64
 

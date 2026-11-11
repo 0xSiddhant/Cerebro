@@ -1,9 +1,9 @@
 import Foundation
 
 /// A stored request or response body, after the pipeline ran.
-public struct CapturedBody: Sendable, Equatable {
+public struct CapturedBody: Sendable, Equatable, Codable {
     /// What was kept of the body.
-    public enum Content: Sendable, Equatable {
+    public enum Content: Sendable, Equatable, Codable {
         /// The whole body.
         case complete(Data)
 
@@ -18,7 +18,7 @@ public struct CapturedBody: Sendable, Equatable {
     }
 
     /// Why a body that should be protobuf wasn't decoded. Such a body shows as hex.
-    public enum Undecoded: Sendable, Equatable {
+    public enum Undecoded: Sendable, Equatable, Codable {
         /// Its content type says protobuf, but no rule matched.
         case noRule
 
@@ -85,7 +85,7 @@ public struct CapturedBody: Sendable, Equatable {
 }
 
 /// A compression format the app applied to a body itself.
-public enum BodyCompression: String, Sendable, Equatable {
+public enum BodyCompression: String, Sendable, Equatable, Codable {
     /// gzip, which Cerebro can read.
     case gzip
 

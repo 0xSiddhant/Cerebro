@@ -2,7 +2,7 @@ import Foundation
 import os
 
 /// Who a socket is, already redacted. The same value travels with every frame and event.
-struct SocketIdentity: Sendable, Equatable {
+struct SocketIdentity: Sendable, Equatable, Codable {
     let id: UUID
     let source: SocketSource
     let name: String

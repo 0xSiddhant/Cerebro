@@ -1,5 +1,5 @@
 /// One name and value, from a header or a query string.
-public struct NamedValue: Sendable, Equatable {
+public struct NamedValue: Sendable, Equatable, Codable {
     /// The name.
     public let name: String
 
