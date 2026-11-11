@@ -129,7 +129,18 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         Cerebro.start(
             CerebroConfiguration(consoleLevel: .summary, redaction: redaction).registering([rule] + ProtoRule.generated)
         )
+        // After `Cerebro.start()`, so a transfer that finished while the app wasn't running is captured.
+        BackgroundTransfers.reconnect()
         return true
+    }
+
+    /// iOS calls this when it relaunches the app in the background to hand over finished transfers.
+    func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        BackgroundTransfers.handleEvents(completionHandler: completionHandler)
     }
 
     func application(

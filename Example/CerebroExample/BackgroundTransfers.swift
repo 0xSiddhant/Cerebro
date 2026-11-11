@@ -14,6 +14,21 @@ enum BackgroundTransfers {
         delegateQueue: nil
     )
 
+    /// What iOS wants called once every event from a relaunch has been delivered.
+    @MainActor private static var finishEvents: (() -> Void)?
+
+    /// Creates the session again, which is what makes iOS deliver transfers that finished while the app
+    /// wasn't running. Call it at launch, after `Cerebro.start()`, so Cerebro sees the session too.
+    static func reconnect() {
+        _ = session
+    }
+
+    /// Call from `application(_:handleEventsForBackgroundURLSession:completionHandler:)`.
+    @MainActor static func handleEvents(completionHandler: @escaping () -> Void) {
+        finishEvents = completionHandler
+        reconnect()
+    }
+
     static func download(from url: URL) async throws -> URLResponse {
         try await delegate.run(session.downloadTask(with: url))
     }
@@ -50,8 +65,20 @@ enum BackgroundTransfers {
             // A real app moves the file here, because iOS deletes it as soon as this returns.
         }
 
+        func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+            Task { @MainActor in
+                BackgroundTransfers.finishEvents?()
+                BackgroundTransfers.finishEvents = nil
+            }
+        }
+
         func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
             let continuation = lock.withLock { waiting.removeValue(forKey: task.taskIdentifier) }
+            if continuation == nil {
+                // Nothing is waiting, so the transfer was started by an earlier launch of the app.
+                let status = (task.response as? HTTPURLResponse)?.statusCode
+                print("Background transfer from an earlier launch finished:", status ?? error ?? "no response")
+            }
             if let response = task.response, error == nil {
                 continuation?.resume(returning: response)
             } else {

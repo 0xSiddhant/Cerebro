@@ -24,6 +24,7 @@ enum TrafficSample: CaseIterable, Sendable {
     case protobufFromMap
     case backgroundDownload
     case backgroundUpload
+    case backgroundLargeDownload
 
     private static let session = URLSession(configuration: .default)
     private static let mockAPI = "https://mock.0xsiddhant.com"
@@ -50,6 +51,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .protobufFromMap: "Protobuf: traffic_map.json"
         case .backgroundDownload: "Background download"
         case .backgroundUpload: "Background upload"
+        case .backgroundLargeDownload: "Background download: 1 GB"
         }
     }
 
@@ -64,7 +66,8 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockSlowFlights: "\(Self.mockAPI)/api/v1/flights?delay=1500"
         case .mockUnauthorized: "\(Self.mockAPI)/api/v1/flights?status=401"
         case .mockEcho, .mockUpload, .mockPut, .mockPatch, .mockDelete, .redaction, .webSocket, .nwConnection,
-            .externalBridge, .protobuf, .protobufFromMap, .backgroundDownload, .backgroundUpload:
+            .externalBridge, .protobuf, .protobufFromMap, .backgroundDownload, .backgroundUpload,
+            .backgroundLargeDownload:
             ""
         }
     }
@@ -81,7 +84,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .redaction: try await postFakeSecrets()
         case .webSocket, .nwConnection, .externalBridge: try await useSocket()
         case .protobuf, .protobufFromMap: try await sendProtobuf()
-        case .backgroundDownload, .backgroundUpload: try await runBackgroundTransfer()
+        case .backgroundDownload, .backgroundUpload, .backgroundLargeDownload: try await runBackgroundTransfer()
         }
     }
 
@@ -91,14 +94,6 @@ enum TrafficSample: CaseIterable, Sendable {
         case .nwConnection: try await NWConnectionExchange().run()
         default: logExternalSocket()
         }
-    }
-
-    private func runBackgroundTransfer() async throws -> String {
-        let response =
-            self == .backgroundUpload
-            ? try await BackgroundTransfers.upload(Data(count: 4_096), to: Self.url("https://httpbin.org/post"))
-            : try await BackgroundTransfers.download(from: Self.url("https://httpbin.org/bytes/2048"))
-        return Self.summary(of: response)
     }
 
     private func sendRequest(to address: String, through session: URLSession) async throws -> String {
@@ -292,5 +287,34 @@ enum TrafficSample: CaseIterable, Sendable {
     private static func summary(of response: URLResponse) -> String {
         guard let response = response as? HTTPURLResponse else { return "Not an HTTP response" }
         return "HTTP \(response.statusCode)"
+    }
+}
+
+extension TrafficSample {
+    /// What the row says before the sample has run, for the ones that don't run at launch.
+    var hint: String? {
+        switch self {
+        case .mockUpload: "Tap to upload sample JSON"
+        case .backgroundLargeDownload: "Tap, then leave the app or stop it from Xcode"
+        default: nil
+        }
+    }
+
+    /// The large download is slow on purpose, to leave time to test it. Start it, go to the home screen
+    /// and stop the app from Xcode. iOS finishes the transfer, relaunches the app in the background, and
+    /// the request is in Cerebro's log when you open the app again. Quitting from the app switcher is
+    /// different: iOS cancels the transfer.
+    private func runBackgroundTransfer() async throws -> String {
+        let response: URLResponse
+        switch self {
+        case .backgroundUpload:
+            response = try await BackgroundTransfers.upload(
+                Data(count: 4_096), to: Self.url("https://httpbin.org/post"))
+        case .backgroundLargeDownload:
+            response = try await BackgroundTransfers.download(from: Self.url("https://proof.ovh.net/files/1Gb.dat"))
+        default:
+            response = try await BackgroundTransfers.download(from: Self.url("https://httpbin.org/bytes/2048"))
+        }
+        return Self.summary(of: response)
     }
 }
