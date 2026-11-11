@@ -20,9 +20,13 @@ final class InspectorSummaryView: UIView {
         }
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
+        // A table gives its header a height of zero until it has been measured, and a required bottom
+        // constraint can't hold at that height, so this one gives way without a warning.
+        let bottom = stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6)
+        bottom.priority = .required - 1
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
+            bottom,
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
         ])

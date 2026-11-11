@@ -35,9 +35,13 @@ final class SystemInfoSummaryView: UIView {
         card.layer.cornerCurve = .continuous
         card.translatesAutoresizingMaskIntoConstraints = false
         addSubview(card)
+        // A table gives its header a height of zero until it has been measured, and a required bottom
+        // constraint can't hold at that height, so this one gives way without a warning.
+        let bottom = card.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4)
+        bottom.priority = .required - 1
         NSLayoutConstraint.activate([
             card.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            card.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
+            bottom,
             card.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             card.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
         ])
