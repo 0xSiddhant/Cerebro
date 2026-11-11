@@ -116,6 +116,8 @@ public final class CaptureRuntime: Sendable {
                     await downloads.apply(event)
                 }
             }
+            // Capture stopped, so a download still running can never report that it finished.
+            await downloads.removeAll()
         }
         return input
     }

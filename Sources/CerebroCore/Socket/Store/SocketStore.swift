@@ -14,7 +14,6 @@ public actor SocketStore {
     private var changed = Set<UUID>()
     private var storedBytes = 0
     private var observers = SnapshotObservers<[SocketConnection]>()
-    private var pendingPublish: Task<Void, Never>?
     private let frameLimit: Int
     private let connectionLimit: Int
     private let payloadByteLimit: Int
@@ -114,16 +113,10 @@ public actor SocketStore {
     }
 
     private func schedulePublish() {
-        guard pendingPublish == nil else { return }
-        pendingPublish = Task { [updateInterval] in
-            try? await Task.sleep(for: updateInterval)
-            publish()
-        }
+        observers.schedulePublish(after: updateInterval) { [weak self] in await self?.publish() }
     }
 
     private func publish() {
-        pendingPublish = nil
-        guard !observers.isEmpty else { return }
         observers.publish(snapshot())
     }
 }

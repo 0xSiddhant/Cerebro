@@ -52,6 +52,15 @@ private let file = URL(string: "https://example.com/file.zip")
     #expect(await store.active.count == DownloadProgressStore.limit)
 }
 
+@Test func stoppingForgetsDownloadsThatCanNoLongerReport() async {
+    let store = DownloadProgressStore()
+    await store.apply(.started(id: UUID(), url: file, date: start))
+
+    await store.removeAll()
+
+    #expect(await store.active.isEmpty)
+}
+
 @Test func downloadsStayInTheOrderTheyStarted() async {
     let store = DownloadProgressStore()
     let (first, second) = (UUID(), UUID())
@@ -102,6 +111,27 @@ extension CaptureTests {
                 let transaction = try await harness.transaction()
                 #expect(transaction.response?.body?.content == .notStored)
                 #expect(transaction.id == running?.id)
+                for _ in 0..<500 where await !harness.runtime.downloads.active.isEmpty {
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+                #expect(await harness.runtime.downloads.active.isEmpty)
+            }
+        }
+
+        @Test func aDownloadStillRunningWhenCaptureStopsIsForgotten() async throws {
+            let handler: CaptureHarness.Handler = { _ in LocalHTTPServer.Response(delay: .seconds(3)) }
+            try await withCapture(handler: handler) { harness in
+                let session = URLSession(configuration: .default)
+                let task = session.downloadTask(with: harness.url("/slow.bin"))
+                task.resume()
+                defer { task.cancel() }
+                for _ in 0..<500 where await harness.runtime.downloads.active.isEmpty {
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+                #expect(await harness.runtime.downloads.active.count == 1)
+
+                harness.runtime.stop()
+
                 for _ in 0..<500 where await !harness.runtime.downloads.active.isEmpty {
                     try await Task.sleep(for: .milliseconds(10))
                 }

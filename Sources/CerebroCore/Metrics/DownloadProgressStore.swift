@@ -59,7 +59,6 @@ public actor DownloadProgressStore {
     private var downloads: [UUID: DownloadProgress] = [:]
     private var order: [UUID] = []
     private var observers = SnapshotObservers<[DownloadProgress]>()
-    private var pendingPublish: Task<Void, Never>?
     private let updateInterval: Duration
 
     init(updateInterval: Duration = .milliseconds(250)) {
@@ -100,16 +99,19 @@ public actor DownloadProgressStore {
         observers.remove(id)
     }
 
+    /// Forgets every download, for when capture stops and no more reports can arrive.
+    func removeAll() {
+        guard !order.isEmpty else { return }
+        downloads.removeAll()
+        order.removeAll()
+        schedulePublish()
+    }
+
     private func schedulePublish() {
-        guard pendingPublish == nil, !observers.isEmpty else { return }
-        pendingPublish = Task { [updateInterval] in
-            try? await Task.sleep(for: updateInterval)
-            publish()
-        }
+        observers.schedulePublish(after: updateInterval) { [weak self] in await self?.publish() }
     }
 
     private func publish() {
-        pendingPublish = nil
         observers.publish(active)
     }
 }

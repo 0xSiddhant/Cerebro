@@ -5,7 +5,6 @@ public actor TransactionStore {
     private var buffer: RingBuffer<HTTPTransaction>
     private var runningTotals = SessionTotals()
     private var observers = SnapshotObservers<[HTTPTransaction]>()
-    private var pendingPublish: Task<Void, Never>?
     private let updateInterval: Duration
 
     /// Creates a store. Changes publish at most once per `updateInterval`, so a burst can't flood the UI.
@@ -44,15 +43,10 @@ public actor TransactionStore {
     }
 
     private func schedulePublish() {
-        guard pendingPublish == nil else { return }
-        pendingPublish = Task { [updateInterval] in
-            try? await Task.sleep(for: updateInterval)
-            publish()
-        }
+        observers.schedulePublish(after: updateInterval) { [weak self] in await self?.publish() }
     }
 
     private func publish() {
-        pendingPublish = nil
         observers.publish(buffer.elements)
     }
 }
