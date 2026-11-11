@@ -21,6 +21,10 @@ final class TrafficViewController: UITableViewController {
         super.viewDidLoad()
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
         TrafficSample.allCases.filter { $0.hint == nil }.forEach(run)
+        // Also fires for a download an earlier launch started, if it's still running.
+        BackgroundTransfers.onProgress = { [weak self] progress in
+            self?.show(progress, for: .backgroundLargeDownload)
+        }
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
