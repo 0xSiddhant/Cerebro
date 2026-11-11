@@ -59,8 +59,13 @@ final class TrafficViewController: UITableViewController {
         }
     }
 
+    /// Updates one row in place. Reloading the whole table for every result made scrolling stutter while
+    /// samples were running.
     private func show(_ result: String, for sample: TrafficSample) {
+        guard results[sample] != result else { return }
         results[sample] = result
-        tableView.reloadData()
+        // Before the table is on screen it has no rows to update, and it reads `results` when it loads.
+        guard tableView.window != nil, let row = TrafficSample.allCases.firstIndex(of: sample) else { return }
+        tableView.reconfigureRows(at: [IndexPath(row: row, section: 0)])
     }
 }
