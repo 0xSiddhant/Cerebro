@@ -30,6 +30,14 @@ public actor TransactionStore {
         schedulePublish()
     }
 
+    /// Removes every transaction and starts the totals again, as if the session had just begun. Readers
+    /// are told at once, not with the next batch, because someone asked for this and is watching.
+    public func removeAll() {
+        buffer.removeAll()
+        runningTotals = SessionTotals()
+        publish()
+    }
+
     /// Delivers the current transactions now, then again after each batch of changes.
     /// A slow reader only ever sees the latest batch.
     public func updates() -> AsyncStream<[HTTPTransaction]> {

@@ -28,6 +28,13 @@ struct RingBuffer<Element> {
         return evicted
     }
 
+    /// Removes every element.
+    mutating func removeAll() {
+        slots.removeAll()
+        oldest = 0
+        storedCount = 0
+    }
+
     /// Removes and returns the oldest element, if there is one.
     @discardableResult
     mutating func removeOldest() -> Element? {

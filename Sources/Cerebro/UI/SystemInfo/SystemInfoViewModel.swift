@@ -237,7 +237,8 @@ extension SystemInfoViewModel {
                     SystemInfoRow(
                         title: "Received", value: DisplayFormat.bytes(totals.bytesReceived), symbol: "arrow.down"),
                 ],
-                footer: "HTTP requests since Cerebro started. Sockets aren't counted."
+                footer:
+                    "HTTP requests since Cerebro started, or since the list was last cleared. Sockets aren't counted."
             ),
             SystemInfoSection(title: "By host", rows: totals.byHost.map(row)),
             SystemInfoSection(title: "By connection", rows: totals.byConnectionType.map(row)),

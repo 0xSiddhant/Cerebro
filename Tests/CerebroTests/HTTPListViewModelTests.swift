@@ -135,3 +135,24 @@ private let cancelled = CapturedFailure(domain: NSURLErrorDomain, code: NSURLErr
     }
     #expect(model.rows.map(\.path) == ["/live"])
 }
+
+@Test @MainActor func clearingEmptiesTheListForEveryoneReadingTheStore() async throws {
+    let store = TransactionStore(requestLimit: 10)
+    await store.append(transaction(path: "/a"))
+    await store.append(transaction(path: "/b"))
+    let list = HTTPListViewModel(store: store)
+    list.startObserving()
+    for _ in 0..<500 where list.rows.count < 2 {
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(list.rows.count == 2)
+
+    await list.clear()
+    for _ in 0..<500 where !list.rows.isEmpty {
+        try await Task.sleep(for: .milliseconds(10))
+    }
+
+    #expect(list.rows.isEmpty)
+    #expect(await list.sessionTransactions().isEmpty)
+    #expect(await store.totals.requestCount == 0)
+}

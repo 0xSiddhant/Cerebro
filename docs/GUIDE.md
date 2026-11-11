@@ -30,7 +30,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 **Dashboard**
 
 - **Floating trigger:** sits above your app, drags anywhere and snaps to the nearest side, and counts the requests since you last looked.
-- **HTTP list:** newest first and live, with search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests.
+- **HTTP list:** newest first and live, with search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests. The trash button clears every request and resets the session totals, after asking. Sockets are kept.
 - **Log Inspector:** Response, Request and Metrics pages for each request. Tap a row to expand it, or long-press to copy it.
 - **Body Viewer:** pretty JSON or raw text, plus a collapsible tree for decoded protobuf, with copy and share buttons.
 - **Sockets list:** every connection with its source (`WS`, `NW` or `EXT`), status, frame count and bytes sent and received.
@@ -292,7 +292,7 @@ The System Info tab shows the network a request ran on, what the session has mov
   - Response time is how long a server took to start answering.
   - Connection setup only counts requests that opened a new connection.
   - Download speed only counts responses of 64 KB or more, because a small one measures the server's delay, not the network's speed. The row is hidden until there is one.
-- **Totals** are a running sum of captured requests, so they stay correct after old requests leave the list. They don't include sockets or other apps' traffic. Only the first 50 hosts get their own line.
+- **Totals** are a running sum of captured requests, so they stay correct after old requests leave the list. Clearing the HTTP list starts them again. They don't include sockets or other apps' traffic. Only the first 50 hosts get their own line.
 - **Downloads** made with a download task, including image loaders built on one, keep their size, duration, throughput and MIME type but never their body. A [background transfer](#background-transfers) has no progress, because it only appears once it finishes.
 - While the tab shows the device as offline, it checks the network again every 2 seconds, because iOS can miss the connection coming back, most often on a simulator.
 - A VPN or proxy is detected from the system's proxy settings, so a VPN that doesn't register there isn't seen. On a simulator, these and the memory and processor counts reflect the Mac.
