@@ -43,7 +43,10 @@ private actor Counter {
     for index in 0..<200 {
         await store.append(Fixtures.transaction(path: "/\(index)"))
     }
-    try await Task.sleep(for: .milliseconds(600))
+    // Waits for the batch itself, not a fixed time, because a busy machine can be late delivering it.
+    for _ in 0..<1_500 where await counter.batches.last?.count != 200 {
+        try await Task.sleep(for: .milliseconds(10))
+    }
     reader.cancel()
 
     // The first delivery is the empty store. A slow machine may split the burst once, but never into 200.
