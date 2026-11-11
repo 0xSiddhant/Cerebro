@@ -53,7 +53,7 @@ private let full = HTTPTransaction(
     #expect(entry["startedDateTime"] as? String == "2023-11-14T22:13:20.250Z")
     #expect(entry["time"] as? Int == 500)
     #expect(entry["serverIPAddress"] as? String == "1.2.3.4")
-    #expect(entry["connection"] as? String == "443")
+    #expect(entry["connection"] == nil)
     #expect(request["method"] as? String == "POST")
     #expect(request["url"] as? String == "https://example.com/orders?page=2")
     #expect(request["httpVersion"] as? String == "h2")
@@ -62,7 +62,7 @@ private let full = HTTPTransaction(
     #expect(try child("postData", of: request)["mimeType"] as? String == "application/json")
     #expect((request["queryString"] as? [[String: String]])?.first == ["name": "page", "value": "2"])
     #expect(response["status"] as? Int == 201)
-    #expect(response["redirectURL"] as? String == "/orders/9")
+    #expect((response["redirectURL"] as? String)?.isEmpty == true)
     #expect(response["bodySize"] as? Int == 2)
     #expect(try child("content", of: response)["text"] as? String == "ok")
     #expect(try child("content", of: response)["mimeType"] as? String == "text/plain")
@@ -72,6 +72,47 @@ private let full = HTTPTransaction(
     #expect(timings["send"] as? Int == 2)
     #expect(timings["wait"] as? Int == 98)
     #expect(timings["receive"] as? Int == 340)
+    #expect(timings["blocked"] as? Int == -1)
+}
+
+@Test func timeNoStageExplainsIsBlockedOnceReceivingWasMeasured() throws {
+    let queued = HTTPTransaction(
+        request: CapturedRequest(url: URL(string: "https://example.com"), method: "GET", startDate: Date()),
+        timing: TransactionTiming(requestSent: 0.01, firstByte: 0.11, receive: 0.05, total: 2.16)
+    )
+
+    let timings = try child("timings", of: try #require(try entries([queued]).first))
+
+    #expect(timings["send"] as? Int == 10)
+    #expect(timings["wait"] as? Int == 100)
+    #expect(timings["receive"] as? Int == 50)
+    #expect(timings["blocked"] as? Int == 2_000)
+}
+
+@Test func onlyARedirectsLocationIsARedirectURL() throws {
+    let redirect = HTTPTransaction(
+        request: CapturedRequest(url: URL(string: "https://example.com"), method: "GET", startDate: Date()),
+        response: CapturedResponse(
+            statusCode: 302, headers: [NamedValue(name: "location", value: "/next")], endDate: Date())
+    )
+
+    let response = try child("response", of: try #require(try entries([redirect]).first))
+
+    #expect(response["redirectURL"] as? String == "/next")
+}
+
+@Test func textCutOffInsideACharacterIsStillText() throws {
+    let whole = Data("héllo 🌍".utf8)
+    let content = try harContent(CapturedBody(content: .truncated(whole.dropLast(2)), byteCount: 500))
+
+    #expect(content["text"] as? String == "héllo ")
+    #expect(content["encoding"] == nil)
+}
+
+@Test func completeBytesThatArentTextStayBase64EvenNearValidText() throws {
+    let content = try harContent(CapturedBody(content: .complete(Data("ab".utf8) + Data([0xF0, 0x9F])), byteCount: 4))
+
+    #expect(content["encoding"] as? String == "base64")
 }
 
 @Test func aFailedRequestIsAnEntryWithStatusZeroAndItsError() throws {

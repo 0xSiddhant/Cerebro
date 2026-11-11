@@ -107,7 +107,6 @@ public enum TransactionExport {
             "timings": harTimings(timing),
         ]
         entry["serverIPAddress"] = transaction.connection?.remoteAddress
-        entry["connection"] = transaction.connection?.remotePort.map(String.init)
         entry["_error"] = transaction.failure?.description
         return entry
     }
@@ -138,7 +137,9 @@ public enum TransactionExport {
         var content = response?.body.map(content) ?? Object()
         content["size"] = response?.body?.byteCount ?? 0
         content["mimeType"] = response?.mimeType ?? ""
-        let location = response?.headers.first { $0.name.lowercased() == "location" }?.value
+        // Other responses, such as a 201, use `Location` for something that isn't a redirect.
+        let isRedirect = (300..<400).contains(response?.statusCode ?? 0)
+        let location = isRedirect ? response?.headers.first { $0.name.lowercased() == "location" }?.value : nil
         return [
             // 0 is what HAR uses for a request that never got a response.
             "status": response?.statusCode ?? 0,
@@ -162,14 +163,18 @@ public enum TransactionExport {
         // `firstByte` starts when the request starts, so the wait is what's left after sending.
         let wait = max((timing.firstByte ?? 0) - send, 0)
         let before = (timing.dns ?? 0) + (timing.connect ?? 0) + send + wait
+        // The total covers the whole task, so what the stages don't explain was spent waiting to start,
+        // on a queue or an earlier attempt. Without a measured receive time, the two can't be told apart.
+        let remainder = max(timing.total - before, 0)
+        let receive = timing.receive.map { min($0, remainder) } ?? remainder
         return [
-            "blocked": -1,
+            "blocked": timing.receive == nil ? -1 : milliseconds(remainder - receive),
             "dns": timing.dns.map(milliseconds) ?? -1,
             "connect": timing.connect.map(milliseconds) ?? -1,
             "ssl": timing.tls.map(milliseconds) ?? -1,
             "send": milliseconds(send),
             "wait": milliseconds(wait),
-            "receive": milliseconds(max(timing.total - before, 0)),
+            "receive": milliseconds(receive),
         ]
     }
 
@@ -181,7 +186,9 @@ public enum TransactionExport {
         var object = Object()
         var comments: [String] = []
         if let data = body.data {
-            if body.undecoded == nil, let text = String(data: data, encoding: .utf8) {
+            let isTruncated = body.content == .truncated(data)
+            // A body cut off at the cap can end partway through a character, which doesn't make it binary.
+            if body.undecoded == nil, let text = Redactor.text(of: data, isTruncated: isTruncated) {
                 object["text"] = text
             } else {
                 object["text"] = data.base64EncodedString()

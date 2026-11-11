@@ -195,6 +195,9 @@ public struct TransactionTiming: Sendable, Equatable {
     /// From the request being sent to the first response byte.
     public let firstByte: TimeInterval?
 
+    /// Receiving the response, from its first byte to its last.
+    public let receive: TimeInterval?
+
     /// The whole request.
     public let total: TimeInterval
 
@@ -205,6 +208,7 @@ public struct TransactionTiming: Sendable, Equatable {
         tls: TimeInterval? = nil,
         requestSent: TimeInterval? = nil,
         firstByte: TimeInterval? = nil,
+        receive: TimeInterval? = nil,
         total: TimeInterval
     ) {
         self.dns = dns
@@ -212,6 +216,7 @@ public struct TransactionTiming: Sendable, Equatable {
         self.tls = tls
         self.requestSent = requestSent
         self.firstByte = firstByte
+        self.receive = receive
         self.total = total
     }
 }
