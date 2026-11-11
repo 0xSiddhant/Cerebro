@@ -34,12 +34,18 @@ public actor SystemInfoMonitor {
         }
     }
 
+    /// How often a network that isn't online is checked again. See `scheduleRecheck()`.
+    static let recheckInterval: Duration = .seconds(2)
+
     private let lookup: PublicIPLookup?
     /// Created with the path monitor, because it connects to a system service and most sessions never
     /// open the tab.
     private var telephony: CTTelephonyNetworkInfo?
     private var pathMonitor: NWPathMonitor?
     private var pathUpdates: Task<Void, Never>?
+    /// Which path monitor is current, so a late update from one that was replaced is ignored.
+    private var monitorGeneration = 0
+    private var recheck: Task<Void, Never>?
     /// `nil` until the system reports one, so nothing claims the device is offline before it's known.
     private var path: Path?
     private var publicIP: SystemInfo.PublicIP
@@ -71,6 +77,9 @@ public actor SystemInfoMonitor {
         pathMonitor = nil
         pathUpdates?.cancel()
         pathUpdates = nil
+        monitorGeneration += 1
+        recheck?.cancel()
+        recheck = nil
         runningLookup?.cancel()
         runningLookup = nil
         lookupGeneration += 1
@@ -91,24 +100,59 @@ public actor SystemInfoMonitor {
     private func startIfNeeded() {
         guard pathMonitor == nil else { return }
         telephony = CTTelephonyNetworkInfo()
+        startPathMonitor()
+    }
+
+    /// Replaces any path monitor with a new one, which reports the network as it is now.
+    private func startPathMonitor() {
+        pathMonitor?.cancel()
+        pathUpdates?.cancel()
+        monitorGeneration += 1
         let monitor = NWPathMonitor()
         // A stream keeps changes in order, which separate tasks wouldn't.
         let (paths, input) = AsyncStream.makeStream(of: Path.self, bufferingPolicy: .bufferingNewest(1))
         monitor.pathUpdateHandler = { input.yield(Path($0)) }
         monitor.start(queue: .global(qos: .utility))
         pathMonitor = monitor
-        pathUpdates = Task { [weak self] in
+        pathUpdates = Task { [weak self, generation = monitorGeneration] in
             for await path in paths {
-                await self?.pathChanged(to: path)
+                await self?.pathChanged(to: path, generation: generation)
             }
         }
     }
 
-    private func pathChanged(to newPath: Path) {
+    private func pathChanged(to newPath: Path, generation: Int) {
+        guard generation == monitorGeneration else { return }
+        show(newPath)
+    }
+
+    func show(_ newPath: Path) {
         guard isRunning else { return }
         path = newPath
         lookUpPublicIP(isOnline: newPath.status == .online)
         publishSnapshot()
+        scheduleRecheck()
+    }
+
+    /// A path monitor can miss the network coming back, which the simulator does when the Mac
+    /// reconnects, while a new one always starts from the real state. So while the network isn't
+    /// online and someone is reading, a new monitor takes over every few seconds.
+    private func scheduleRecheck() {
+        recheck?.cancel()
+        recheck = nil
+        guard path?.status != .online else { return }
+        recheck = Task { [weak self] in
+            try? await Task.sleep(for: Self.recheckInterval)
+            guard !Task.isCancelled else { return }
+            await self?.recheckPath()
+        }
+    }
+
+    private func recheckPath() {
+        guard isRunning, path?.status != .online else { return }
+        startPathMonitor()
+        // In case the new monitor reports nothing, so the checks don't stop.
+        scheduleRecheck()
     }
 
     private func publishSnapshot() {

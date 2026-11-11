@@ -294,6 +294,7 @@ The System Info tab shows the network a request ran on, what the session has mov
   - Download speed only counts responses of 64 KB or more, because a small one measures the server's delay, not the network's speed. The row is hidden until there is one.
 - **Totals** are a running sum of captured requests, so they stay correct after old requests leave the list. They don't include sockets or other apps' traffic. Only the first 50 hosts get their own line.
 - **Downloads** made with a download task, including image loaders built on one, keep their size, duration, throughput and MIME type but never their body. A [background transfer](#background-transfers) has no progress, because it only appears once it finishes.
+- While the tab shows the device as offline, it checks the network again every 2 seconds, because iOS can miss the connection coming back, most often on a simulator.
 - A VPN or proxy is detected from the system's proxy settings, so a VPN that doesn't register there isn't seen. On a simulator, these and the memory and processor counts reflect the Mac.
 
 Signal strength, carrier name and Wi-Fi name aren't shown, because iOS has no public API for the first, deprecated the second, and needs an entitlement and location permission for the third. The device's own name, battery level and free storage aren't shown either: iOS returns a generic name, and the other two would need Cerebro to change app settings or declare a privacy reason on your app's behalf.

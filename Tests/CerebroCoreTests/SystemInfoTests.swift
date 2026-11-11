@@ -292,3 +292,20 @@ func anEnabledProxySwitchMeansAProxy(key: String) {
 
     #expect(try #require(await again.next()).publicIP == .off)
 }
+
+@Test func aNetworkShownAsOfflineIsCheckedAgainUntilItMatchesTheRealOne() async throws {
+    let monitor = SystemInfoMonitor(lookup: nil)
+    defer { Task { await monitor.stop() } }
+    var updates = await monitor.updates().makeAsyncIterator()
+    let real = try #require(await updates.next())
+    // What a path monitor that missed the network coming back leaves on screen.
+    await monitor.show(SystemInfoMonitor.Path())
+    #expect(try #require(await updates.next()).status == .offline)
+
+    var latest = SystemInfo.Status.offline
+    while real.status != .offline, latest != real.status, let next = await updates.next() {
+        latest = next.status
+    }
+
+    #expect(latest == real.status)
+}
