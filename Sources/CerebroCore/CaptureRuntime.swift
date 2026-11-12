@@ -89,7 +89,7 @@ public final class CaptureRuntime: Sendable {
 
         let socketStore = SocketStore(frameLimit: configuration.socketFrameLimit, payloadByteLimit: payloadByteLimit)
         let socketBuilder = SocketActivityBuilder(processor: processor)
-        let backlog = SocketBacklog(frameLimit: Self.socketBacklogFrames, byteLimit: payloadByteLimit)
+        let backlog = CaptureBacklog(frameLimit: Self.socketBacklogFrames, byteLimit: payloadByteLimit)
         // Unbounded because `backlog` limits the payloads. Dropping from here could lose a close.
         let (activities, activityInput) = AsyncStream.makeStream(
             of: RawSocketActivity.self, bufferingPolicy: .unbounded)

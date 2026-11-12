@@ -11,13 +11,13 @@ final class SocketCaptureEngine: Sendable {
     }
 
     private let bodyLimit: Int
-    private let backlog: SocketBacklog
+    private let backlog: CaptureBacklog
     private let redactor: Redactor
     private let record: @Sendable (RawSocketActivity) -> Void
 
     init(
         bodyLimit: Int,
-        backlog: SocketBacklog,
+        backlog: CaptureBacklog,
         redactor: Redactor,
         record: @escaping @Sendable (RawSocketActivity) -> Void
     ) {

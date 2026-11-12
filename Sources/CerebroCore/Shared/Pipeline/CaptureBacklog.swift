@@ -1,8 +1,9 @@
 import os
 
-/// Limits what can wait for the pipeline. A frame that doesn't fit keeps only its size, so a slow
-/// moment can't exhaust memory, and events always get through so a socket can't get stuck open.
-final class SocketBacklog: Sendable {
+/// Limits the payload that can wait for the pipeline, so a slow moment can't exhaust memory. Sockets
+/// share one, and each event stream has its own. A payload that doesn't fit is dropped by its caller,
+/// while events and completions hold no payload and always get through, so nothing gets stuck open.
+final class CaptureBacklog: Sendable {
     private struct Usage {
         var frames = 0
         var bytes = 0
@@ -12,7 +13,7 @@ final class SocketBacklog: Sendable {
     private let frameLimit: Int
     private let byteLimit: Int
 
-    init(frameLimit: Int, byteLimit: Int) {
+    init(frameLimit: Int = .max, byteLimit: Int) {
         self.frameLimit = frameLimit
         self.byteLimit = byteLimit
     }
