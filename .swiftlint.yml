@@ -8,7 +8,7 @@ included:
 
 excluded:
   # Output of protoc-gen-swift, which writes its own blanket disable.
-  - Example/CerebroExample/quote.pb.swift
+  - Example/CerebroExample/Proto/quote.pb.swift
 
 disabled_rules:
   - force_cast

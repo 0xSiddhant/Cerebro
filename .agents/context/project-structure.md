@@ -26,7 +26,9 @@ Cerebro/
 │                              # build-generator.sh
 ├── docs/                      # GUIDE.md for everything past setup, and the README's screenshots
 ├── Example/                   # example app using the package by local path
-│   └── traffic_map.json       # proto rules the build plugin turns into ProtoRule.generated
+│   ├── traffic_map.json       # proto rules the build plugin turns into ProtoRule.generated
+│   └── CerebroExample/        # App (delegates and the Cerebro.start call), Screens, Samples (each kind
+│                              # of traffic and its helpers), Proto (generated .pb.swift), Resources
 ├── Sources/
 │   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
 │   │   ├── HTTP/
