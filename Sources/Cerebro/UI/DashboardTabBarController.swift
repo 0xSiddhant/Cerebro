@@ -11,6 +11,9 @@ struct DashboardSources {
     let decoders: [any BodyDecoder]
     let systemInfo: SystemInfoMonitor
     let downloads: DownloadProgressStore
+
+    /// The sessions kept on disk, or `nil` if persistence is off.
+    let archive: SessionArchive?
 }
 
 /// The dashboard's shell.
@@ -23,12 +26,13 @@ final class DashboardTabBarController: UITabBarController {
         let (store, socketStore, decoders) = (sources.store, sources.socketStore, sources.decoders)
         var tabs = [
             makeTab(
-                root: HTTPListViewController(viewModel: HTTPListViewModel(store: store)),
+                root: HTTPListViewController(viewModel: HTTPListViewModel(store: store), archive: sources.archive),
                 title: "HTTP",
                 image: "network"
             ),
             makeTab(
-                root: SocketListViewController(viewModel: SocketListViewModel(store: socketStore), store: socketStore),
+                root: SocketListViewController(
+                    viewModel: SocketListViewModel(store: socketStore), store: socketStore, archive: sources.archive),
                 title: "Sockets",
                 image: "bolt.horizontal"
             ),

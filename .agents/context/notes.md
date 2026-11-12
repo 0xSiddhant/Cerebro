@@ -4,7 +4,7 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. PLAN-01 and PLAN-02 add HTTP and socket capture and the dashboard.
+`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-05 is on `develop`, waiting for the `v1.0.0` release.
 
 Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, and a burst of large responses on a real device. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
 
@@ -25,6 +25,12 @@ These win over the spec, which is older.
 | Download progress | An Active downloads section on the System Info tab, for foreground downloads only | The spec doesn't say where. A row in the HTTP list would need PLAN-06's update-by-ID path, and a background transfer has no row until it ends |
 | Raw JSON export | One request as a JSON document, from the Log Inspector | The Body Viewer already shares a body as a file, and HAR covers the session |
 | Session totals | A running sum kept by the store, with hosts past 50 grouped together | Summing the stored requests would shrink as the oldest are dropped |
+| Saved sessions | Sockets are saved too, one line per frame or event | The plan's tasks only named requests, but its criteria ask for the Sockets tab, and the owner chose it |
+| Session file cap | The newest `requestLimit` requests and 50 MB, trimmed from the oldest | The spec sets no disk limit, and an append-only file outgrows the store. The owner chose it |
+| Restore | The previous session is read when it's opened, not at launch | Launch stays free of disk reads, and most launches never open it |
+| Persistence off | Removes what earlier launches saved | A developer turning it off expects nothing left on disk |
+| Notification trigger | Removed. The dashboard opens from the floating button, a shake or `Cerebro.present()` | The owner found it too generic to be useful. It also needed the app's permission and delegate code, couldn't have its own layout without an app extension, and iOS sometimes dropped it |
+| Clearing the HTTP list | Also clears those requests from the saved session, through a marker line | The file is append-only, and a cleared request shouldn't come back after a relaunch |
 | Throughput | Bytes received on the wire divided by the request's whole duration. The System Info average only counts responses of 64 KB or more | Metrics have no separate download time, so a small response measures the server's delay |
 | System Info layout | Three pages, Network, Traffic and Device, under a status card | The owner's rule: one long list was hard to use |
 | Connection quality | Shown as Performance, with a rating from the average response time: Good under 300 ms, Fair under 1 s, else Slow | The owner found averaged timings unclear. The thresholds are a judgement, not a measurement |

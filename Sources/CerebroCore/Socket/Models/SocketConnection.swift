@@ -1,7 +1,7 @@
 import Foundation
 
 /// Which way a socket frame travelled.
-public enum SocketDirection: Sendable, Equatable {
+public enum SocketDirection: Sendable, Equatable, Codable {
     /// From the app to the server.
     case sent
 
@@ -19,9 +19,9 @@ public enum SocketPayload: Sendable, Equatable {
 }
 
 /// One message on a socket, after the pipeline ran.
-public struct SocketFrame: Sendable, Equatable {
+public struct SocketFrame: Sendable, Equatable, Codable {
     /// What kind of frame this is.
-    public enum Kind: Sendable, Equatable {
+    public enum Kind: Sendable, Equatable, Codable {
         /// A text frame.
         case text
 
@@ -66,7 +66,7 @@ public struct SocketFrame: Sendable, Equatable {
 }
 
 /// Something that happened on a socket, other than a frame.
-public enum SocketEvent: Sendable, Equatable {
+public enum SocketEvent: Sendable, Equatable, Codable {
     /// The socket opened.
     case opened
 
@@ -87,7 +87,7 @@ public enum SocketEvent: Sendable, Equatable {
 }
 
 /// One line of a socket's timeline.
-public enum SocketTimelineItem: Sendable, Equatable {
+public enum SocketTimelineItem: Sendable, Equatable, Codable {
     /// A message.
     case frame(SocketFrame)
 
@@ -104,7 +104,7 @@ public enum SocketTimelineItem: Sendable, Equatable {
 }
 
 /// How a socket's traffic reaches Cerebro.
-public enum SocketSource: Sendable, Equatable {
+public enum SocketSource: Sendable, Equatable, Codable {
     /// A `URLSessionWebSocketTask`, captured automatically.
     case webSocketTask
 

@@ -29,7 +29,8 @@ public enum Cerebro {
                     socketStore: started.socketStore,
                     decoders: configuration.decoders,
                     systemInfo: started.systemInfo,
-                    downloads: started.downloads
+                    downloads: started.downloads,
+                    archive: started.archive
                 ),
                 isShakeGestureEnabled: configuration.isShakeGestureEnabled
             )

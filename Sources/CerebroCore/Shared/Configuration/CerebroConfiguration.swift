@@ -28,6 +28,13 @@ public struct CerebroConfiguration: Sendable {
     /// because it's the only data Cerebro sends off the device.
     public var isPublicIPLookupEnabled: Bool
 
+    /// Whether each session is also kept on disk, in the app's Caches directory and already redacted, so
+    /// the previous one can be read after a relaunch or a crash. Turning it off removes what was saved.
+    public var isPersistenceEnabled: Bool
+
+    /// How many earlier sessions stay on disk. Older ones are removed at each launch.
+    public var previousSessionLimit: Int
+
     /// Creates a configuration. Every argument has a working default.
     public init(
         allowsDistributionBuilds: Bool = false,
@@ -38,7 +45,9 @@ public struct CerebroConfiguration: Sendable {
         redaction: RedactionRules = RedactionRules(),
         isShakeGestureEnabled: Bool = true,
         decoders: [any BodyDecoder] = [],
-        isPublicIPLookupEnabled: Bool = false
+        isPublicIPLookupEnabled: Bool = false,
+        isPersistenceEnabled: Bool = true,
+        previousSessionLimit: Int = 1
     ) {
         self.allowsDistributionBuilds = allowsDistributionBuilds
         self.consoleLevel = consoleLevel
@@ -49,5 +58,7 @@ public struct CerebroConfiguration: Sendable {
         self.isShakeGestureEnabled = isShakeGestureEnabled
         self.decoders = decoders
         self.isPublicIPLookupEnabled = isPublicIPLookupEnabled
+        self.isPersistenceEnabled = isPersistenceEnabled
+        self.previousSessionLimit = previousSessionLimit
     }
 }

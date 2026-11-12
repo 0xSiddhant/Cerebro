@@ -32,7 +32,7 @@ Cerebro/
 │   │   ├── HTTP/
 │   │   │   ├── Capture/       # URLProtocol, config injection, background delegate proxy
 │   │   │   ├── Pipeline/      # raw exchange, transaction builder, console logger
-│   │   │   ├── Store/         # transaction store, cURL; persistence and export in later plans
+│   │   │   ├── Store/         # transaction store, cURL, JSON and HAR export
 │   │   │   └── Models/        # transaction model and its metrics
 │   │   ├── Socket/
 │   │   │   ├── Capture/       # WebSocket hooks, MonitoredNWConnection, ExternalNetworkBridge
@@ -41,7 +41,7 @@ Cerebro/
 │   │   │   └── Models/        # socket connection model
 │   │   ├── Shared/            # used by both
 │   │   │   ├── Pipeline/      # body processing, decompression, redaction
-│   │   │   ├── Store/         # ring buffer, snapshot observers
+│   │   │   ├── Store/         # ring buffer, snapshot observers, session archive
 │   │   │   ├── Models/        # captured body, named value
 │   │   │   └── Configuration/ # CerebroConfiguration, redaction rules, release gate
 │   │   └── Metrics/           # network path, interfaces, public IP, totals, connection quality, download progress

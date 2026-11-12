@@ -31,6 +31,11 @@ enum DisplayFormat {
         ByteCountFormatter.string(fromByteCount: Int64(clamping: byteCount), countStyle: .memory)
     }
 
+    /// When a saved session started, short enough for a title, such as "11 Nov, 14:02".
+    static func sessionStart(_ date: Date) -> String {
+        date.formatted(.dateTime.day().month(.abbreviated).hour().minute())
+    }
+
     /// A transfer speed, from bytes per second.
     static func rate(_ bytesPerSecond: Double) -> String {
         bytes(Int64(bytesPerSecond.rounded())) + "/s"

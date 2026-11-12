@@ -7,10 +7,21 @@ public actor TransactionStore {
     private var observers = SnapshotObservers<[HTTPTransaction]>()
     private let updateInterval: Duration
 
+    /// Where each change is also written, so the session survives a relaunch. `nil` for a store that
+    /// only shows a saved session.
+    private let journal: (@Sendable (SessionRecord) -> Void)?
+
     /// Creates a store. Changes publish at most once per `updateInterval`, so a burst can't flood the UI.
     public init(requestLimit: Int, updateInterval: Duration = .milliseconds(250)) {
         buffer = RingBuffer(capacity: requestLimit)
         self.updateInterval = updateInterval
+        journal = nil
+    }
+
+    init(requestLimit: Int, journal: (@Sendable (SessionRecord) -> Void)?) {
+        buffer = RingBuffer(capacity: requestLimit)
+        updateInterval = .milliseconds(250)
+        self.journal = journal
     }
 
     /// The transactions, oldest first.
@@ -27,6 +38,7 @@ public actor TransactionStore {
     public func append(_ transaction: HTTPTransaction) {
         buffer.append(transaction)
         runningTotals.add(transaction)
+        journal?(.http(transaction))
         schedulePublish()
     }
 
@@ -35,6 +47,7 @@ public actor TransactionStore {
     public func removeAll() {
         buffer.removeAll()
         runningTotals = SessionTotals()
+        journal?(.httpCleared)
         publish()
     }
 

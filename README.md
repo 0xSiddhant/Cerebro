@@ -11,7 +11,7 @@
 
 A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app, and decodes protobuf to JSON when you add rules for it. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
 
-**Status:** early development. HTTP, WebSocket and NWConnection capture, protobuf decoding, the dashboard, System Info and export work today.
+**Status:** HTTP, WebSocket and NWConnection capture, protobuf decoding, the dashboard, System Info, export and previous sessions work today.
 
 ## Screenshots
 
@@ -139,7 +139,7 @@ That one line is all most apps need. HTTP traffic and `URLSessionWebSocketTask` 
 | `Cerebro.present()` | Opens the dashboard from your own debug menu or gesture. It does nothing while Cerebro is off |
 | Close button | Top left of the dashboard. It returns you to your app |
 
-`Cerebro.stop()` ends capture, removes the dashboard and discards what was captured. A later `Cerebro.start()` begins again with nothing.
+`Cerebro.stop()` ends capture and removes the dashboard. A later `Cerebro.start()` begins a new session, and the one before it can still be read as a [previous session](docs/GUIDE.md#previous-sessions).
 
 ## Learn more
 
@@ -153,6 +153,7 @@ The [guide](docs/GUIDE.md) covers everything past setup:
 | [Traffic that needs code](docs/GUIDE.md#traffic-that-needs-code) | `NWConnection`, Starscream and Socket.IO |
 | [Protobuf decoding](docs/GUIDE.md#protobuf-decoding) | Showing binary protobuf as JSON, with rules in code or in a `traffic_map.json` file |
 | [System Info](docs/GUIDE.md#system-info) | Network status, addresses, performance, session totals, app and device info, and the opt-in public IP |
+| [Previous sessions](docs/GUIDE.md#previous-sessions) | Reading the last session after a relaunch or a crash, and what's kept on disk |
 | [Export](docs/GUIDE.md#export) | Sharing a request as cURL or JSON, or the whole session as HAR |
 | [When Cerebro runs](docs/GUIDE.md#when-cerebro-runs) | On in simulators and development-signed builds, off elsewhere unless you opt in |
 | [What changes while Cerebro captures](docs/GUIDE.md#what-changes-while-cerebro-captures) | Side effects on your app's requests |

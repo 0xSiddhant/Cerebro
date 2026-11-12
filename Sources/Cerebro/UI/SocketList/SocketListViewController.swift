@@ -9,11 +9,22 @@ final class SocketListViewController: UITableViewController {
     private let viewModel: SocketListViewModel
     private let store: SocketStore
 
-    init(viewModel: SocketListViewModel, store: SocketStore) {
+    private let archive: SessionArchive?
+
+    /// `previousSessionTitle` makes this a read-only view of a saved session.
+    init(
+        viewModel: SocketListViewModel,
+        store: SocketStore,
+        archive: SessionArchive? = nil,
+        previousSessionTitle: String? = nil
+    ) {
         self.viewModel = viewModel
         self.store = store
+        self.archive = previousSessionTitle == nil ? archive : nil
         super.init(style: .plain)
-        title = "Sockets"
+        title = previousSessionTitle ?? "Sockets"
+        // The tabs belong to the live session, so they'd be misleading over a saved one.
+        hidesBottomBarWhenPushed = previousSessionTitle != nil
     }
 
     @available(*, unavailable)
@@ -24,6 +35,16 @@ final class SocketListViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.register(TrafficRowCell.self, forCellReuseIdentifier: TrafficRowCell.reuseIdentifier)
+        navigationItem.rightBarButtonItem = archive.map { archive in
+            PreviousSessions.button(archive: archive) { [weak self] session in
+                let list = SocketListViewController(
+                    viewModel: SocketListViewModel(store: session.socketStore),
+                    store: session.socketStore,
+                    previousSessionTitle: PreviousSessions.title(for: session)
+                )
+                self?.navigationController?.pushViewController(list, animated: true)
+            }
+        }
         viewModel.onChange = { [weak self] in self?.tableView.reloadData() }
         viewModel.startObserving()
     }

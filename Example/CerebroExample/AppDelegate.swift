@@ -58,6 +58,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //
         //     Cerebro.start(CerebroConfiguration(isPublicIPLookupEnabled: true))
         //
+        // Keep nothing on disk, or keep more earlier sessions (the default keeps the last one, redacted):
+        //
+        //     Cerebro.start(CerebroConfiguration(isPersistenceEnabled: false))
+        //     Cerebro.start(CerebroConfiguration(previousSessionLimit: 3))
+        //
         // Stop a shake from showing and hiding the floating button:
         //
         //     Cerebro.start(CerebroConfiguration(isShakeGestureEnabled: false))

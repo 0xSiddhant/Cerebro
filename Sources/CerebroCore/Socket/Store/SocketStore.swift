@@ -19,6 +19,9 @@ public actor SocketStore {
     private let payloadByteLimit: Int
     private let updateInterval: Duration
 
+    /// Where each frame and event is also written, so the session survives a relaunch.
+    private var journal: (@Sendable (SessionRecord) -> Void)?
+
     /// Creates a store. `frameLimit` caps each socket, and the other two cap the store as a whole,
     /// because a reconnecting socket would otherwise fill a fresh timeline every time.
     public init(
@@ -45,7 +48,12 @@ public actor SocketStore {
         }
     }
 
+    func setJournal(_ journal: (@Sendable (SessionRecord) -> Void)?) {
+        self.journal = journal
+    }
+
     func record(_ item: SocketTimelineItem, on socket: SocketIdentity) {
+        journal?(.socket(socket, item))
         if entries[socket.id] == nil {
             add(socket, startingAt: item.date)
         }
