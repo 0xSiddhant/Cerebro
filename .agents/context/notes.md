@@ -4,7 +4,7 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-06 is on `develop`, waiting for the `v1.0.0` release. PLAN-06 was gated on that release, and the owner chose to start it first.
+`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-06 is on `develop`. The owner wants PLAN-08, the Files tab, in `v1.0.0` too, so the release waits for it. PLAN-06 was gated on that release, and the owner chose to start it first.
 
 Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, and a burst of large responses on a real device. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
 
@@ -49,6 +49,8 @@ These win over the spec, which is older.
 | SSE updates | An open stream reaches the store at most once per 250 ms, on top of the store's own batching | The plan only asked for batching. A stream that sends tokens can deliver hundreds of small chunks a second, and each update copies up to 1,000 events |
 | SSE event text | An event type or ID that isn't UTF-8 is dropped, and the default type `message` is never redacted | The standard replaces bad bytes, but the linter wants failable decoding and the data is kept as bytes either way. The default type isn't something a server sent |
 | SSE timeout | The 60-second idle timeout of Cerebro's session still applies to a stream, and the guide says so | A longer timeout for streams would remove a limit an app may rely on. A probe protocol saw a configuration timeout of 3600 arrive as 60 |
+| Scope | PLAN-08 adds a Files tab that browses the app's sandbox | The owner's requirement. The spec describes a network inspector only |
+| Files tab sharing | Quick Look's own share button shares a file with no privacy warning | No public API removes the button. The owner accepted it over dropping Quick Look, and Cerebro's own Share action still warns |
 | Branches and releases | `develop` flow, with releases automated on `main` | The owner's rule. `rules/git.md` has it |
 | Versions | Breaking commits are a minor bump below 1.0, and `1.0.0` needs a `Release-As` footer | The spec makes `v1.0.0` a deliberate Plan 5 step |
 
