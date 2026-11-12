@@ -50,6 +50,7 @@ These win over the spec, which is older.
 | SSE event text | An event type or ID that isn't UTF-8 is dropped, and the default type `message` is never redacted | The standard replaces bad bytes, but the linter wants failable decoding and the data is kept as bytes either way. The default type isn't something a server sent |
 | SSE timeout | The 60-second idle timeout of Cerebro's session still applies to a stream, and the guide says so | A longer timeout for streams would remove a limit an app may rely on. A probe protocol saw a configuration timeout of 3600 arrive as 60 |
 | Scope | PLAN-08 adds a Files tab that browses the app's sandbox | The owner's requirement. The spec describes a network inspector only |
+| Files tab sharing | Quick Look's own share button shares a file with no privacy warning | No public API removes the button. The owner accepted it over dropping Quick Look, and Cerebro's own Share action still warns |
 | Branches and releases | `develop` flow, with releases automated on `main` | The owner's rule. `rules/git.md` has it |
 | Versions | Breaking commits are a minor bump below 1.0, and `1.0.0` needs a `Release-As` footer | The spec makes `v1.0.0` a deliberate Plan 5 step |
 

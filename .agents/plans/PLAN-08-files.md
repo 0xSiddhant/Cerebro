@@ -6,13 +6,13 @@ Add a Files tab that shows the app's sandbox as folders and files, previews any 
 
 ## Gate
 
-PLAN-06 merged. Single PR on `plan/8-files`. The owner answers the open questions before the first commit. This plan ships in `v1.0.0`, so PLAN-05's release step waits for it.
+PLAN-06 merged. Single PR on `plan/8-files`. This plan ships in `v1.0.0`, so PLAN-05's release step waits for it.
 
 ## Scope
 
 **In:** a Files tab, second to last; the data container, the app bundle and any App Group containers the developer names as browsable roots; folder listing with sort, search and live refresh; previews through Quick Look, with Cerebro's Body Viewer for what Quick Look shows badly; copy, move, rename, duplicate, delete, new folder, share and import, one at a time or for a selection; a file info page; folder sizes; a setting to turn the tab off and one to name App Groups; documentation; all three install options.
 
-**Out:** editing a file's contents; a SQLite table browser and a `UserDefaults` editor, which are their own plans; the Keychain, which isn't files; iCloud containers; thumbnails in the list; a "recently changed" view (see Open questions); a Mac companion app, which the spec rules out.
+**Out:** editing a file's contents; a SQLite table browser and a `UserDefaults` editor, which are their own plans; the Keychain, which isn't files; iCloud containers; thumbnails in the list; a "recently changed" view, which the owner left for a follow-up because search and the date sort come close; a Mac companion app, which the spec rules out.
 
 ## Decisions & reasoning
 
@@ -82,6 +82,10 @@ The Body Viewer reads at most `bodyLimit` bytes and says when a file was cut off
 A guess can be wrong, so the context menu also offers Open in Quick Look and Open as Text or Hex for every file.
 
 Quick Look's editing and markup stay off, since this plan doesn't edit files.
+
+### Quick Look's share button has no warning
+
+Quick Look shows its own share button, and no public API removes it. A file shared from there skips the warning every other export shows. The owner accepted that: the developer is already reading the file and chose a system button, and the alternative was to drop Quick Look and lose PDF, media and document previews. Cerebro's own Share action still warns. `notes.md` and the guide both say so.
 
 ### Actions, and what guards them
 
@@ -160,7 +164,7 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 - [ ] Add a sample to the Example app that writes a few files: JSON, a plist, an image and a file with no extension
 - [ ] Show `appGroupIdentifiers` in the Example's `AppDelegate` comments, beside the other settings
 - [ ] Add `QuickLook` and `UniformTypeIdentifiers` to the podspec's `UI` subspec
-- [ ] Add a Files section to `docs/GUIDE.md`: what the tab shows, each action, how previews are chosen, the limits, that files aren't redacted, that the app must be relaunched to see some changes, and both settings
+- [ ] Add a Files section to `docs/GUIDE.md`: what the tab shows, each action, how previews are chosen, the limits, that files aren't redacted, that Quick Look's own share button has no warning, that the app must be relaunched to see some changes, and both settings
 - [ ] Add the Files tab to the `README.md` intro and status line, and a screenshot
 - [ ] Update `architecture.md` (the side input, the tab list and the `Cerebro` module's frameworks), `project-structure.md`, `tech-stack.md` and `notes.md`
 - [ ] Verify SPM, CocoaPods and XCFramework builds
@@ -173,7 +177,7 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 4. Rename, duplicate, copy, move, delete, delete contents and new folder work in the data container and in an App Group container, and a selection can be deleted, copied, moved or shared together.
 5. No action overwrites an existing item, and both deletes ask first.
 6. Nothing in the app bundle can be changed, on a device or a simulator, and no action can read or change a path outside its root, including through a symlink or a name such as `..`.
-7. A file or a zipped folder can be shared, always after the warning, and a file can be imported into the open folder.
+7. A file or a zipped folder can be shared with Cerebro's Share action, always after the warning, and a file can be imported into the open folder.
 8. A file the app adds, removes or renames while its folder is open shows without a manual refresh, and pulling down refreshes sizes and dates.
 9. Listing, sizes, search and every action run off the main thread. A folder of 10,000 files opens without blocking the UI, and size and search stop at their limits and say so.
 10. A failed action shows why and leaves the files as they were. No path crashes the app.
@@ -210,8 +214,3 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 - [ ] Open a folder of 10,000 files and scroll it
 - [ ] Change the app's preferences file, relaunch, and see the app read the change
 - [ ] Exercise the tab through SPM, CocoaPods and XCFramework client builds
-
-## Open questions
-
-1. **Quick Look has its own share button, which skips Cerebro's warning.** The coding rules say an export shows a warning first, and no public API removes that button. Recommendation: accept it and record it in `notes.md`, because the developer is already reading the file and chose a system button. The alternative is to drop Quick Look and show only text, hex and images, which loses PDF, media and documents.
-2. **A "recently changed" view,** listing the files modified since launch across the data container. It answers "what did my app just write?", but it needs a scan of the whole container when opened. Recommendation: leave it for a follow-up, and see first whether search and the date sort cover it.
