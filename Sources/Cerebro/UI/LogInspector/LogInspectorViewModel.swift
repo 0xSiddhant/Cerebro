@@ -53,29 +53,78 @@ struct InspectorRow: Equatable {
     let value: String
     var body: CapturedBody?
     var isBodyRow = false
+
+    /// What the Body Viewer is titled when this row opens it, if not the page's name.
+    var bodyTitle: String?
     var preview: String?
     var span: InspectorSpan?
 }
 
-/// Lays one transaction out as a summary and pages, leaving out anything it doesn't have.
+/// Lays one transaction out as a summary and pages, leaving out anything it doesn't have. An event
+/// stream that's still open is followed in the store until it ends.
 @MainActor
 final class LogInspectorViewModel {
     let title: String
-    let summary: InspectorSummary
     let request: CapturedRequest
-    let transaction: HTTPTransaction
-    private let pages: [InspectorTab: [InspectorSection]]
+    private(set) var summary: InspectorSummary
+    private(set) var transaction: HTTPTransaction
 
-    init(transaction: HTTPTransaction) {
+    /// Called after the transaction changes.
+    var onChange: (() -> Void)?
+
+    private var pages: [InspectorTab: [InspectorSection]]
+    private let store: TransactionStore?
+    private var updates: Task<Void, Never>?
+
+    /// `store` is where an open event stream's updates come from. Without it the page never changes.
+    init(transaction: HTTPTransaction, store: TransactionStore? = nil) {
         title = transaction.request.url?.lastPathComponent ?? transaction.request.method
-        summary = Self.summary(of: transaction)
         request = transaction.request
+        summary = Self.summary(of: transaction)
         self.transaction = transaction
-        pages = [
+        pages = Self.pages(of: transaction)
+        self.store = store
+    }
+
+    deinit {
+        updates?.cancel()
+    }
+
+    /// Follows the store for as long as the request is open. A finished request never changes, so it
+    /// observes nothing.
+    func startObserving() {
+        guard updates == nil, transaction.isOpen, let store else { return }
+        updates = Task { [weak self, store] in
+            for await transactions in await store.updates() {
+                guard let self else { return }
+                self.show(transactions)
+                if !self.transaction.isOpen { return }
+            }
+        }
+    }
+
+    /// Takes the store's transactions. If this one is gone from them, the page keeps what it had.
+    func show(_ transactions: [HTTPTransaction]) {
+        guard let latest = transactions.last(where: { $0.id == transaction.id }), latest != transaction else {
+            return
+        }
+        transaction = latest
+        summary = Self.summary(of: latest)
+        pages = Self.pages(of: latest)
+        onChange?()
+    }
+
+    private static func pages(of transaction: HTTPTransaction) -> [InspectorTab: [InspectorSection]] {
+        [
             .response: Self.nonEmpty([
                 InspectorSection(title: "Error", rows: Self.error(of: transaction)),
                 InspectorSection(title: "Body", rows: Self.bodyRows(transaction.response?.body)),
                 InspectorSection(title: "Headers", rows: Self.rows(transaction.response?.headers ?? [])),
+                // Last, so a stream of any length never pushes the headers out of reach.
+                InspectorSection(
+                    title: transaction.eventStream.map(Self.eventsTitle) ?? "",
+                    rows: transaction.eventStream.map(Self.eventRows) ?? []
+                ),
             ]),
             .request: Self.nonEmpty([
                 InspectorSection(title: "General", rows: Self.general(of: transaction)),
@@ -110,7 +159,10 @@ final class LogInspectorViewModel {
         if let size = transaction.size {
             stats.append(InspectorStat(title: "Size", value: DisplayFormat.bytes(size.bytesReceived)))
         }
-        if let type = transaction.response?.mimeType?.split(separator: "/").last {
+        if let stream = transaction.eventStream {
+            stats.append(InspectorStat(title: "Stream", value: stream.state == .open ? "Live" : "Ended"))
+            stats.append(InspectorStat(title: "Events", value: stream.eventCount.formatted()))
+        } else if let type = transaction.response?.mimeType?.split(separator: "/").last {
             stats.append(InspectorStat(title: "Type", value: String(type)))
         }
         if let version = transaction.connection?.httpVersion {
@@ -162,6 +214,37 @@ final class LogInspectorViewModel {
                 preview: DisplayFormat.preview(of: body)
             )
         ]
+    }
+
+    private static func eventsTitle(_ stream: CapturedEventStream) -> String {
+        if stream.events.count < stream.eventCount {
+            return "Events · newest \(stream.events.count.formatted()) of \(stream.eventCount.formatted())"
+        }
+        // Nothing was dropped from the list, so parsing stopped because events arrived too fast.
+        return stream.isTruncated ? "Events · incomplete, they arrived too fast" : "Events"
+    }
+
+    private static func eventRows(_ stream: CapturedEventStream) -> [InspectorRow] {
+        guard !stream.events.isEmpty else {
+            return [InspectorRow(title: stream.state == .open ? "Waiting for events" : "No events", value: "—")]
+        }
+        return stream.events.map { event in
+            var title = [event.type, event.id.map { "#\($0)" }, DisplayFormat.time(event.date)].compactMap { $0 }
+            switch event.data.content {
+            case .complete: break
+            case .truncated: title.append("truncated")
+            case .withheld: title.append("withheld, because it couldn't be redacted")
+            case .notStored: title.append("not stored")
+            }
+            return InspectorRow(
+                title: title.joined(separator: " · "),
+                value: DisplayFormat.bytes(Int64(event.data.byteCount)),
+                body: event.data.data?.isEmpty == false ? event.data : nil,
+                isBodyRow: true,
+                bodyTitle: "Event data",
+                preview: DisplayFormat.preview(of: event.data)
+            )
+        }
     }
 
     private static func summary(of body: CapturedBody) -> String {

@@ -48,6 +48,10 @@ enum HTTPListFilter: Int, CaseIterable {
 final class HTTPListViewModel {
     private(set) var rows: [HTTPListRow] = []
 
+    /// The rows that were already listed and now read differently, such as an event stream that got
+    /// more events. The list has to redraw these itself, because their IDs are the same.
+    private(set) var changedRowIDs: [UUID] = []
+
     /// Called after `rows` changes.
     var onChange: (() -> Void)?
 
@@ -99,12 +103,19 @@ final class HTTPListViewModel {
         transactions.first { $0.id == id }
     }
 
+    /// The Log Inspector for a request, which follows the store while the request is still open.
+    func inspector(id: UUID) -> LogInspectorViewModel? {
+        transaction(id: id).map { LogInspectorViewModel(transaction: $0, store: store) }
+    }
+
     private func refresh() {
         let query = searchText.trimmingCharacters(in: .whitespaces)
+        let previous = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         rows =
             transactions
             .filter { filter.includes($0.outcome) && matches($0, query: query) }
             .map(Self.row)
+        changedRowIDs = rows.filter { row in previous[row.id].map { $0 != row } ?? false }.map(\.id)
         onChange?()
     }
 
@@ -126,6 +137,10 @@ final class HTTPListViewModel {
         }
         if let received = transaction.size?.bytesReceived {
             detail.append(DisplayFormat.bytes(received))
+        }
+        if let stream = transaction.eventStream {
+            detail.append(stream.state == .open ? "SSE live" : "SSE ended")
+            detail.append(DisplayFormat.eventCount(stream.eventCount))
         }
         return HTTPListRow(
             id: transaction.id,

@@ -13,9 +13,10 @@ enum ExportActions {
         await Task.detached(priority: .userInitiated, operation: work).value
     }
 
-    /// The menu items that share one request as a JSON document. `anchor` is where an iPad points the sheet.
+    /// The menu items that share one request as a JSON document. `transaction` is read when an item is
+    /// chosen, because an open event stream keeps changing. `anchor` is where an iPad points the sheet.
     static func jsonActions(
-        for transaction: HTTPTransaction,
+        for transaction: @escaping @MainActor () -> HTTPTransaction,
         from presenter: UIViewController,
         anchor: @escaping @MainActor () -> (any UIPopoverPresentationControllerSourceItem)?
     ) -> [UIAction] {
@@ -23,7 +24,8 @@ enum ExportActions {
             UIAction(title: title, image: UIImage(systemName: icon)) { [weak presenter] _ in
                 guard let presenter else { return }
                 Task { @MainActor in
-                    let json = await build { TransactionExport.json(transaction) }
+                    let current = transaction()
+                    let json = await build { TransactionExport.json(current) }
                     CapturedContentSharing.share(
                         json, as: format, fileName: "request.json", from: presenter, anchor: anchor() ?? presenter.view)
                 }
