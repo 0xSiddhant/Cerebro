@@ -46,6 +46,20 @@ struct EventStreamAssembler: Sendable {
         isTruncated = true
     }
 
+    /// Forgets the events that arrived before `date` and counts from there, for a stream that was
+    /// cleared from the list while it was open.
+    mutating func forgetEvents(before date: Date) {
+        events.removeAll { $0.date < date }
+        storedBytes = events.reduce(0) { $0 + $1.storedBytes }
+        eventCount = events.count
+        isTruncated = parser.hasLostFraming
+    }
+
+    /// Whether any event is held.
+    var hasEvents: Bool {
+        !events.isEmpty
+    }
+
     /// What has been captured so far.
     func stream(_ state: CapturedEventStream.State) -> CapturedEventStream {
         CapturedEventStream(state: state, eventCount: eventCount, events: events, isTruncated: isTruncated)

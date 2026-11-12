@@ -129,7 +129,7 @@ private final class Journal: Sendable {
     await store.append(Fixtures.transaction(path: "/after"))
 
     let updated = Fixtures.stream(id: open.id, .open, events: [Fixtures.event("one")])
-    #expect(await store.update(updated))
+    #expect(await store.update(updated) == .updated)
 
     let kept = await store.transactions
     #expect(kept.count == 3)
@@ -144,19 +144,29 @@ private final class Journal: Sendable {
     await store.append(Fixtures.transaction(path: "/a"))
     await store.append(Fixtures.transaction(path: "/b"))
 
-    #expect(await !store.update(Fixtures.stream(id: open.id, .completed)))
+    #expect(await store.update(Fixtures.stream(id: open.id, .completed)) == .evicted)
 
     #expect(await store.transactions.map { $0.request.url?.path } == ["/a", "/b"])
 }
 
-@Test func anUpdateAfterClearingIsIgnored() async {
+@Test func anUpdateAfterClearingStoresNothingAndSaysWhenTheClearWas() async {
     let store = TransactionStore(requestLimit: 10)
     let open = Fixtures.stream(.open)
     await store.append(open)
+    await store.append(Fixtures.transaction())
+    let before = Date()
     await store.removeAll()
 
-    #expect(await !store.update(Fixtures.stream(id: open.id, .completed)))
+    let result = await store.update(Fixtures.stream(id: open.id, .open))
+
+    guard case .cleared(let date) = result else {
+        Issue.record("expected the clear to be reported, got \(result)")
+        return
+    }
+    #expect(date >= before)
     #expect(await store.transactions.isEmpty)
+    // Reported once. After that the stream is the caller's to add again, or it's simply gone.
+    #expect(await store.update(Fixtures.stream(id: open.id, .open)) == .evicted)
 }
 
 @Test func aStreamsBytesAreCountedOnceWhenItEnds() async {

@@ -43,7 +43,8 @@ public struct CapturedEventStream: Sendable, Equatable, Codable {
     /// The newest events, oldest first.
     public let events: [CapturedSSEEvent]
 
-    /// Whether events were dropped at a cap, or parsing stopped because events arrived too fast.
+    /// Whether events were dropped at a cap, or parsing stopped because one event was over the body
+    /// limit or events arrived faster than they could be read.
     public let isTruncated: Bool
 
     /// Creates a stream.

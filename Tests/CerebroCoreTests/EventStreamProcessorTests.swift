@@ -176,6 +176,70 @@ private struct Pipeline {
         #expect(pipeline.logged.withLock { $0 }.isEmpty)
     }
 
+    @Test func aStreamClearedWhileLiveComesBackWithOnlyWhatArrivesAfter() async throws {
+        var pipeline = Pipeline()
+        await pipeline.send(.opened(try pipeline.exchange()))
+        await pipeline.send("data: before\n\n", at: 1)
+        await pipeline.send(.flush)
+        await pipeline.store.removeAll()
+        let afterClear = Date().timeIntervalSince1970 + 60
+
+        await pipeline.send("data: after\n\n", at: afterClear)
+
+        let stream = try #require(await pipeline.stream)
+        #expect(stream.state == .open)
+        #expect(stream.eventCount == 1)
+        #expect(stream.events.first?.data.data == Data("after".utf8))
+
+        await pipeline.send(.finished(try pipeline.exchange()))
+        #expect(await pipeline.stream?.state == .completed)
+        #expect(await pipeline.store.transactions.count == 1)
+    }
+
+    @Test func aClearedStreamThatEndsWithNothingNewStaysGone() async throws {
+        var pipeline = Pipeline()
+        await pipeline.send(.opened(try pipeline.exchange()))
+        await pipeline.send("data: before\n\n", at: 1)
+        await pipeline.store.removeAll()
+
+        await pipeline.send(.finished(try pipeline.exchange()))
+
+        #expect(await pipeline.store.transactions.isEmpty)
+        #expect(pipeline.logged.withLock { $0 }.isEmpty)
+    }
+
+    @Test func aClearedStreamThatEndsWithUnpublishedEventsIsStoredWithThem() async throws {
+        var pipeline = Pipeline()
+        await pipeline.send(.opened(try pipeline.exchange()))
+        await pipeline.send("data: before\n\n", at: 1)
+        await pipeline.store.removeAll()
+        // Waiting for a flush that never comes, so only finishing can carry it.
+        await pipeline.send("data: after\n\n", at: Date().timeIntervalSince1970 + 60)
+
+        await pipeline.send(.finished(try pipeline.exchange()))
+
+        let stream = try #require(await pipeline.stream)
+        #expect(stream.state == .completed)
+        #expect(stream.events.map(\.data.data) == [Data("after".utf8)])
+        #expect(pipeline.logged.withLock { $0 }.count == 2)
+    }
+
+    @Test func stoppingClosesEveryStreamStillOpen() async throws {
+        var pipeline = Pipeline()
+        await pipeline.send(.opened(try pipeline.exchange()))
+        await pipeline.send("data: one\n\n", at: 7)
+
+        await pipeline.processor.finishAll()
+
+        let transaction = try #require(await pipeline.store.transactions.first)
+        #expect(transaction.eventStream?.state == .completed)
+        #expect(transaction.eventStream?.eventCount == 1)
+        #expect(transaction.response?.endDate == Date(timeIntervalSince1970: 7))
+        // Its real end can't arrive any more, and if it did it would change nothing.
+        await pipeline.send(.finished(try pipeline.exchange(error: URLError(.cancelled))))
+        #expect(await pipeline.store.transactions.first == transaction)
+    }
+
     @Test func liveUpdatesAreRedactedBeforeTheyReachTheStore() async throws {
         var pipeline = Pipeline(jsonKeys: ["token"])
         await pipeline.send(.opened(try pipeline.exchange()))

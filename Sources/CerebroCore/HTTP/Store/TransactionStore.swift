@@ -2,11 +2,27 @@ import Foundation
 
 /// Holds the session's transactions. It's an actor because capture finishes on arbitrary threads.
 public actor TransactionStore {
+    /// What became of an update to a transaction that was already stored.
+    enum UpdateResult: Equatable {
+        /// It replaced the stored transaction.
+        case updated
+
+        /// The store dropped the transaction to make room, and it's never put back.
+        case evicted
+
+        /// The list was cleared at this time while the transaction was open. Nothing was stored, so
+        /// the caller can add it again with only what arrived since.
+        case cleared(Date)
+    }
+
     private var buffer: RingBuffer<HTTPTransaction>
     private var runningTotals = SessionTotals()
     private var observers = SnapshotObservers<[HTTPTransaction]>()
     private var requestObservers = SnapshotObservers<[HTTPTransaction]>()
     private let updateInterval: Duration
+
+    /// The streams that were open when the list was cleared, and when that was.
+    private var clearedWhileOpen: [UUID: Date] = [:]
 
     /// Where each change is also written, so the session survives a relaunch. `nil` for a store that
     /// only shows a saved session.
@@ -49,11 +65,11 @@ public actor TransactionStore {
     }
 
     /// Replaces the transaction with the same ID, for an event stream that got more events or ended.
-    /// Returns `false` if the store no longer holds it, because one that was dropped is never put back.
+    /// If the store no longer holds it, nothing is stored and the result says why.
     @discardableResult
-    func update(_ transaction: HTTPTransaction) -> Bool {
+    func update(_ transaction: HTTPTransaction) -> UpdateResult {
         guard let previous = buffer.replaceLast(where: { $0.id == transaction.id }, with: transaction) else {
-            return false
+            return clearedWhileOpen.removeValue(forKey: transaction.id).map(UpdateResult.cleared) ?? .evicted
         }
         if previous.size == nil {
             runningTotals.addBytes(of: transaction)
@@ -63,12 +79,16 @@ public actor TransactionStore {
         }
         // The list of requests is the same, so readers of `requestUpdates` aren't woken.
         schedulePublish()
-        return true
+        return .updated
     }
 
     /// Removes every transaction and starts the totals again, as if the session had just begun. Readers
     /// are told at once, not with the next batch, because someone asked for this and is watching.
     public func removeAll() {
+        let now = Date()
+        for transaction in buffer.elements where transaction.isOpen {
+            clearedWhileOpen[transaction.id] = now
+        }
         buffer.removeAll()
         runningTotals = SessionTotals()
         journal?(.httpCleared)

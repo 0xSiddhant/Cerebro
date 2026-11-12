@@ -170,6 +170,7 @@ public final class CaptureRuntime: Sendable {
             for await activity in activities {
                 await processor.handle(activity)
             }
+            await processor.finishAll()
         }
         return input
     }
@@ -202,7 +203,8 @@ public final class CaptureRuntime: Sendable {
         socketEngine.install()
     }
 
-    /// Stops capturing. Anything already captured still reaches the store.
+    /// Stops capturing. Anything already captured still reaches the store, and an event stream that's
+    /// still open is closed there with the events it has.
     public func stop() {
         engine.uninstall()
         exchanges.finish()

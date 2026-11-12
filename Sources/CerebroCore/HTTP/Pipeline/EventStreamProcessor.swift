@@ -12,6 +12,10 @@ struct EventStreamProcessor {
         var assembler: EventStreamAssembler
         var hasUnpublishedChanges = false
         var isFlushScheduled = false
+
+        func transaction(_ state: CapturedEventStream.State) -> HTTPTransaction {
+            opening.updating(eventStream: assembler.stream(state), lastReceived: assembler.lastReceived)
+        }
     }
 
     private let builder: TransactionBuilder
@@ -62,12 +66,34 @@ struct EventStreamProcessor {
                 await publish(id)
             }
         case .finished(let exchange):
-            guard let stream = streams.removeValue(forKey: id) else { return }
-            let finished = builder.transaction(from: exchange, eventStream: stream.assembler.stream(.completed))
-            // Logged once, here, so a live stream never prints over and over.
-            if await store.update(finished) {
-                console.log(finished)
-            }
+            await finish(id, with: exchange)
+        }
+    }
+
+    private mutating func finish(_ id: UUID, with exchange: RawExchange) async {
+        guard var stream = streams.removeValue(forKey: id) else { return }
+        var finished = builder.transaction(from: exchange, eventStream: stream.assembler.stream(.completed))
+        var result = await store.update(finished)
+        if case .cleared(let date) = result {
+            stream.assembler.forgetEvents(before: date)
+            // A stream that ends with nothing new since the clear has nothing to show.
+            guard stream.assembler.hasEvents else { return }
+            finished = builder.transaction(from: exchange, eventStream: stream.assembler.stream(.completed))
+            await store.append(finished)
+            result = .updated
+        }
+        // Logged once, here, so a live stream never prints over and over.
+        if result == .updated {
+            console.log(finished)
+        }
+    }
+
+    /// Capture stopped, so no stream's end can arrive any more. Each one still open is closed with what
+    /// it has, or it would read as live for good and never be saved.
+    mutating func finishAll() async {
+        for (id, stream) in streams {
+            await store.update(stream.transaction(.completed))
+            streams[id] = nil
         }
     }
 
@@ -85,13 +111,19 @@ struct EventStreamProcessor {
         streams[id]?.hasUnpublishedChanges = false
         streams[id]?.isFlushScheduled = true
         scheduleFlush(id)
-        let updated = stream.opening.updating(
-            eventStream: stream.assembler.stream(.open),
-            lastReceived: stream.assembler.lastReceived
-        )
-        // The store dropped the request to make room, so there's nothing left to keep up to date.
-        if await !store.update(updated) {
+        switch await store.update(stream.transaction(.open)) {
+        case .updated:
+            break
+        case .evicted:
+            // The store dropped the request to make room, so there's nothing left to keep up to date.
             streams[id] = nil
+        case .cleared(let date):
+            // The list was cleared, and the stream is still running, so it comes back with only what
+            // has arrived since.
+            streams[id]?.assembler.forgetEvents(before: date)
+            if let restarted = streams[id]?.transaction(.open) {
+                await store.append(restarted)
+            }
         }
     }
 }

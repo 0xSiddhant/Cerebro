@@ -180,8 +180,44 @@ extension CaptureTests {
             }
         }
 
-        @Test func aBurstOverTheQueuedByteBudgetStillReachesTheAppAndFinishes() async throws {
-            // Each piece is larger than the whole budget, so it can never wait for the parser.
+        @Test func stoppingCaptureClosesAStreamThatIsStillOpen() async throws {
+            let gate = Gate()
+            try await withCapture(handler: feed(["data: one\n\n"], hold: gate)) { harness in
+                let session = URLSession(configuration: .default)
+                let task = Task { try await session.data(from: harness.url("/feed")) }
+                let live = try await harness.transaction { $0.eventStream?.eventCount == 1 }
+                #expect(live.isOpen)
+
+                harness.runtime.stop()
+
+                let closed = try await harness.transaction { $0.eventStream?.state == .completed }
+                #expect(closed.id == live.id)
+                #expect(closed.eventStream?.eventCount == 1)
+                gate.open()
+                _ = try await task.value
+            }
+        }
+
+        @Test func chunksLargerThanTheBodyLimitAreStillReadWhenNothingIsWaiting() async throws {
+            // Many small events in pieces that are each several times the limit.
+            let piece = (0..<200).map { "data: event \($0)\n\n" }.joined()
+            let configuration = CerebroConfiguration(consoleLevel: .off, bodyLimit: 512)
+            let gate = Gate()
+            try await withCapture(configuration, handler: feed([piece], hold: gate)) { harness in
+                let session = URLSession(configuration: .default)
+                let task = Task { try await session.data(from: harness.url("/feed")) }
+
+                let live = try await harness.transaction { $0.eventStream?.eventCount == 200 }
+                gate.open()
+                _ = try await task.value
+
+                // The oldest went at the byte cap, which is the only reason it's marked truncated.
+                #expect(texts(of: live).last == "event 199")
+                #expect((live.eventStream?.events.count ?? 0) < 200)
+            }
+        }
+
+        @Test func anEventLargerThanTheBodyLimitStopsParsingAndTheStreamStillFinishes() async throws {
             let piece = "data: \(String(repeating: "x", count: 4_000))\n\n"
             let configuration = CerebroConfiguration(consoleLevel: .off, bodyLimit: 1_000)
             try await withCapture(configuration, handler: feed([piece, piece, piece])) { harness in
