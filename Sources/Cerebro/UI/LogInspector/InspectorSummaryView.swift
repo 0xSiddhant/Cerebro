@@ -2,22 +2,26 @@ import UIKit
 
 /// The top of the Log Inspector: what the request was and how it went, at a glance.
 final class InspectorSummaryView: UIView {
+    private let status = StatusBadgeLabel()
+
+    /// The error and the figures, which are what change while an event stream is open.
+    private let details = UIStackView()
+
     /// `actions` sit on the title line, so they stay in view without adding height to the page.
     init(summary: InspectorSummary, actions: [UIView]) {
         super.init(frame: .zero)
-        let stack = UIStackView(
-            arrangedSubviews: [Self.titleLine(for: summary, actions: actions), Self.urlLabel(summary.url)]
-        )
+        let method = UILabel()
+        method.text = summary.method
+        method.font = .monospacedSystemFont(ofSize: 15, weight: .bold)
+        let title = UIStackView(arrangedSubviews: [method, UIView()] + actions + [status])
+        title.alignment = .center
+        title.spacing = 8
+        details.axis = .vertical
+        details.spacing = 12
+        let stack = UIStackView(arrangedSubviews: [title, Self.urlLabel(summary.url), details])
         stack.axis = .vertical
         stack.spacing = 6
-        if let error = summary.error {
-            stack.addArrangedSubview(Self.errorLabel(error))
-        }
-        if !summary.stats.isEmpty {
-            let stats = Self.statsCard(summary.stats)
-            stack.addArrangedSubview(stats)
-            stack.setCustomSpacing(12, after: stack.arrangedSubviews[stack.arrangedSubviews.count - 2])
-        }
+        show(summary)
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
         // A table gives its header a height of zero until it has been measured, and a required bottom
@@ -37,16 +41,18 @@ final class InspectorSummaryView: UIView {
         fatalError("InspectorSummaryView is built in code")
     }
 
-    private static func titleLine(for summary: InspectorSummary, actions: [UIView]) -> UIView {
-        let method = UILabel()
-        method.text = summary.method
-        method.font = .monospacedSystemFont(ofSize: 15, weight: .bold)
-        let status = StatusBadgeLabel()
+    /// Shows how the request is going now. The title line and its buttons stay where they are, so a
+    /// menu open on one of them isn't disturbed. The method and URL never change.
+    func show(_ summary: InspectorSummary) {
         status.show(summary.status, outcome: summary.outcome)
-        let line = UIStackView(arrangedSubviews: [method, UIView()] + actions + [status])
-        line.alignment = .center
-        line.spacing = 8
-        return line
+        details.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        if let error = summary.error {
+            details.addArrangedSubview(Self.errorLabel(error))
+        }
+        if !summary.stats.isEmpty {
+            details.addArrangedSubview(Self.statsCard(summary.stats))
+        }
+        details.isHidden = details.arrangedSubviews.isEmpty
     }
 
     private static func urlLabel(_ url: String) -> UILabel {

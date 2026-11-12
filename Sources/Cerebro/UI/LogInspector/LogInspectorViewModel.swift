@@ -80,7 +80,8 @@ final class LogInspectorViewModel {
     init(transaction: HTTPTransaction, store: TransactionStore? = nil) {
         title = transaction.request.url?.lastPathComponent ?? transaction.request.method
         request = transaction.request
-        summary = Self.summary(of: transaction)
+        summary = Self.summary(of: transaction, isFollowing: transaction.isOpen)
+        isFollowing = transaction.isOpen
         self.transaction = transaction
         pages = Self.pages(of: transaction)
         self.store = store
@@ -90,26 +91,36 @@ final class LogInspectorViewModel {
         updates?.cancel()
     }
 
-    /// Follows the store for as long as the request is open. A finished request never changes, so it
-    /// observes nothing.
+    /// Whether the request is open and still in the store, so the page can change again.
+    private(set) var isFollowing: Bool
+
+    /// Follows the store for as long as the request is open and listed. A finished request never
+    /// changes, so it observes nothing.
     func startObserving() {
-        guard updates == nil, transaction.isOpen, let store else { return }
+        guard updates == nil, isFollowing, let store else { return }
         updates = Task { [weak self, store] in
             for await transactions in await store.updates() {
                 guard let self else { return }
                 self.show(transactions)
-                if !self.transaction.isOpen { return }
+                if !self.isFollowing { return }
             }
         }
     }
 
-    /// Takes the store's transactions. If this one is gone from them, the page keeps what it had.
+    /// Takes the store's transactions. If this one is gone from them, because the list was cleared or
+    /// it was dropped to make room, the page keeps what it had and stops calling the stream live.
     func show(_ transactions: [HTTPTransaction]) {
-        guard let latest = transactions.last(where: { $0.id == transaction.id }), latest != transaction else {
+        guard isFollowing else { return }
+        guard let latest = transactions.last(where: { $0.id == transaction.id }) else {
+            isFollowing = false
+            summary = Self.summary(of: transaction, isFollowing: false)
+            onChange?()
             return
         }
+        guard latest != transaction else { return }
         transaction = latest
-        summary = Self.summary(of: latest)
+        isFollowing = latest.isOpen
+        summary = Self.summary(of: latest, isFollowing: isFollowing)
         pages = Self.pages(of: latest)
         onChange?()
     }
@@ -151,7 +162,8 @@ final class LogInspectorViewModel {
         return [InspectorSection(title: "", rows: [InspectorRow(title: "Nothing captured", value: "—")])]
     }
 
-    private static func summary(of transaction: HTTPTransaction) -> InspectorSummary {
+    /// `isFollowing` is `false` for an open stream this page has lost track of.
+    private static func summary(of transaction: HTTPTransaction, isFollowing: Bool) -> InspectorSummary {
         var stats: [InspectorStat] = []
         if let timing = transaction.timing {
             stats.append(InspectorStat(title: "Time", value: DisplayFormat.duration(timing.total)))
@@ -160,7 +172,9 @@ final class LogInspectorViewModel {
             stats.append(InspectorStat(title: "Size", value: DisplayFormat.bytes(size.bytesReceived)))
         }
         if let stream = transaction.eventStream {
-            stats.append(InspectorStat(title: "Stream", value: stream.state == .open ? "Live" : "Ended"))
+            // A stream that left the list while open may still be running, but nothing here can tell.
+            let state = stream.state == .completed ? "Ended" : isFollowing ? "Live" : "Not tracked"
+            stats.append(InspectorStat(title: "Stream", value: state))
             stats.append(InspectorStat(title: "Events", value: stream.eventCount.formatted()))
         } else if let type = transaction.response?.mimeType?.split(separator: "/").last {
             stats.append(InspectorStat(title: "Type", value: String(type)))
@@ -214,37 +228,6 @@ final class LogInspectorViewModel {
                 preview: DisplayFormat.preview(of: body)
             )
         ]
-    }
-
-    private static func eventsTitle(_ stream: CapturedEventStream) -> String {
-        if stream.events.count < stream.eventCount {
-            return "Events · newest \(stream.events.count.formatted()) of \(stream.eventCount.formatted())"
-        }
-        // Nothing was dropped from the list, so parsing stopped because events arrived too fast.
-        return stream.isTruncated ? "Events · incomplete, they arrived too fast" : "Events"
-    }
-
-    private static func eventRows(_ stream: CapturedEventStream) -> [InspectorRow] {
-        guard !stream.events.isEmpty else {
-            return [InspectorRow(title: stream.state == .open ? "Waiting for events" : "No events", value: "—")]
-        }
-        return stream.events.map { event in
-            var title = [event.type, event.id.map { "#\($0)" }, DisplayFormat.time(event.date)].compactMap { $0 }
-            switch event.data.content {
-            case .complete: break
-            case .truncated: title.append("truncated")
-            case .withheld: title.append("withheld, because it couldn't be redacted")
-            case .notStored: title.append("not stored")
-            }
-            return InspectorRow(
-                title: title.joined(separator: " · "),
-                value: DisplayFormat.bytes(Int64(event.data.byteCount)),
-                body: event.data.data?.isEmpty == false ? event.data : nil,
-                isBodyRow: true,
-                bodyTitle: "Event data",
-                preview: DisplayFormat.preview(of: event.data)
-            )
-        }
     }
 
     private static func summary(of body: CapturedBody) -> String {
@@ -342,5 +325,41 @@ final class LogInspectorViewModel {
         if connection.isExpensive { traits.append("Expensive") }
         if connection.isConstrained { traits.append("Low Data Mode") }
         return traits.joined(separator: ", ")
+    }
+}
+
+// MARK: - Event streams
+
+extension LogInspectorViewModel {
+    fileprivate static func eventsTitle(_ stream: CapturedEventStream) -> String {
+        if stream.events.count < stream.eventCount {
+            return "Events · newest \(stream.events.count.formatted()) of \(stream.eventCount.formatted())"
+        }
+        // Nothing was dropped from the list, so parsing stopped: one event was over the body limit, or
+        // events arrived faster than they could be read.
+        return stream.isTruncated ? "Events · incomplete" : "Events"
+    }
+
+    fileprivate static func eventRows(_ stream: CapturedEventStream) -> [InspectorRow] {
+        guard !stream.events.isEmpty else {
+            return [InspectorRow(title: stream.state == .open ? "Waiting for events" : "No events", value: "—")]
+        }
+        return stream.events.map { event in
+            var title = [event.type, event.id.map { "#\($0)" }, DisplayFormat.time(event.date)].compactMap { $0 }
+            switch event.data.content {
+            case .complete: break
+            case .truncated: title.append("truncated")
+            case .withheld: title.append("withheld, because it couldn't be redacted")
+            case .notStored: title.append("not stored")
+            }
+            return InspectorRow(
+                title: title.joined(separator: " · "),
+                value: DisplayFormat.bytes(Int64(event.data.byteCount)),
+                body: event.data.data?.isEmpty == false ? event.data : nil,
+                isBodyRow: true,
+                bodyTitle: "Event data",
+                preview: DisplayFormat.preview(of: event.data)
+            )
+        }
     }
 }

@@ -74,19 +74,26 @@ final class LogInspectorViewController: UITableViewController {
         shownSummary = viewModel.summary
     }
 
-    /// An open event stream got more events or ended. Its events are the last section, so the rows
-    /// above keep their places unless a section came or went.
+    /// An open event stream got more events or ended. Only what changed is redrawn, so a page that
+    /// didn't change stays still, and so do the summary's buttons.
     private func showChanges() {
         if viewModel.summary != shownSummary {
-            showSummary()
+            (tableView.tableHeaderView as? InspectorSummaryView)?.show(viewModel.summary)
+            shownSummary = viewModel.summary
             view.setNeedsLayout()
         }
         let updated = viewModel.sections(for: selectedTab)
-        if updated.count != sections.count {
-            expandedRows.removeAll()
-        }
+        guard updated != sections else { return }
+        let previous = sections
         sections = updated
-        tableView.reloadData()
+        guard updated.count == previous.count else {
+            expandedRows.removeAll()
+            tableView.reloadData()
+            return
+        }
+        // Usually just the events, which are the last section, so the rows above keep their places.
+        let changed = IndexSet(updated.indices.filter { updated[$0] != previous[$0] })
+        UIView.performWithoutAnimation { tableView.reloadSections(changed, with: .none) }
     }
 
     override func viewDidLayoutSubviews() {

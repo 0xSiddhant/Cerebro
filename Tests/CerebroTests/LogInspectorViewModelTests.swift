@@ -319,7 +319,7 @@ private func stream(
     let stopped = LogInspectorViewModel(transaction: stream(.open, events: [event("only")], isTruncated: true))
 
     #expect(dropped.sections(for: .response).last?.title == "Events · newest 1 of 1,200")
-    #expect(stopped.sections(for: .response).last?.title == "Events · incomplete, they arrived too fast")
+    #expect(stopped.sections(for: .response).last?.title == "Events · incomplete")
 }
 
 @Test @MainActor func withheldAndTruncatedEventDataIsLabelledAndOnlyStoredDataOpens() throws {
@@ -351,11 +351,33 @@ private func stream(
     #expect(model.sections(for: .response).last?.rows.count == 2)
     #expect(model.summary.stats.first?.value == "Ended")
 
-    // The same again, or a store that no longer holds it, changes nothing.
+    // The same again, or a store that no longer holds it, changes nothing once it has ended.
     model.show([full, finished])
     model.show([full])
     #expect(changes == 1)
     #expect(model.transaction == finished)
+    #expect(!model.isFollowing)
 
     #expect(LogInspectorViewModel(transaction: full).sections(for: .response).map(\.title) == ["Body", "Headers"])
+}
+
+@Test @MainActor func anOpenStreamThatLeavesTheStoreStopsBeingCalledLive() {
+    let open = stream(.open, events: [event("one")])
+    let model = LogInspectorViewModel(transaction: open)
+    var changes = 0
+    model.onChange = { changes += 1 }
+    #expect(model.isFollowing)
+
+    // Cleared, or dropped to make room. The stream may still be running, but this page can't know.
+    model.show([full])
+
+    #expect(changes == 1)
+    #expect(!model.isFollowing)
+    #expect(model.summary.stats.first == InspectorStat(title: "Stream", value: "Not tracked"))
+    #expect(model.sections(for: .response).last?.rows.count == 1)
+
+    // It stays that way even if a stream with the same ID is listed again.
+    model.show([stream(id: open.id, .open, events: [event("one"), event("two")])])
+    #expect(changes == 1)
+    #expect(model.transaction == open)
 }
