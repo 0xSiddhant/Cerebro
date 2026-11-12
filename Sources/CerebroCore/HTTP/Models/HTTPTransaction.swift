@@ -1,6 +1,7 @@
 import Foundation
 
-/// One finished request, already redacted.
+/// One request, already redacted. It's stored when it finishes, except an event stream, which is stored
+/// when its response arrives and updated under the same ID until it ends.
 public struct HTTPTransaction: Sendable, Identifiable, Equatable, Codable {
     /// Identifies this transaction.
     public let id: UUID
@@ -23,6 +24,14 @@ public struct HTTPTransaction: Sendable, Identifiable, Equatable, Codable {
     /// How many bytes moved.
     public let size: TransferSize?
 
+    /// The Server-Sent Events the response carried, or `nil` if it isn't a `text/event-stream`.
+    public let eventStream: CapturedEventStream?
+
+    /// Whether this is an event stream that's still arriving, so it will change again.
+    public var isOpen: Bool {
+        eventStream?.state == .open
+    }
+
     /// Creates a transaction.
     public init(
         id: UUID = UUID(),
@@ -31,7 +40,8 @@ public struct HTTPTransaction: Sendable, Identifiable, Equatable, Codable {
         failure: CapturedFailure? = nil,
         timing: TransactionTiming? = nil,
         connection: ConnectionDetails? = nil,
-        size: TransferSize? = nil
+        size: TransferSize? = nil,
+        eventStream: CapturedEventStream? = nil
     ) {
         self.id = id
         self.request = request
@@ -40,9 +50,10 @@ public struct HTTPTransaction: Sendable, Identifiable, Equatable, Codable {
         self.timing = timing
         self.connection = connection
         self.size = size
+        self.eventStream = eventStream
     }
 
-    /// How this transaction ended.
+    /// How this transaction ended, or how it's going so far if it's still open.
     public var outcome: TransactionOutcome {
         if let failure {
             return failure.isCancelled ? .cancelled : .failed
@@ -124,7 +135,7 @@ public struct CapturedResponse: Sendable, Equatable, Codable {
     /// The response headers.
     public let headers: [NamedValue]
 
-    /// The decoded body, if there was one.
+    /// The decoded body, if there was one. An event stream has none, because its events hold the data.
     public let body: CapturedBody?
 
     /// The MIME type the server reported.
@@ -133,7 +144,7 @@ public struct CapturedResponse: Sendable, Equatable, Codable {
     /// The encoding URLSession removed on the way in, such as `gzip`.
     public let contentEncoding: String?
 
-    /// When the response finished.
+    /// When the response finished. While an event stream is open, this is when data last arrived.
     public let endDate: Date
 
     /// Creates a response.
