@@ -4,7 +4,7 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-06 is on `develop`, waiting for the `v1.0.0` release. PLAN-06 was gated on that release, and the owner chose to start it first.
+`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-06 is on `develop`. The owner wants PLAN-08, the Files tab, in `v1.0.0` too, so the release waits for it. PLAN-06 was gated on that release, and the owner chose to start it first.
 
 Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, and a burst of large responses on a real device. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
 

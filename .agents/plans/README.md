@@ -1,6 +1,6 @@
 # Cerebro Plans — Index & Gates
 
-Implement strictly in the order of this table. One plan = one branch from `develop` = one PR into `develop`, except PLAN-00. Plans 0–5 and 7 lead to 1.0; subsequent plans build on that release. Plan 99 holds work deliberately left for later.
+Implement strictly in the order of this table. One plan = one branch from `develop` = one PR into `develop`, except PLAN-00. Plans 0–8 lead to 1.0, and PLAN-05's release step comes last; subsequent plans build on that release. Plan 99 holds work deliberately left for later.
 
 Zero code change is the first priority of every plan, and each must work the same in all three install options: SPM, CocoaPods and a downloaded XCFramework. Every plan also follows the design principles in `rules/coding.md`: DRY, KISS, YAGNI, the architecture, and Swift best practices.
 
@@ -14,7 +14,7 @@ Each plan follows the same format: goal → gate → scope → decisions & reaso
 | ✅ 03 | Protobuf decoding and the Proto Config tab | `plan/3-proto` | PLAN-02 merged |
 | ✅ 07 | Background transfer metrics | `plan/7-background-metrics` | PLAN-03 merged |
 | ✅ 04 | System info and export | `plan/4-system-info` | PLAN-07 merged |
-| 05 | [Persistence and 1.0](PLAN-05-background-and-1.0.md) | `plan/5-background-and-1.0` | PLAN-04 merged |
+| 05 | [Persistence and 1.0](PLAN-05-background-and-1.0.md) | `plan/5-background-and-1.0` | PLAN-04 merged. Its code is merged, and its release step waits for PLAN-08 |
 | ✅ 06 | Server-Sent Events capture and live inspection | `plan/6-sse` | PLAN-05 merged and `v1.0.0` released |
 | 08 | [Sandbox file browser](PLAN-08-files.md) | `plan/8-files` | PLAN-06 merged, and the owner has answered the plan's open questions |
 | 99 | [Response mocking and replay](PLAN-99-mocking-and-replay.md) | Named when scheduled | Reference only: after 1.0, pulled into a new numbered plan when scheduled |

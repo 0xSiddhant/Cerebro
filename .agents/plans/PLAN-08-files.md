@@ -6,11 +6,11 @@ Add a Files tab that shows the app's sandbox as folders and files, previews any 
 
 ## Gate
 
-PLAN-06 merged. Single PR on `plan/8-files`. The owner answers the open questions before the first commit.
+PLAN-06 merged. Single PR on `plan/8-files`. The owner answers the open questions before the first commit. This plan ships in `v1.0.0`, so PLAN-05's release step waits for it.
 
 ## Scope
 
-**In:** a Files tab, second to last; the data container and the app bundle as browsable roots; folder listing with sort, search and live refresh; previews through Quick Look, with Cerebro's Body Viewer for what Quick Look shows badly; copy, move, rename, duplicate, delete, new folder, share and import, one at a time or for a selection; a file info page; folder sizes; a setting to turn the tab off; documentation; all three install options.
+**In:** a Files tab, second to last; the data container, the app bundle and any App Group containers the developer names as browsable roots; folder listing with sort, search and live refresh; previews through Quick Look, with Cerebro's Body Viewer for what Quick Look shows badly; copy, move, rename, duplicate, delete, new folder, share and import, one at a time or for a selection; a file info page; folder sizes; a setting to turn the tab off and one to name App Groups; documentation; all three install options.
 
 **Out:** editing a file's contents; a SQLite table browser and a `UserDefaults` editor, which are their own plans; the Keychain, which isn't files; iCloud containers; thumbnails in the list; a "recently changed" view (see Open questions); a Mac companion app, which the spec rules out.
 
@@ -42,15 +42,21 @@ Listing, attributes, sizes, search and file operations go in `Sources/CerebroCor
 
 There is no store and no cache of the tree. Each folder is read when it's opened, so nothing can go stale and nothing needs a cap on memory beyond the one listing on screen.
 
-### Two roots, and nothing outside them
+### The roots, and nothing outside them
 
-The tab opens on a list of locations: the data container, which holds `Documents`, `Library`, `tmp` and `SystemData`, and the app bundle. Each shows its size. Opening one pushes its folders, one screen per level, with the path's parents in the title's menu to jump back up.
+The tab opens on a list of locations: the data container, which holds `Documents`, `Library`, `tmp` and `SystemData`, the app bundle, and one for each App Group the developer names. Each shows its size. Opening one pushes its folders, one screen per level, with the path's parents in the title's menu to jump back up.
 
 Every operation resolves its paths, symlinks included, and refuses one that ends outside its root. A real device's sandbox already stops that, but the spike showed a simulator doesn't, and a debugging tool must not be able to delete files on the developer's Mac. A symlink is listed as a link with its target, and is never followed out of its root.
 
 The app bundle is read-only everywhere. On a device it's signed and can't change. On a simulator it can, so Cerebro refuses anyway, to behave the same in both and never corrupt the installed app.
 
 Hidden files are listed like any other, because a debugging tool that hides files is misleading.
+
+### App Groups are named by the developer
+
+A widget or an extension shares files with the app through an App Group container, which is among the hardest places to inspect. iOS has no public way to list an app's groups, because entitlements can't be read at runtime, so `appGroupIdentifiers` takes them. This is the one place the tab needs code, and only for apps that use groups: the default is empty, and everything else works without it.
+
+Each identifier is resolved with `FileManager.containerURL(forSecurityApplicationGroupIdentifier:)` and becomes one more root, writable like the data container, with the identifier as its name. One that doesn't resolve is left out, and the console says which. On a simulator that call can return a folder for a group the app isn't entitled to, so a root is only listed if its folder exists.
 
 ### Everything off the main thread, and bounded
 
@@ -117,13 +123,14 @@ Cerebro changes files, not the app's memory. An app that has a database open, or
 | API | Purpose | Notes |
 |---|---|---|
 | `CerebroConfiguration.isFileBrowserEnabled` | Shows or hides the Files tab | Defaults to `true`. No app has to set it |
+| `CerebroConfiguration.appGroupIdentifiers` | Adds each named App Group container as a root | Defaults to empty. Only apps that share files with a widget or an extension set it |
 
 Nothing else changes for the host app, and no code is needed to use the tab.
 
 ## Task checklist
 
 **Core (`Sources/CerebroCore/Files/`)**
-- [ ] Add the roots: the data container and the app bundle, with the bundle read-only
+- [ ] Add the roots: the data container, the app bundle, which is read-only, and each App Group container that resolves to a folder that exists
 - [ ] Add a file entry model with name, kind, size, dates, type, link target and whether it's writable
 - [ ] List a folder in one batched read, off the main thread, with sorting by name, date or size, folders first
 - [ ] Measure a folder's size and item count, cancellable, stopping at 20,000 items
@@ -133,10 +140,10 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 - [ ] Classify a file by extension and first bytes, read at most `bodyLimit` bytes, and convert a plist to JSON
 - [ ] Watch a folder for added, removed and renamed entries and report them at most once per 250 ms
 - [ ] Make what the dashboard uses `public` with doc comments, and keep every new type and file name unique across `Sources/CerebroCore` and `Sources/Cerebro`
-- [ ] Add `isFileBrowserEnabled` to `CerebroConfiguration`
+- [ ] Add `isFileBrowserEnabled` and `appGroupIdentifiers` to `CerebroConfiguration`, and log an identifier that doesn't resolve
 
 **Dashboard (`Sources/Cerebro/UI/Files/`, `Sources/Cerebro/UI/DashboardTabBarController.swift`, `Sources/Cerebro/Facade/Cerebro.swift`)**
-- [ ] Add the Files tab before System Info, only when `isFileBrowserEnabled` is set, and pass `bodyLimit` and the setting through `DashboardSources`
+- [ ] Add the Files tab before System Info, only when `isFileBrowserEnabled` is set, and pass `bodyLimit` and both settings through `DashboardSources`
 - [ ] Locations screen with each root's size
 - [ ] Folder screen with an icon, name, size and modified date per row, the path's parents in the title menu, a sort menu, pull to refresh, and search with This Folder and Subfolders scopes
 - [ ] Route a tap to Quick Look or the Body Viewer by type, with a loading state while Quick Look prepares, and offer both viewers in the context menu
@@ -151,8 +158,9 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 **Tests, documentation, and distribution**
 - [ ] Unit and view-model tests from the test checklist
 - [ ] Add a sample to the Example app that writes a few files: JSON, a plist, an image and a file with no extension
+- [ ] Show `appGroupIdentifiers` in the Example's `AppDelegate` comments, beside the other settings
 - [ ] Add `QuickLook` and `UniformTypeIdentifiers` to the podspec's `UI` subspec
-- [ ] Add a Files section to `docs/GUIDE.md`: what the tab shows, each action, how previews are chosen, the limits, that files aren't redacted, that the app must be relaunched to see some changes, and the new setting
+- [ ] Add a Files section to `docs/GUIDE.md`: what the tab shows, each action, how previews are chosen, the limits, that files aren't redacted, that the app must be relaunched to see some changes, and both settings
 - [ ] Add the Files tab to the `README.md` intro and status line, and a screenshot
 - [ ] Update `architecture.md` (the side input, the tab list and the `Cerebro` module's frameworks), `project-structure.md`, `tech-stack.md` and `notes.md`
 - [ ] Verify SPM, CocoaPods and XCFramework builds
@@ -160,9 +168,9 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 ## Acceptance criteria
 
 1. With no code change, the dashboard has a Files tab between the other tabs and System Info, and it's absent when `isFileBrowserEnabled` is `false`.
-2. The tab shows the data container and the app bundle, and every folder and file beneath them, hidden ones included, one level per screen.
+2. The tab shows the data container, the app bundle and each named App Group container, and every folder and file beneath them, hidden ones included, one level per screen.
 3. Tapping a file previews it: plists and JSON are readable, images and documents open in Quick Look, and any other file opens as text or hex. A file over `bodyLimit` opens cut off and says so.
-4. Rename, duplicate, copy, move, delete, delete contents and new folder work in the data container, and a selection can be deleted, copied, moved or shared together.
+4. Rename, duplicate, copy, move, delete, delete contents and new folder work in the data container and in an App Group container, and a selection can be deleted, copied, moved or shared together.
 5. No action overwrites an existing item, and both deletes ask first.
 6. Nothing in the app bundle can be changed, on a device or a simulator, and no action can read or change a path outside its root, including through a symlink or a name such as `..`.
 7. A file or a zipped folder can be shared, always after the warning, and a file can be imported into the open folder.
@@ -170,7 +178,7 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 9. Listing, sizes, search and every action run off the main thread. A folder of 10,000 files opens without blocking the UI, and size and search stop at their limits and say so.
 10. A failed action shows why and leaves the files as they were. No path crashes the app.
 11. While Cerebro is off, no file is read and no tab exists.
-12. `docs/GUIDE.md` and `README.md` describe the tab, its limits and the setting.
+12. `docs/GUIDE.md` and `README.md` describe the tab, its limits and both settings.
 13. The feature works the same through SPM, CocoaPods and XCFrameworks, and the `build-and-test` skill passes.
 
 ## Test checklist
@@ -183,6 +191,7 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 - [ ] Containment: a symlink that points outside, a rename to `..` or a name with `/`, and a move to a folder outside the root are all refused
 - [ ] Name collisions: `name 2.ext`, then `name 3.ext`, and a refused rename
 - [ ] A read-only root refuses every change
+- [ ] An App Group identifier that resolves to an existing folder becomes a root, and one that doesn't is left out and logged
 - [ ] Classification by extension and by first bytes, the read cap, and plist to JSON with a date and data value
 - [ ] The watcher reports an added, removed and renamed entry, and batches a burst
 
@@ -196,6 +205,7 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 **Manual**
 - [ ] On a real device: Quick Look for an image, a PDF, a video and a text file, and the first preview's delay
 - [ ] On a real device: the app bundle refuses changes, and a file with complete data protection opens while the device is unlocked
+- [ ] On a real device: an app with an App Group lists that container, and an identifier it isn't entitled to is left out
 - [ ] Share a file and a folder by AirDrop, and import a file from the Files app
 - [ ] Open a folder of 10,000 files and scroll it
 - [ ] Change the app's preferences file, relaunch, and see the app read the change
@@ -204,6 +214,4 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 ## Open questions
 
 1. **Quick Look has its own share button, which skips Cerebro's warning.** The coding rules say an export shows a warning first, and no public API removes that button. Recommendation: accept it and record it in `notes.md`, because the developer is already reading the file and chose a system button. The alternative is to drop Quick Look and show only text, hex and images, which loses PDF, media and documents.
-2. **App Group containers.** A widget or an extension shares files with the app there, but iOS has no public way to list an app's groups, so the developer would have to name them in a second setting, such as `appGroupIdentifiers`. Recommendation: include it in this plan, because it's one setting and one more root, and shared containers are among the hardest to inspect.
-3. **A "recently changed" view,** listing the files modified since launch across the data container. It answers "what did my app just write?", but it needs a scan of the whole container when opened. Recommendation: leave it for a follow-up, and see first whether search and the date sort cover it.
-4. **Before or after `v1.0.0`?** The plan adds a setting and two system frameworks, none of them breaking. Recommendation: don't tie it to the release. Merge it when it's ready, on either side of 1.0.
+2. **A "recently changed" view,** listing the files modified since launch across the data container. It answers "what did my app just write?", but it needs a scan of the whole container when opened. Recommendation: leave it for a follow-up, and see first whether search and the date sort cover it.
