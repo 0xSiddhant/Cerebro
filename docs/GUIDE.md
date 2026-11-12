@@ -33,7 +33,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 **Dashboard**
 
 - **Floating trigger:** sits above your app, drags anywhere and snaps to the nearest side, and counts the requests since you last looked.
-- **HTTP list:** newest first and live, with search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests. The trash button clears every request and resets the session totals, after asking. Sockets are kept.
+- **HTTP list:** newest first and live, with each method in its own colour (`GET` blue, `POST` green, `PUT` orange, `PATCH` purple, `DELETE` red) and an `SSE` tag on event streams, plus search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests. The trash button clears every request and resets the session totals, after asking. Sockets are kept.
 - **Log Inspector:** Response, Request and Metrics pages for each request. Tap a row to expand it, or long-press to copy it. An event stream's events are listed live at the end of the Response page.
 - **Body Viewer:** pretty JSON or raw text, plus a collapsible tree for decoded protobuf, with copy and share buttons.
 - **Sockets list:** every connection with its source (`WS`, `NW` or `EXT`), status, frame count and bytes sent and received.
@@ -274,7 +274,7 @@ Cerebro shows a Server-Sent Events (SSE) stream while it's open, with no code ch
 
 **What you see.**
 
-- The request joins the HTTP list as soon as its response arrives. Its row says `SSE live` and counts its events, then `SSE ended` when the stream closes, is cancelled or fails. It stays one row throughout.
+- The request joins the HTTP list as soon as its response arrives. Its row carries an `SSE` tag beside the method, teal with a dot while the stream is live and grey once it closes, is cancelled or fails, and it counts its events. It stays one row throughout.
 - On the request's page, the summary shows whether the stream is live and how many events it has had, and the Response page lists the events last, after the headers. Each event shows its type, its ID if the stream set one, when it arrived and the start of its data. Tap one to open its data in the Body Viewer. The page updates while it's open.
 - A stream has no response body. Its events are what's kept.
 

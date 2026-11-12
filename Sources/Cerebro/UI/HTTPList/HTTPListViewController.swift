@@ -152,6 +152,8 @@ final class HTTPListViewController: UITableViewController {
         if let row = viewModel.rows.first(where: { $0.id == id }) {
             (cell as? TrafficRowCell)?.show(
                 tag: row.method,
+                tagTint: TrafficTagLabel.tint(forMethod: row.method),
+                marker: row.marker,
                 title: row.path,
                 detail: row.detail,
                 status: row.status,

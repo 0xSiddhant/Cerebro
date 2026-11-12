@@ -12,6 +12,9 @@ struct HTTPListRow: Equatable, Identifiable {
     let detail: String
     let status: String
     let outcome: TransactionOutcome
+
+    /// What marks the row as something other than an ordinary request, if anything does.
+    var marker: TrafficRowMarker?
 }
 
 /// The list's filters, in the order the scope bar shows them.
@@ -139,7 +142,8 @@ final class HTTPListViewModel {
             detail.append(DisplayFormat.bytes(received))
         }
         if let stream = transaction.eventStream {
-            detail.append(stream.state == .open ? "SSE live" : "SSE ended")
+            // The row's tag says it's a stream, so this only adds how it's going.
+            detail.append(stream.state == .open ? "Live" : "Ended")
             detail.append(DisplayFormat.eventCount(stream.eventCount))
         }
         return HTTPListRow(
@@ -148,7 +152,8 @@ final class HTTPListViewModel {
             path: url?.path.isEmpty == false ? url?.path ?? "/" : "/",
             detail: detail.joined(separator: " · "),
             status: DisplayFormat.status(of: transaction),
-            outcome: transaction.outcome
+            outcome: transaction.outcome,
+            marker: transaction.eventStream.map { .eventStream(isLive: $0.state == .open) }
         )
     }
 }

@@ -176,7 +176,9 @@ private func stream(
 @Test @MainActor func aStreamsRowSaysWhetherItIsLiveAndHowManyEventsItHas() {
     let model = viewModel([stream(.completed, eventCount: 1_204), stream(.open, eventCount: 1)])
 
-    #expect(model.rows.map(\.detail) == ["example.com · SSE live · 1 event", "example.com · SSE ended · 1,204 events"])
+    #expect(model.rows.map(\.detail) == ["example.com · Live · 1 event", "example.com · Ended · 1,204 events"])
+    #expect(model.rows.map(\.marker) == [.eventStream(isLive: true), .eventStream(isLive: false)])
+    #expect(viewModel([transaction(path: "/plain")]).rows.first?.marker == nil)
     #expect(model.rows.map(\.status) == ["200", "200"])
 }
 
