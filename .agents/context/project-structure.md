@@ -31,16 +31,17 @@ Cerebro/
 │   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
 │   │   ├── HTTP/
 │   │   │   ├── Capture/       # URLProtocol, config injection, background delegate proxy
-│   │   │   ├── Pipeline/      # raw exchange, transaction builder, console logger
+│   │   │   ├── Pipeline/      # raw exchange, transaction builder, console logger; for event streams,
+│   │   │   │                  # the SSE parser, assembler and processor
 │   │   │   ├── Store/         # transaction store, cURL, JSON and HAR export
-│   │   │   └── Models/        # transaction model and its metrics
+│   │   │   └── Models/        # transaction model, its metrics and its event stream
 │   │   ├── Socket/
 │   │   │   ├── Capture/       # WebSocket hooks, MonitoredNWConnection, ExternalNetworkBridge
 │   │   │   ├── Pipeline/      # raw activity, activity builder
 │   │   │   ├── Store/         # socket store
 │   │   │   └── Models/        # socket connection model
 │   │   ├── Shared/            # used by both
-│   │   │   ├── Pipeline/      # body processing, decompression, redaction
+│   │   │   ├── Pipeline/      # body processing, decompression, redaction, capture backlog
 │   │   │   ├── Store/         # ring buffer, snapshot observers, session archive
 │   │   │   ├── Models/        # captured body, named value
 │   │   │   └── Configuration/ # CerebroConfiguration, redaction rules, release gate

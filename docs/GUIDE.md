@@ -7,6 +7,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
   - [Redaction](#redaction)
 - [Traffic that needs code](#traffic-that-needs-code)
 - [Protobuf decoding](#protobuf-decoding)
+- [Server-Sent Events](#server-sent-events)
 - [Background transfers](#background-transfers)
 - [System Info](#system-info)
 - [Previous sessions](#previous-sessions)
@@ -21,6 +22,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 **Capture**
 
 - `URLSession` traffic with no code change, including `URLSession.shared` and sessions made from `.default` or `.ephemeral` configurations.
+- Server-Sent Events with no code change: a `text/event-stream` response is listed while it's still open, with its events parsed as they arrive. See [Server-Sent Events](#server-sent-events).
 - Background `URLSession` downloads and uploads with no code change, with their metrics but never their file or body.
 - `URLSessionWebSocketTask` frames, pings, opens and closes with no code change.
 - `NWConnection` through a drop-in wrapper, and any other socket engine through a one-line bridge.
@@ -32,7 +34,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 
 - **Floating trigger:** sits above your app, drags anywhere and snaps to the nearest side, and counts the requests since you last looked.
 - **HTTP list:** newest first and live, with search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests. The trash button clears every request and resets the session totals, after asking. Sockets are kept.
-- **Log Inspector:** Response, Request and Metrics pages for each request. Tap a row to expand it, or long-press to copy it.
+- **Log Inspector:** Response, Request and Metrics pages for each request. Tap a row to expand it, or long-press to copy it. An event stream's events are listed live at the end of the Response page.
 - **Body Viewer:** pretty JSON or raw text, plus a collapsible tree for decoded protobuf, with copy and share buttons.
 - **Sockets list:** every connection with its source (`WS`, `NW` or `EXT`), status, frame count and bytes sent and received.
 - **Socket timeline:** each socket as a conversation with its frames, pings and state changes. Tap a frame to open it in the Body Viewer.
@@ -264,6 +266,38 @@ The **Proto Config** tab lists each rule, what it maps to, whether it came from 
 
 Decoded bodies are redacted like any other JSON, and the keys are the field names in your `.proto` file, such as `card_number` rather than `cardNumber`. With `jsonKeys` set, a decoded body's original bytes aren't kept, because a field your `.pb.swift` files don't know is in those bytes but not in the JSON that was redacted. Protobuf that wasn't decoded is withheld, because its values can't be matched to keys, and so is gRPC-web's base64 text form.
 
+## Server-Sent Events
+
+Cerebro shows a Server-Sent Events (SSE) stream while it's open, with no code change. Other requests appear in the HTTP list when they finish, which a stream may never do.
+
+**What counts as a stream.** A response with status 200 and the media type `text/event-stream`, in any letter case and with or without parameters such as `charset`, made through the same `URLSession` path as other captured requests. That covers `URLSession.bytes(for:)`, data tasks, delegate-based clients and third-party libraries built on `URLSession`, however the request was started, including a `POST`. Any other response is captured as before, with its body.
+
+**What you see.**
+
+- The request joins the HTTP list as soon as its response arrives. Its row says `SSE live` and counts its events, then `SSE ended` when the stream closes, is cancelled or fails. It stays one row throughout.
+- On the request's page, the summary shows whether the stream is live and how many events it has had, and the Response page lists the events last, after the headers. Each event shows its type, its ID if the stream set one, when it arrived and the start of its data. Tap one to open its data in the Body Viewer. The page updates while it's open.
+- A stream has no response body. Its events are what's kept.
+
+**How events are read.** Cerebro follows the standard event stream format. Lines can end in LF, CR or CRLF, a leading byte order mark is skipped, and it doesn't matter how the bytes are split as they arrive. An event is recorded at each blank line if it has a `data` field, and several `data` lines join with line breaks. The type is `message` unless an `event` field names another, and an ID stays in effect until the stream sets a new one. Comment lines, which many servers send to keep a stream alive, and `retry` fields aren't events. Cerebro never reconnects a stream or replays one: it watches your app's connection.
+
+**Limits.**
+
+- Each stream keeps its newest 1,000 events, and at most `bodyLimit` bytes of them (1 MB by default). Past either, the oldest go. The count keeps counting every event, and the Events heading shows `newest 1,000 of 5,230`.
+- Your app always gets every byte first and unchanged. If events arrive faster than Cerebro can read them, by more than `bodyLimit`, or one event is larger than `bodyLimit`, Cerebro stops reading that stream and marks its events incomplete. The stream itself still works and still shows when it ends.
+- The request cap still applies. If a long-lived stream becomes the oldest row and the list is full, it's dropped like any other request and doesn't come back.
+- While the dashboard is closed, an open stream costs nothing on the main thread.
+
+**Redaction.** Each event goes through [redaction](#redaction) before it's stored, so the dashboard, console, exports and saved sessions never hold the raw value.
+
+- With `jsonKeys` set, JSON data has those keys redacted. Data that looks like JSON but doesn't parse is withheld, and so is plain text that names a key. The `[DONE]` marker many streaming APIs send is one of these: it starts like a JSON array, so with `jsonKeys` set it shows as withheld.
+- An event's type or ID that contains a configured key name becomes `[redacted]`.
+
+**Console, export and saved sessions.** A stream is printed once, when it ends, and `.full` adds its events. The JSON export has an `eventStream` object and a HAR entry has `_eventStream`, both with the stream's state, counts and events. A stream is saved to the [previous session](#previous-sessions) when it ends, so one still open when the app exits isn't there after a relaunch.
+
+**Quiet streams and timeouts.** Cerebro runs each request through its own session, so a timeout set on your `URLSessionConfiguration` doesn't apply, as described in [What changes while Cerebro captures](#what-changes-while-cerebro-captures). The default of 60 seconds without data applies in its place, even if your configuration allows longer. If your stream can stay quiet for longer than that, set `timeoutInterval` on the `URLRequest`, which does carry over, or have the server send a comment line as a keep-alive.
+
+**Not captured.** Streams from a `WKWebView`, from a networking stack that doesn't use `URLSession`, and from background sessions, which report only their metrics.
+
 ## Background transfers
 
 Uploads and downloads through a background `URLSession` are captured with no code change. Each one appears in the HTTP list with its URL, status, headers, timing, connection details and sizes. Your session delegate still gets every callback, and `session.delegate` still returns it.
@@ -313,7 +347,7 @@ Cerebro keeps each session on disk as well as in memory, so you can still read w
 - **Clearing** the HTTP list also clears those requests from the saved session.
 - **Turning it off:** `isPersistenceEnabled: false` writes nothing, and removes what earlier launches saved.
 
-A request that hadn't finished when the app ended isn't in the file, and neither is a download still in progress.
+A request that hadn't finished when the app ended isn't in the file, and neither is a download still in progress or an event stream that was still open.
 
 ## Export
 
@@ -327,6 +361,7 @@ Every export goes through the share sheet, which warns first, because captured d
 
 - A HAR export holds every request in the list, not only the ones your search or filter shows.
 - A body that isn't text is written as Base64. One that was cut off, withheld or not stored has a comment saying so.
+- A [Server-Sent Events](#server-sent-events) stream is exported with the events it holds at that moment, and its `state` says whether it was still open.
 - A whole session can be large: up to twice `bodyLimit` for each of `requestLimit` requests. Lower either if exports are too big to share.
 
 ## When Cerebro runs
@@ -372,7 +407,7 @@ SPM and XCFrameworks link Cerebro in every configuration, so its code stays in t
 
 Cerebro sends each request through its own session, which has these side effects in builds where it runs. Background sessions don't go through it, so they aren't affected:
 
-- Settings on your `URLSessionConfiguration` other than headers don't apply, such as timeouts, cellular access and cookie handling.
+- Settings on your `URLSessionConfiguration` other than headers don't apply, such as timeouts, cellular access and cookie handling. For a long-lived stream this matters most: see [Server-Sent Events](#server-sent-events).
 - The `urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)` upload progress callback doesn't fire.
 - HTTP Basic, Digest and NTLM logins answered by a session delegate aren't answered, so your app receives the 401.
 - A redirect your session delegate refuses arrives about 500 ms later. Followed redirects aren't delayed.
@@ -394,6 +429,8 @@ Cerebro keeps both the request and response body of up to 500 requests, so it ca
 |---|---|---|
 | No floating button | `Cerebro.start()` didn't run, or the build is signed for distribution | Check the call runs. For Ad Hoc or TestFlight, set `allowsDistributionBuilds` |
 | The floating button disappeared | A shake hid it | Shake again |
+| An event's data says withheld | `jsonKeys` is set and the data couldn't be redacted safely, such as `[DONE]` | Expected. See [Server-Sent Events](#server-sent-events) |
+| A stream ends after a minute of silence only while Cerebro runs | Its timeout is set on the `URLSessionConfiguration`, which Cerebro's session doesn't see | Set `timeoutInterval` on the `URLRequest`, or send keep-alive comments |
 | Some requests are missing | Their session or configuration was made before `Cerebro.start()` | Call it earlier, and check stored properties on your `AppDelegate` or `App` |
 | One session's requests are all missing | Your code assigned `protocolClasses`, which removes Cerebro's | Add to the array instead: `configuration.protocolClasses = (configuration.protocolClasses ?? []) + [MyProtocol.self]` |
 | A body says `proto, no rule` | Its content type says protobuf, but no rule matched | Add a [rule](#protobuf-decoding), and check its host, path and direction |

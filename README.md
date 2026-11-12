@@ -9,9 +9,9 @@
 [![SPM compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)](#swift-package-manager)
 [![CocoaPods via Git](https://img.shields.io/badge/CocoaPods-via%20Git-EE3322)](#cocoapods)
 
-A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app, and decodes protobuf to JSON when you add rules for it. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
+A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app, shows [Server-Sent Events](docs/GUIDE.md#server-sent-events) live while a stream is still open, and decodes protobuf to JSON when you add rules for it. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
 
-**Status:** HTTP, WebSocket and NWConnection capture, protobuf decoding, the dashboard, System Info, export and previous sessions work today.
+**Status:** HTTP, live Server-Sent Events, WebSocket and NWConnection capture, protobuf decoding, the dashboard, System Info, export and previous sessions work today.
 
 ## Screenshots
 

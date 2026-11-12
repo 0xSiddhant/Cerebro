@@ -4,7 +4,7 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-05 is on `develop`, waiting for the `v1.0.0` release.
+`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-06 is on `develop`, waiting for the `v1.0.0` release. PLAN-06 was gated on that release, and the owner chose to start it first.
 
 Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, and a burst of large responses on a real device. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
 
@@ -22,7 +22,7 @@ These win over the spec, which is older.
 | Trigger badge | Counts requests since the dashboard was last opened, not errors | The owner's rule |
 | Dashboard | Four tabs, with Proto Config hidden when no decoder is registered | The spec says five but lists four |
 | Public IP | Looked up at `https://api.ipify.org`, one fixed address | The spec names no service, and the owner chose it |
-| Download progress | An Active downloads section on the System Info tab, for foreground downloads only | The spec doesn't say where. A row in the HTTP list would need PLAN-06's update-by-ID path, and a background transfer has no row until it ends |
+| Download progress | An Active downloads section on the System Info tab, for foreground downloads only | The spec doesn't say where. A background transfer has no row in the HTTP list until it ends |
 | Raw JSON export | One request as a JSON document, from the Log Inspector | The Body Viewer already shares a body as a file, and HAR covers the session |
 | Session totals | A running sum kept by the store, with hosts past 50 grouped together | Summing the stored requests would shrink as the oldest are dropped |
 | Saved sessions | Sockets are saved too, one line per frame or event | The plan's tasks only named requests, but its criteria ask for the Sockets tab, and the owner chose it |
@@ -46,6 +46,9 @@ These win over the spec, which is older.
 | Socket store | Also capped at 100 connections and 100 times the body cap of payload in all, taking from the socket idle longest | A reconnecting socket would otherwise fill a fresh 1,000-frame timeline every time |
 | WebSocket open | Shown as Connecting at `resume`, and Opened at the first frame or pong | Only the app's delegate sees the handshake, and a refused upgrade must never look open |
 | Server-Sent Events | Capture `text/event-stream` responses through the existing URLSession path as bounded, live parsed events | SSE is a long-lived HTTP response; waiting for completion can hide it indefinitely |
+| SSE updates | An open stream reaches the store at most once per 250 ms, on top of the store's own batching | The plan only asked for batching. A stream that sends tokens can deliver hundreds of small chunks a second, and each update copies up to 1,000 events |
+| SSE event text | An event type or ID that isn't UTF-8 is dropped, and the default type `message` is never redacted | The standard replaces bad bytes, but the linter wants failable decoding and the data is kept as bytes either way. The default type isn't something a server sent |
+| SSE timeout | The 60-second idle timeout of Cerebro's session still applies to a stream, and the guide says so | A longer timeout for streams would remove a limit an app may rely on. A probe protocol saw a configuration timeout of 3600 arrive as 60 |
 | Branches and releases | `develop` flow, with releases automated on `main` | The owner's rule. `rules/git.md` has it |
 | Versions | Breaking commits are a minor bump below 1.0, and `1.0.0` needs a `Release-As` footer | The spec makes `v1.0.0` a deliberate Plan 5 step |
 
