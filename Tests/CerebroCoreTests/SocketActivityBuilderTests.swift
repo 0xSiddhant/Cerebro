@@ -14,7 +14,7 @@ private func capture(
     limit: Int,
     jsonKeys: Set<String>,
     didFail: Bool = false,
-    backlog: SocketBacklog = SocketBacklog(frameLimit: 10, byteLimit: 1_048_576),
+    backlog: CaptureBacklog = CaptureBacklog(frameLimit: 10, byteLimit: 1_048_576),
     on identity: SocketIdentity = socket
 ) throws -> RawSocketActivity {
     let captured = OSAllocatedUnfairLock<RawSocketActivity?>(initialState: nil)
@@ -31,7 +31,7 @@ private func frame(
     limit: Int = 1_000,
     jsonKeys: Set<String> = [],
     didFail: Bool = false,
-    backlog: SocketBacklog = SocketBacklog(frameLimit: 10, byteLimit: 1_048_576)
+    backlog: CaptureBacklog = CaptureBacklog(frameLimit: 10, byteLimit: 1_048_576)
 ) throws -> SocketFrame {
     let activity = try capture(payload, limit: limit, jsonKeys: jsonKeys, didFail: didFail, backlog: backlog)
     let builder = SocketActivityBuilder(
@@ -119,7 +119,7 @@ private func redacted(_ event: SocketEvent, jsonKeys: Set<String>) -> SocketEven
 }
 
 @Test func aFrameTheBacklogCantHoldKeepsOnlyItsSize() throws {
-    let full = SocketBacklog(frameLimit: 0, byteLimit: 1_000)
+    let full = CaptureBacklog(frameLimit: 0, byteLimit: 1_000)
 
     let frame = try frame(.text("hello"), backlog: full)
 

@@ -58,6 +58,10 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
     private var downloadedBytes: Int64 = 0
     private var lastProgressReport = Date.distantPast
 
+    /// Set once the response turns out to be an event stream. It limits the bytes waiting to be parsed.
+    private var streamBacklog: CaptureBacklog?
+    private var hasStreamOverflowed = false
+
     override init(request: URLRequest, cachedResponse: CachedURLResponse?, client: (any URLProtocolClient)?) {
         // Held for the request's whole life, so it can still be cancelled after `stop`.
         engine = HTTPCaptureEngine.active
@@ -167,11 +171,16 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
     func didReceive(_ response: URLResponse) {
         self.response = response
         sendToClient { $0.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed) }
+        beginEventStream(for: response)
     }
 
     func didReceive(_ data: Data) {
         sendToClient { $0.urlProtocol(self, didLoad: data) }
-        responseBody?.append(data)
+        if let streamBacklog {
+            submit(data, to: streamBacklog)
+        } else {
+            responseBody?.append(data)
+        }
         reportProgress(adding: data.count)
     }
 
@@ -268,18 +277,27 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
     private func finish() {
         guard !isRecorded, let completion else { return }
         isRecorded = true
-        engine?.submit(
-            RawExchange(
-                id: id,
-                request: request,
-                requestBody: requestBody,
-                response: response,
-                responseBody: responseBody,
-                error: completion.error,
-                metrics: metrics,
-                startDate: startDate,
-                endDate: completion.date
-            )
+        let exchange = exchange(error: completion.error, endDate: completion.date)
+        if streamBacklog != nil {
+            // The same ordered path as the stream's bytes, so its end can't overtake its last event.
+            engine?.submit(RawStreamActivity(id: id, content: .finished(exchange), date: completion.date))
+        } else {
+            engine?.submit(exchange)
+        }
+    }
+
+    private func exchange(error: (any Error)?, endDate: Date) -> RawExchange {
+        RawExchange(
+            id: id,
+            request: request,
+            requestBody: requestBody,
+            response: response,
+            responseBody: responseBody,
+            error: error,
+            metrics: metrics,
+            startDate: startDate,
+            endDate: endDate,
+            isEventStream: streamBacklog != nil
         )
     }
 
@@ -287,6 +305,36 @@ class CustomURLProtocol: URLProtocol, @unchecked Sendable {
         session?.perform { [self] in
             challengeHandler?(disposition, credential)
             challengeHandler = nil
+        }
+    }
+}
+
+// MARK: - Event streams
+
+extension CustomURLProtocol {
+    /// A final 200 with the event-stream media type is shown while it's open and parsed into events, so
+    /// it's reported now and its bytes aren't also kept as a body. `mimeType` has no parameters, and a
+    /// redirect never gets here. A download is left alone, because its bytes are never stored.
+    private func beginEventStream(for response: URLResponse) {
+        guard let engine, responseBody != nil, let response = response as? HTTPURLResponse,
+            response.statusCode == 200, response.mimeType?.lowercased() == "text/event-stream"
+        else { return }
+        responseBody = nil
+        streamBacklog = CaptureBacklog(byteLimit: engine.bodyLimit)
+        let now = Date()
+        engine.submit(RawStreamActivity(id: id, content: .opened(exchange(error: nil, endDate: now)), date: now))
+    }
+
+    /// Called after the app has the bytes. If the parser has fallen behind by more than the body limit,
+    /// the bytes are dropped here and parsing stops, since the event boundaries went with them. A chunk
+    /// larger than the limit still gets through when nothing is waiting, because it's already in memory.
+    private func submit(_ data: Data, to backlog: CaptureBacklog) {
+        guard !hasStreamOverflowed, !data.isEmpty else { return }
+        if backlog.admit(bytes: data.count, evenIfAlone: true) {
+            engine?.submit(RawStreamActivity(id: id, content: .chunk(data, backlog: backlog), date: Date()))
+        } else {
+            hasStreamOverflowed = true
+            engine?.submit(RawStreamActivity(id: id, content: .overflowed, date: Date()))
         }
     }
 }

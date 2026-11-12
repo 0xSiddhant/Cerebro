@@ -17,6 +17,8 @@ enum TrafficSample: CaseIterable, Sendable {
     case mockPatch
     case mockDelete
     case redaction
+    case eventStream
+    case eventStreamLong
     case webSocket
     case nwConnection
     case externalBridge
@@ -44,6 +46,8 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockPatch: "Mock API: PATCH blackhole"
         case .mockDelete: "Mock API: DELETE blackhole"
         case .redaction: "Redaction"
+        case .eventStream: "Server-Sent Events"
+        case .eventStreamLong: "Server-Sent Events: 1 minute"
         case .webSocket: "URLSessionWebSocketTask"
         case .nwConnection: "NWConnection"
         case .externalBridge: "ExternalNetworkBridge"
@@ -65,9 +69,9 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockStocks: "\(Self.mockAPI)/api/v1/stocks"
         case .mockSlowFlights: "\(Self.mockAPI)/api/v1/flights?delay=1500"
         case .mockUnauthorized: "\(Self.mockAPI)/api/v1/flights?status=401"
-        case .mockEcho, .mockUpload, .mockPut, .mockPatch, .mockDelete, .redaction, .webSocket, .nwConnection,
-            .externalBridge, .protobuf, .protobufFromMap, .backgroundDownload, .backgroundUpload,
-            .backgroundLargeDownload:
+        case .mockEcho, .mockUpload, .mockPut, .mockPatch, .mockDelete, .redaction, .eventStream, .eventStreamLong,
+            .webSocket, .nwConnection, .externalBridge, .protobuf, .protobufFromMap, .backgroundDownload,
+            .backgroundUpload, .backgroundLargeDownload:
             ""
         }
     }
@@ -82,6 +86,7 @@ enum TrafficSample: CaseIterable, Sendable {
         case .mockUpload: try await uploadMockJSON()
         case .mockPut, .mockPatch, .mockDelete: try await sendBlackholeRequest()
         case .redaction: try await postFakeSecrets()
+        case .eventStream, .eventStreamLong: try await streamEvents()
         case .webSocket, .nwConnection, .externalBridge: try await useSocket()
         case .protobuf, .protobufFromMap: try await sendProtobuf()
         case .backgroundDownload, .backgroundUpload, .backgroundLargeDownload: try await runBackgroundTransfer()
@@ -295,6 +300,7 @@ extension TrafficSample {
     var hint: String? {
         switch self {
         case .mockUpload: "Tap to upload sample JSON"
+        case .eventStreamLong: "Tap, then open the dashboard to watch it live"
         case .backgroundLargeDownload: "Tap, then leave the app or stop it from Xcode"
         default: nil
         }
@@ -316,5 +322,28 @@ extension TrafficSample {
             response = try await BackgroundTransfers.download(from: Self.url("https://httpbin.org/bytes/2048"))
         }
         return Self.summary(of: response)
+    }
+
+    /// Reads a Server-Sent Events stream to its end, the way an app usually does, with `bytes(for:)`.
+    /// Cerebro needs nothing extra: the request joins the HTTP list as soon as its response arrives, and
+    /// its page lists each event as it comes in. `EventStreamServer` says what the events show.
+    private func streamEvents() async throws -> String {
+        // Five events in a few seconds at launch, or one a second for a minute, to watch it live.
+        let (count, milliseconds) = self == .eventStreamLong ? (60, 1_000) : (5, 500)
+        let query = [
+            URLQueryItem(name: "count", value: String(count)),
+            URLQueryItem(name: "interval", value: String(milliseconds)),
+        ]
+        let url = try await EventStreamServer.baseURL().appending(path: "events").appending(queryItems: query)
+        var request = URLRequest(url: url)
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+
+        let (bytes, response) = try await Self.session.bytes(for: request)
+        var events = 0
+        // Every event the server sends has one `id` line.
+        for try await line in bytes.lines where line.hasPrefix("id:") {
+            events += 1
+        }
+        return "\(Self.summary(of: response)), \(events) events"
     }
 }

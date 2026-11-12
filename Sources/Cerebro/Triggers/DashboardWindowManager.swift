@@ -24,7 +24,8 @@ final class DashboardWindowManager: NSObject {
             ShakeDetector.install { [weak self] in self?.toggleTrigger() }
         }
         badgeUpdates = Task { [weak self, store = sources.store] in
-            for await transactions in await store.updates() {
+            // Only requests being added or removed, so an open event stream never wakes the badge.
+            for await transactions in await store.requestUpdates() {
                 self?.updateBadge(with: transactions)
             }
         }

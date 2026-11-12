@@ -42,6 +42,33 @@ enum Fixtures {
         )
     }
 
+    static func event(_ text: String, id: String? = nil, type: String = "message") -> CapturedSSEEvent {
+        CapturedSSEEvent(
+            id: id,
+            type: type,
+            data: CapturedBody(content: .complete(Data(text.utf8)), byteCount: text.utf8.count),
+            date: Date(timeIntervalSince1970: 2)
+        )
+    }
+
+    /// An event stream's transaction. Pass `id` to make a later state of the same one.
+    static func stream(
+        id: UUID = UUID(),
+        _ state: CapturedEventStream.State,
+        events: [CapturedSSEEvent] = [],
+        size: TransferSize? = nil
+    ) -> HTTPTransaction {
+        HTTPTransaction(
+            id: id,
+            request: CapturedRequest(
+                url: URL(string: "https://example.com/feed"), method: "GET", startDate: Date(timeIntervalSince1970: 0)),
+            response: CapturedResponse(
+                statusCode: 200, mimeType: "text/event-stream", endDate: Date(timeIntervalSince1970: 1)),
+            size: size,
+            eventStream: CapturedEventStream(state: state, eventCount: events.count, events: events)
+        )
+    }
+
     static func transaction(status: Int = 200, path: String = "/") -> HTTPTransaction {
         HTTPTransaction(
             request: CapturedRequest(

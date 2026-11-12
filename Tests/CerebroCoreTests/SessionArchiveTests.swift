@@ -332,3 +332,38 @@ extension CaptureTests {
         }
     }
 }
+
+@Test func aFinishedStreamIsReadBackWithItsEvents() async throws {
+    let directory = temporaryDirectory()
+    let stream = Fixtures.stream(.completed, events: [Fixtures.event("one", id: "7", type: "tick")])
+
+    let session = try await savedSession([.http(stream)], in: directory)
+
+    #expect(await session.store.transactions == [stream])
+}
+
+@Test func aRecordSavedBeforeEventStreamsStillDecodes() throws {
+    // A line as 1.0 wrote it, which has no `eventStream` key.
+    let line = Data(
+        #"""
+        {"http":{"_0":{"id":"3F2504E0-4F89-11D3-9A0C-0305E82C3301","request":{"url":"https://example.com/a",\#
+        "method":"GET","headers":[],"queryParameters":[],"startDate":0},"response":{"statusCode":200,\#
+        "headers":[],"endDate":1}}}}
+        """#.utf8)
+
+    let record = try JSONDecoder().decode(SessionRecord.self, from: line)
+
+    guard case .http(let transaction) = record else {
+        Issue.record("expected a request, got \(record)")
+        return
+    }
+    #expect(transaction.response?.statusCode == 200)
+    #expect(transaction.eventStream == nil)
+    #expect(!transaction.isOpen)
+}
+
+@Test func aTransactionWithoutAStreamEncodesAsItDidBefore() throws {
+    let encoded = try JSONEncoder().encode(SessionRecord.http(Fixtures.transaction()))
+
+    #expect(String(data: encoded, encoding: .utf8)?.contains("eventStream") == false)
+}

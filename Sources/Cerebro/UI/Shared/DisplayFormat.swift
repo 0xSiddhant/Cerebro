@@ -78,6 +78,11 @@ enum DisplayFormat {
         }
     }
 
+    /// How many events a stream carried, such as "1 event" or "1,204 events".
+    static func eventCount(_ count: Int) -> String {
+        "\(count.formatted()) \(count == 1 ? "event" : "events")"
+    }
+
     static func status(of transaction: HTTPTransaction) -> String {
         switch transaction.outcome {
         case .failed: return "Failed"

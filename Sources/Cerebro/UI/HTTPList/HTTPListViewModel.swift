@@ -12,6 +12,9 @@ struct HTTPListRow: Equatable, Identifiable {
     let detail: String
     let status: String
     let outcome: TransactionOutcome
+
+    /// What marks the row as something other than an ordinary request, if anything does.
+    var marker: TrafficRowMarker?
 }
 
 /// The list's filters, in the order the scope bar shows them.
@@ -47,6 +50,10 @@ enum HTTPListFilter: Int, CaseIterable {
 @MainActor
 final class HTTPListViewModel {
     private(set) var rows: [HTTPListRow] = []
+
+    /// The rows that were already listed and now read differently, such as an event stream that got
+    /// more events. The list has to redraw these itself, because their IDs are the same.
+    private(set) var changedRowIDs: [UUID] = []
 
     /// Called after `rows` changes.
     var onChange: (() -> Void)?
@@ -99,12 +106,19 @@ final class HTTPListViewModel {
         transactions.first { $0.id == id }
     }
 
+    /// The Log Inspector for a request, which follows the store while the request is still open.
+    func inspector(id: UUID) -> LogInspectorViewModel? {
+        transaction(id: id).map { LogInspectorViewModel(transaction: $0, store: store) }
+    }
+
     private func refresh() {
         let query = searchText.trimmingCharacters(in: .whitespaces)
+        let previous = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         rows =
             transactions
             .filter { filter.includes($0.outcome) && matches($0, query: query) }
             .map(Self.row)
+        changedRowIDs = rows.filter { row in previous[row.id].map { $0 != row } ?? false }.map(\.id)
         onChange?()
     }
 
@@ -127,13 +141,19 @@ final class HTTPListViewModel {
         if let received = transaction.size?.bytesReceived {
             detail.append(DisplayFormat.bytes(received))
         }
+        if let stream = transaction.eventStream {
+            // The row's tag says it's a stream, so this only adds how it's going.
+            detail.append(stream.state == .open ? "Live" : "Ended")
+            detail.append(DisplayFormat.eventCount(stream.eventCount))
+        }
         return HTTPListRow(
             id: transaction.id,
             method: transaction.request.method,
             path: url?.path.isEmpty == false ? url?.path ?? "/" : "/",
             detail: detail.joined(separator: " · "),
             status: DisplayFormat.status(of: transaction),
-            outcome: transaction.outcome
+            outcome: transaction.outcome,
+            marker: transaction.eventStream.map { .eventStream(isLive: $0.state == .open) }
         )
     }
 }

@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   DESC
   s.homepage = 'https://github.com/0xSiddhant/Cerebro'
   s.license = { :type => 'MIT', :file => 'LICENSE' }
-  s.author = 'Siddhant Kumar'
+  s.author = '0xSiddhant'
   s.source = { :git => 'https://github.com/0xSiddhant/Cerebro.git', :tag => "v#{s.version}" }
 
   s.ios.deployment_target = '16.0'

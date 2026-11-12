@@ -63,11 +63,9 @@ final class HTTPListViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard let id = dataSource.itemIdentifier(for: indexPath),
-            let transaction = viewModel.transaction(id: id)
+        guard let id = dataSource.itemIdentifier(for: indexPath), let inspector = viewModel.inspector(id: id)
         else { return }
-        let inspector = LogInspectorViewController(viewModel: LogInspectorViewModel(transaction: transaction))
-        navigationController?.pushViewController(inspector, animated: true)
+        navigationController?.pushViewController(LogInspectorViewController(viewModel: inspector), animated: true)
     }
 
     override func tableView(
@@ -154,6 +152,8 @@ final class HTTPListViewController: UITableViewController {
         if let row = viewModel.rows.first(where: { $0.id == id }) {
             (cell as? TrafficRowCell)?.show(
                 tag: row.method,
+                tagTint: TrafficTagLabel.tint(forMethod: row.method),
+                marker: row.marker,
                 title: row.path,
                 detail: row.detail,
                 status: row.status,
@@ -178,6 +178,8 @@ final class HTTPListViewController: UITableViewController {
         var snapshot = NSDiffableDataSourceSnapshot<Int, UUID>()
         snapshot.appendSections([0])
         snapshot.appendItems(viewModel.rows.map(\.id))
+        // The snapshot only holds IDs, so a row whose ID is unchanged wouldn't redraw without this.
+        snapshot.reconfigureItems(viewModel.changedRowIDs)
         dataSource.apply(snapshot, animatingDifferences: false)
     }
 }

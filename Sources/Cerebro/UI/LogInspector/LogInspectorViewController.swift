@@ -1,5 +1,9 @@
 import UIKit
 
+#if SWIFT_PACKAGE
+import CerebroCore
+#endif
+
 /// Everything Cerebro knows about one request, split into pages so each one fits about one screen.
 final class LogInspectorViewController: UITableViewController {
     private static let bodyCellIdentifier = "InspectorBodyCell"
@@ -10,6 +14,7 @@ final class LogInspectorViewController: UITableViewController {
     private var selectedTab = InspectorTab.response
     private var sections: [InspectorSection] = []
     private var expandedRows = Set<IndexPath>()
+    private var shownSummary: InspectorSummary?
     private lazy var copyCurlButton: UIButton = {
         var configuration = Self.actionButtonConfiguration(image: "doc.on.doc")
         configuration.title = "Copy cURL"
@@ -21,9 +26,10 @@ final class LogInspectorViewController: UITableViewController {
     }()
     private lazy var shareCurlButton: UIButton = {
         let button = UIButton(configuration: Self.actionButtonConfiguration(image: "square.and.arrow.up"))
+        let transaction: @MainActor () -> HTTPTransaction = { [viewModel] in viewModel.transaction }
         button.menu = UIMenu(
             children: CurlActions.shareActions(for: viewModel.request, from: self) { [weak button] in button }
-                + ExportActions.jsonActions(for: viewModel.transaction, from: self) { [weak button] in button }
+                + ExportActions.jsonActions(for: transaction, from: self) { [weak button] in button }
         )
         button.showsMenuAsPrimaryAction = true
         button.accessibilityLabel = "Share"
@@ -50,15 +56,44 @@ final class LogInspectorViewController: UITableViewController {
         tableView.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: Self.headerIdentifier)
         tableView.sectionHeaderTopPadding = 0
         tableView.sectionFooterHeight = 6
-        tableView.tableHeaderView = InspectorSummaryView(
-            summary: viewModel.summary,
-            actions: [copyCurlButton, shareCurlButton]
-        )
+        showSummary()
 
         tabs.selectedSegmentIndex = selectedTab.rawValue
         tabs.addAction(UIAction { [weak self] _ in self?.showSelectedTab() }, for: .valueChanged)
         navigationItem.titleView = tabs
         sections = viewModel.sections(for: selectedTab)
+        viewModel.onChange = { [weak self] in self?.showChanges() }
+        viewModel.startObserving()
+    }
+
+    private func showSummary() {
+        tableView.tableHeaderView = InspectorSummaryView(
+            summary: viewModel.summary,
+            actions: [copyCurlButton, shareCurlButton]
+        )
+        shownSummary = viewModel.summary
+    }
+
+    /// An open event stream got more events or ended. Only what changed is redrawn, so a page that
+    /// didn't change stays still, and so do the summary's buttons.
+    private func showChanges() {
+        if viewModel.summary != shownSummary {
+            (tableView.tableHeaderView as? InspectorSummaryView)?.show(viewModel.summary)
+            shownSummary = viewModel.summary
+            view.setNeedsLayout()
+        }
+        let updated = viewModel.sections(for: selectedTab)
+        guard updated != sections else { return }
+        let previous = sections
+        sections = updated
+        guard updated.count == previous.count else {
+            expandedRows.removeAll()
+            tableView.reloadData()
+            return
+        }
+        // Usually just the events, which are the last section, so the rows above keep their places.
+        let changed = IndexSet(updated.indices.filter { updated[$0] != previous[$0] })
+        UIView.performWithoutAnimation { tableView.reloadSections(changed, with: .none) }
     }
 
     override func viewDidLayoutSubviews() {
@@ -141,7 +176,7 @@ final class LogInspectorViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         let row = row(at: indexPath)
         if let body = row.body {
-            let title = "\(selectedTab.title) body"
+            let title = row.bodyTitle ?? "\(selectedTab.title) body"
             let viewer = BodyViewerViewController(viewModel: BodyViewerViewModel(title: title, body: body))
             navigationController?.pushViewController(viewer, animated: true)
         } else if !row.isBodyRow {

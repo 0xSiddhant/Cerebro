@@ -5,7 +5,8 @@ struct TransactionBuilder: Sendable {
     let processor: BodyProcessor
     let redactor: Redactor
 
-    func transaction(from exchange: RawExchange) -> HTTPTransaction {
+    /// `eventStream` is what has been parsed of an event stream's response so far.
+    func transaction(from exchange: RawExchange, eventStream: CapturedEventStream? = nil) -> HTTPTransaction {
         let response = exchange.response as? HTTPURLResponse
         return HTTPTransaction(
             id: exchange.id,
@@ -14,7 +15,8 @@ struct TransactionBuilder: Sendable {
             failure: exchange.error.map(failure),
             timing: exchange.metrics?.timing,
             connection: exchange.metrics?.connection,
-            size: exchange.metrics?.size
+            size: exchange.metrics?.size,
+            eventStream: eventStream
         )
     }
 
@@ -66,7 +68,10 @@ struct TransactionBuilder: Sendable {
             direction: .response
         )
         let body: CapturedBody?
-        if let raw = exchange.responseBody {
+        if exchange.isEventStream {
+            // The parsed events are what's stored, so the bytes aren't kept a second time.
+            body = nil
+        } else if let raw = exchange.responseBody {
             body = processor.process(raw, context: context)
         } else {
             let byteCount = Int(exchange.metrics?.size.decodedBodyBytes ?? 0)

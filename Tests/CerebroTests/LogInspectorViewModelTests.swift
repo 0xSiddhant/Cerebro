@@ -245,3 +245,139 @@ private func withBody(_ body: CapturedBody?) -> HTTPTransaction {
     #expect(raw.title.contains("zstd, shown raw"))
     #expect(read.title.contains("gzip, decompressed for display"))
 }
+
+// MARK: - Event streams
+
+private func event(_ text: String, id: String? = nil, type: String = "message") -> CapturedSSEEvent {
+    CapturedSSEEvent(
+        id: id,
+        type: type,
+        data: CapturedBody(content: .complete(Data(text.utf8)), byteCount: text.utf8.count),
+        date: Date(timeIntervalSince1970: 2)
+    )
+}
+
+private func stream(
+    id: UUID = UUID(),
+    _ state: CapturedEventStream.State,
+    events: [CapturedSSEEvent],
+    eventCount: Int? = nil,
+    isTruncated: Bool = false
+) -> HTTPTransaction {
+    HTTPTransaction(
+        id: id,
+        request: CapturedRequest(
+            url: URL(string: "https://example.com/feed"), method: "GET", startDate: Date(timeIntervalSince1970: 0)),
+        response: CapturedResponse(
+            statusCode: 200,
+            headers: [NamedValue(name: "Content-Type", value: "text/event-stream")],
+            mimeType: "text/event-stream",
+            endDate: Date(timeIntervalSince1970: 1)
+        ),
+        eventStream: CapturedEventStream(
+            state: state, eventCount: eventCount ?? events.count, events: events, isTruncated: isTruncated)
+    )
+}
+
+@Test @MainActor func eventsAreTheLastSectionOfTheResponsePage() throws {
+    let model = LogInspectorViewModel(
+        transaction: stream(.open, events: [event("one", id: "7", type: "tick"), event("two")]))
+
+    #expect(model.sections(for: .response).map(\.title) == ["Headers", "Events"])
+    let rows = try #require(model.sections(for: .response).last?.rows)
+    #expect(rows.count == 2)
+    #expect(rows[0].title.hasPrefix("tick · #7 · "))
+    #expect(rows[1].title.hasPrefix("message · "))
+    #expect(rows[0].preview == "one")
+    #expect(rows[0].body?.data == Data("one".utf8))
+    #expect(rows[0].bodyTitle == "Event data")
+    #expect(rows.map(\.isBodyRow) == [true, true])
+}
+
+@Test @MainActor func aStreamsSummarySaysWhetherItIsLiveAndCountsItsEvents() {
+    let live = LogInspectorViewModel(transaction: stream(.open, events: [event("one")]))
+    let ended = LogInspectorViewModel(transaction: stream(.completed, events: [event("one")], eventCount: 1_500))
+
+    #expect(
+        live.summary.stats == [
+            InspectorStat(title: "Stream", value: "Live"), InspectorStat(title: "Events", value: "1"),
+        ])
+    #expect(ended.summary.stats.map(\.value) == ["Ended", "1,500"])
+}
+
+@Test @MainActor func aStreamWithNoEventsSaysSo() {
+    let waiting = LogInspectorViewModel(transaction: stream(.open, events: []))
+    let empty = LogInspectorViewModel(transaction: stream(.completed, events: []))
+
+    #expect(waiting.sections(for: .response).last?.rows.map(\.title) == ["Waiting for events"])
+    #expect(empty.sections(for: .response).last?.rows.map(\.title) == ["No events"])
+}
+
+@Test @MainActor func theEventsTitleSaysWhenSomeAreMissing() {
+    let dropped = LogInspectorViewModel(
+        transaction: stream(.open, events: [event("last")], eventCount: 1_200, isTruncated: true))
+    let stopped = LogInspectorViewModel(transaction: stream(.open, events: [event("only")], isTruncated: true))
+
+    #expect(dropped.sections(for: .response).last?.title == "Events · newest 1 of 1,200")
+    #expect(stopped.sections(for: .response).last?.title == "Events · incomplete")
+}
+
+@Test @MainActor func withheldAndTruncatedEventDataIsLabelledAndOnlyStoredDataOpens() throws {
+    let events = [
+        CapturedSSEEvent(data: CapturedBody(content: .withheld, byteCount: 6), date: Date()),
+        CapturedSSEEvent(data: CapturedBody(content: .truncated(Data("abc".utf8)), byteCount: 900), date: Date()),
+        CapturedSSEEvent(data: CapturedBody(content: .complete(Data()), byteCount: 0), date: Date()),
+    ]
+    let model = LogInspectorViewModel(transaction: stream(.completed, events: events))
+
+    let rows = try #require(model.sections(for: .response).last?.rows)
+    #expect(rows[0].title.hasSuffix("withheld, because it couldn't be redacted"))
+    #expect(rows[0].body == nil)
+    #expect(rows[1].title.hasSuffix("truncated"))
+    #expect(rows[1].body != nil)
+    #expect(rows[2].body == nil)
+}
+
+@Test @MainActor func anOpenStreamFollowsTheStoreAndARequestWithoutAStreamHasNoEvents() {
+    let open = stream(.open, events: [event("one")])
+    let model = LogInspectorViewModel(transaction: open)
+    var changes = 0
+    model.onChange = { changes += 1 }
+
+    let finished = stream(id: open.id, .completed, events: [event("one"), event("two")])
+    model.show([full, finished])
+    #expect(changes == 1)
+    #expect(model.transaction == finished)
+    #expect(model.sections(for: .response).last?.rows.count == 2)
+    #expect(model.summary.stats.first?.value == "Ended")
+
+    // The same again, or a store that no longer holds it, changes nothing once it has ended.
+    model.show([full, finished])
+    model.show([full])
+    #expect(changes == 1)
+    #expect(model.transaction == finished)
+    #expect(!model.isFollowing)
+
+    #expect(LogInspectorViewModel(transaction: full).sections(for: .response).map(\.title) == ["Body", "Headers"])
+}
+
+@Test @MainActor func anOpenStreamThatLeavesTheStoreStopsBeingCalledLive() {
+    let open = stream(.open, events: [event("one")])
+    let model = LogInspectorViewModel(transaction: open)
+    var changes = 0
+    model.onChange = { changes += 1 }
+    #expect(model.isFollowing)
+
+    // Cleared, or dropped to make room. The stream may still be running, but this page can't know.
+    model.show([full])
+
+    #expect(changes == 1)
+    #expect(!model.isFollowing)
+    #expect(model.summary.stats.first == InspectorStat(title: "Stream", value: "Not tracked"))
+    #expect(model.sections(for: .response).last?.rows.count == 1)
+
+    // It stays that way even if a stream with the same ID is listed again.
+    model.show([stream(id: open.id, .open, events: [event("one"), event("two")])])
+    #expect(changes == 1)
+    #expect(model.transaction == open)
+}

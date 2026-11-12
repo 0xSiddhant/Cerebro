@@ -14,4 +14,7 @@ struct RawExchange: Sendable {
     let metrics: URLSessionTaskMetrics?
     let startDate: Date
     let endDate: Date
+
+    /// Whether the response is a `text/event-stream`, whose events are captured in place of a body.
+    var isEventStream = false
 }

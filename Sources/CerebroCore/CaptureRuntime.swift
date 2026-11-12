@@ -8,6 +8,9 @@ public final class CaptureRuntime: Sendable {
     /// How many frames can wait for the pipeline, across every socket.
     private static let socketBacklogFrames = 10_000
 
+    /// The least time between two updates of one open event stream, so a fast one can't flood the store.
+    private static let eventStreamUpdateInterval = Duration.milliseconds(250)
+
     /// Where finished transactions land.
     public let store: TransactionStore
 
@@ -26,6 +29,7 @@ public final class CaptureRuntime: Sendable {
     private let engine: HTTPCaptureEngine
     private let exchanges: AsyncStream<RawExchange>.Continuation
     private let processing: Task<Void, Never>
+    private let eventStreams: AsyncStream<RawStreamActivity>.Continuation
     private let socketEngine: SocketCaptureEngine
     private let socketActivity: AsyncStream<RawSocketActivity>.Continuation
     private let socketProcessing: Task<Void, Never>
@@ -68,14 +72,9 @@ public final class CaptureRuntime: Sendable {
         )
         self.store = store
         exchanges = continuation
-        // One detached task, so transactions stay in order and never run on the main thread.
-        processing = Task.detached(priority: .utility) {
-            for await exchange in stream {
-                let transaction = builder.transaction(from: exchange)
-                await store.append(transaction)
-                console.log(transaction)
-            }
-        }
+        processing = Self.process(stream, builder: builder, store: store, console: console)
+        let streamInput = Self.processEventStreams(builder: builder, store: store, console: console)
+        eventStreams = streamInput
         let downloads = DownloadProgressStore()
         let eventInput = Self.trackDownloads(in: downloads, redactor: redactor)
         self.downloads = downloads
@@ -83,13 +82,14 @@ public final class CaptureRuntime: Sendable {
         engine = HTTPCaptureEngine(
             bodyLimit: bodyLimit,
             reportDownload: { eventInput.yield($0) },
+            recordStream: { streamInput.yield($0) },
             record: { continuation.yield($0) }
         )
         systemInfo = SystemInfoMonitor(lookup: .ifEnabled(configuration.isPublicIPLookupEnabled))
 
         let socketStore = SocketStore(frameLimit: configuration.socketFrameLimit, payloadByteLimit: payloadByteLimit)
         let socketBuilder = SocketActivityBuilder(processor: processor)
-        let backlog = SocketBacklog(frameLimit: Self.socketBacklogFrames, byteLimit: payloadByteLimit)
+        let backlog = CaptureBacklog(frameLimit: Self.socketBacklogFrames, byteLimit: payloadByteLimit)
         // Unbounded because `backlog` limits the payloads. Dropping from here could lose a close.
         let (activities, activityInput) = AsyncStream.makeStream(
             of: RawSocketActivity.self, bufferingPolicy: .unbounded)
@@ -135,6 +135,46 @@ public final class CaptureRuntime: Sendable {
         return overflowed ? Int.max : scaled
     }
 
+    /// One detached task, so transactions stay in order and never run on the main thread.
+    private static func process(
+        _ exchanges: AsyncStream<RawExchange>,
+        builder: TransactionBuilder,
+        store: TransactionStore,
+        console: ConsoleLogger
+    ) -> Task<Void, Never> {
+        Task.detached(priority: .utility) {
+            for await exchange in exchanges {
+                let transaction = builder.transaction(from: exchange)
+                await store.append(transaction)
+                console.log(transaction)
+            }
+        }
+    }
+
+    /// Feeds event streams to the store through one ordered queue. It's unbounded because each stream's
+    /// own backlog limits its bytes, and dropping from here could lose a stream's end and leave it open.
+    private static func processEventStreams(
+        builder: TransactionBuilder,
+        store: TransactionStore,
+        console: ConsoleLogger
+    ) -> AsyncStream<RawStreamActivity>.Continuation {
+        let (activities, input) = AsyncStream.makeStream(of: RawStreamActivity.self, bufferingPolicy: .unbounded)
+        // One detached task, so each stream's events stay in order and never run on the main thread.
+        Task.detached(priority: .utility) {
+            var processor = EventStreamProcessor(builder: builder, store: store, console: console) { id in
+                Task.detached(priority: .utility) {
+                    try? await Task.sleep(for: eventStreamUpdateInterval)
+                    input.yield(RawStreamActivity(id: id, content: .flush, date: Date()))
+                }
+            }
+            for await activity in activities {
+                await processor.handle(activity)
+            }
+            await processor.finishAll()
+        }
+        return input
+    }
+
     /// Feeds download progress to its store through one ordered stream, so a download's end can't
     /// overtake its last progress report.
     private static func trackDownloads(
@@ -163,10 +203,12 @@ public final class CaptureRuntime: Sendable {
         socketEngine.install()
     }
 
-    /// Stops capturing. Anything already captured still reaches the store.
+    /// Stops capturing. Anything already captured still reaches the store, and an event stream that's
+    /// still open is closed there with the events it has.
     public func stop() {
         engine.uninstall()
         exchanges.finish()
+        eventStreams.finish()
         socketEngine.uninstall()
         socketActivity.finish()
         downloadEvents.finish()

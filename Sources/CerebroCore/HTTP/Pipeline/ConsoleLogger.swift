@@ -1,6 +1,7 @@
 import Foundation
 
-/// Prints transactions at the configured level. Everything it sees is already redacted.
+/// Prints transactions at the configured level. Everything it sees is already redacted. An event
+/// stream is printed once, when it ends.
 struct ConsoleLogger: Sendable {
     let level: ConsoleLevel
     var write: @Sendable (String) -> Void = { print($0) }
@@ -37,6 +38,7 @@ struct ConsoleLogger: Sendable {
             body("Request body", transaction.request.body),
             section("Response headers", response?.headers ?? []),
             body("Response body", response?.body),
+            events(of: transaction.eventStream),
         ]
         .compactMap { $0 }
         .joined(separator: "\n")
@@ -45,6 +47,23 @@ struct ConsoleLogger: Sendable {
     private func section(_ title: String, _ fields: [NamedValue]) -> String? {
         guard !fields.isEmpty else { return nil }
         return ([title + ":"] + fields.map { "  \($0.name): \($0.value)" }).joined(separator: "\n")
+    }
+
+    private func events(of stream: CapturedEventStream?) -> String? {
+        guard let stream, stream.eventCount > 0 else { return nil }
+        let kept = stream.events.count
+        let title = kept == stream.eventCount ? "Events (\(kept)):" : "Events (newest \(kept) of \(stream.eventCount)):"
+        return ([title] + stream.events.map(line)).joined(separator: "\n")
+    }
+
+    private func line(for event: CapturedSSEEvent) -> String {
+        let name = event.id.map { "\(event.type) #\($0)" } ?? event.type
+        switch event.data.content {
+        case .complete: return "  \(name): \(BodyFormatter.raw(event.data))"
+        case .truncated: return "  \(name) (truncated): \(BodyFormatter.raw(event.data))"
+        case .withheld: return "  \(name): withheld, because it couldn't be redacted"
+        case .notStored: return "  \(name): not stored"
+        }
     }
 
     private func body(_ title: String, _ body: CapturedBody?) -> String? {

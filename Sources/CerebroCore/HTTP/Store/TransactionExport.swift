@@ -12,6 +12,7 @@ public enum TransactionExport {
         document["failure"] = transaction.failure.map {
             ["domain": $0.domain, "code": $0.code, "description": $0.description] as Object
         }
+        document["eventStream"] = transaction.eventStream.map(eventStream)
         document["timing"] = transaction.timing.map(timing)
         document["connection"] = transaction.connection.map(connection)
         document["size"] = transaction.size.map {
@@ -108,6 +109,8 @@ public enum TransactionExport {
         ]
         entry["serverIPAddress"] = transaction.connection?.remoteAddress
         entry["_error"] = transaction.failure?.description
+        // HAR has no field for Server-Sent Events, and a leading underscore marks a custom one.
+        entry["_eventStream"] = transaction.eventStream.map(eventStream)
         return entry
     }
 
@@ -208,6 +211,24 @@ public enum TransactionExport {
             object["comment"] = comments.joined(separator: " ")
         }
         return object
+    }
+
+    /// The same in both formats: the stream's state and counts, and each stored event.
+    private static func eventStream(_ stream: CapturedEventStream) -> Object {
+        [
+            "state": stream.state.rawValue,
+            "eventCount": stream.eventCount,
+            "isTruncated": stream.isTruncated,
+            "events": stream.events.map { event in
+                var object: Object = [
+                    "type": event.type,
+                    "receivedAt": timestamp(event.date),
+                    "data": body(event.data),
+                ]
+                object["id"] = event.id
+                return object
+            },
+        ]
     }
 
     private static func pairs(_ fields: [NamedValue]) -> [Object] {

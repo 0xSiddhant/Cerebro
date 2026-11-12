@@ -156,3 +156,53 @@ private let cancelled = CapturedFailure(domain: NSURLErrorDomain, code: NSURLErr
     #expect(await list.sessionTransactions().isEmpty)
     #expect(await store.totals.requestCount == 0)
 }
+
+// MARK: - Event streams
+
+private func stream(
+    id: UUID = UUID(),
+    _ state: CapturedEventStream.State,
+    eventCount: Int
+) -> HTTPTransaction {
+    HTTPTransaction(
+        id: id,
+        request: CapturedRequest(
+            url: URL(string: "https://example.com/feed"), method: "GET", startDate: Date(timeIntervalSince1970: 0)),
+        response: CapturedResponse(statusCode: 200, endDate: Date(timeIntervalSince1970: 1)),
+        eventStream: CapturedEventStream(state: state, eventCount: eventCount, events: [])
+    )
+}
+
+@Test @MainActor func aStreamsRowSaysWhetherItIsLiveAndHowManyEventsItHas() {
+    let model = viewModel([stream(.completed, eventCount: 1_204), stream(.open, eventCount: 1)])
+
+    #expect(model.rows.map(\.detail) == ["example.com · Live · 1 event", "example.com · Ended · 1,204 events"])
+    #expect(model.rows.map(\.marker) == [.eventStream(isLive: true), .eventStream(isLive: false)])
+    #expect(viewModel([transaction(path: "/plain")]).rows.first?.marker == nil)
+    #expect(model.rows.map(\.status) == ["200", "200"])
+}
+
+@Test @MainActor func aRowThatReadsDifferentlyIsMarkedToRedraw() {
+    let open = stream(.open, eventCount: 1)
+    let other = transaction(path: "/other")
+    let model = viewModel([other, open])
+    #expect(model.changedRowIDs.isEmpty)
+
+    model.show([other, stream(id: open.id, .open, eventCount: 2)])
+    #expect(model.changedRowIDs == [open.id])
+
+    // The same again changes nothing, and neither does a row that's new to the list.
+    model.show([other, stream(id: open.id, .open, eventCount: 2), transaction(path: "/new")])
+    #expect(model.changedRowIDs.isEmpty)
+
+    model.show([other, stream(id: open.id, .completed, eventCount: 2)])
+    #expect(model.changedRowIDs == [open.id])
+}
+
+@Test @MainActor func theInspectorOpensOnTheListedTransaction() {
+    let open = stream(.open, eventCount: 3)
+    let model = viewModel([open])
+
+    #expect(model.inspector(id: open.id)?.transaction == open)
+    #expect(model.inspector(id: UUID()) == nil)
+}
