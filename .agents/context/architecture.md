@@ -53,9 +53,9 @@ WKWebView, AVPlayer streams and gRPC over SwiftNIO are out of reach, and `docs/G
 Every other request reaches the store once, when it finishes. An event stream is the exception, because it may never finish:
 
 1. `CustomURLProtocol` reports the response as it arrives, then each chunk after the app has it, then the end. All three go through one unbounded queue of `RawStreamActivity`, never the request pipeline's `AsyncStream`, which drops its oldest entries and could lose a stream's end.
-2. Each stream has its own `CaptureBacklog` of `bodyLimit` bytes. A chunk that doesn't fit is dropped and the stream is marked incomplete. Only payload is limited, so the end always gets through.
+2. Each stream has its own `CaptureBacklog` of `bodyLimit` bytes. A chunk that doesn't fit is dropped and the stream is marked incomplete, except that one chunk of any size may wait when nothing else is. Only payload is limited, so the end always gets through.
 3. One background task runs `EventStreamProcessor`, which parses with `SSEParser`, redacts each event in `EventStreamAssembler`, and updates the same transaction by ID with `TransactionStore.update`. A busy stream reaches the store at most once per 250 ms.
-4. The store saves a stream to disk only when it ends, and never puts back one it has evicted.
+4. The store saves a stream to disk only when it ends, and never puts back one it has evicted. One that was cleared while open is different: `update` reports when the clear was, and the processor adds the stream again with only the events since. When capture stops, the processor closes every stream still open.
 5. `TransactionStore.requestUpdates()` only fires when a request is added or removed. The trigger badge reads that, so an open stream causes no main-thread work while the dashboard is closed.
 
 ## Performance

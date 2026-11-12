@@ -283,8 +283,11 @@ Cerebro shows a Server-Sent Events (SSE) stream while it's open, with no code ch
 **Limits.**
 
 - Each stream keeps its newest 1,000 events, and at most `bodyLimit` bytes of them (1 MB by default). Past either, the oldest go. The count keeps counting every event, and the Events heading shows `newest 1,000 of 5,230`.
-- Your app always gets every byte first and unchanged. If events arrive faster than Cerebro can read them, by more than `bodyLimit`, or one event is larger than `bodyLimit`, Cerebro stops reading that stream and marks its events incomplete. The stream itself still works and still shows when it ends.
+- Your app always gets every byte first and unchanged. If events arrive faster than Cerebro can read them, by more than `bodyLimit`, or one event is larger than `bodyLimit`, Cerebro stops reading that stream and marks its events incomplete. The stream itself still works and still shows when it ends. A large chunk on its own is fine: only a backlog or a single oversized event stops the reading.
 - The request cap still applies. If a long-lived stream becomes the oldest row and the list is full, it's dropped like any other request and doesn't come back.
+- Clearing the HTTP list removes a live stream with everything else. If it's still running, it comes back at its next event, with only the events that arrived after the clear.
+- If a stream's page is open when the stream leaves the list, the page keeps what it had and shows the stream as `Not tracked`.
+- `Cerebro.stop()` closes every stream that's still open with the events it has, since its real end can no longer be recorded.
 - While the dashboard is closed, an open stream costs nothing on the main thread.
 
 **Redaction.** Each event goes through [redaction](#redaction) before it's stored, so the dashboard, console, exports and saved sessions never hold the raw value.
