@@ -154,7 +154,6 @@ The [guide](docs/GUIDE.md) covers everything past setup:
 | [Protobuf decoding](docs/GUIDE.md#protobuf-decoding) | Showing binary protobuf as JSON, with rules in code or in a `traffic_map.json` file |
 | [System Info](docs/GUIDE.md#system-info) | Network status, addresses, performance, session totals, app and device info, and the opt-in public IP |
 | [Previous sessions](docs/GUIDE.md#previous-sessions) | Reading the last session after a relaunch or a crash, and what's kept on disk |
-| [Opening the dashboard from a notification](docs/GUIDE.md#opening-the-dashboard-from-a-notification) | An optional notification that opens the dashboard |
 | [Export](docs/GUIDE.md#export) | Sharing a request as cURL or JSON, or the whole session as HAR |
 | [When Cerebro runs](docs/GUIDE.md#when-cerebro-runs) | On in simulators and development-signed builds, off elsewhere unless you opt in |
 | [What changes while Cerebro captures](docs/GUIDE.md#what-changes-while-cerebro-captures) | Side effects on your app's requests |

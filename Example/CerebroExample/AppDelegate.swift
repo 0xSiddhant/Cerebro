@@ -63,11 +63,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //     Cerebro.start(CerebroConfiguration(isPersistenceEnabled: false))
         //     Cerebro.start(CerebroConfiguration(previousSessionLimit: 3))
         //
-        // Post a notification that opens the dashboard. Your notification delegate has to forward the
-        // tap with `Cerebro.handleNotificationResponse(response)`:
-        //
-        //     Cerebro.start(CerebroConfiguration(isNotificationTriggerEnabled: true))
-        //
         // Stop a shake from showing and hiding the floating button:
         //
         //     Cerebro.start(CerebroConfiguration(isShakeGestureEnabled: false))

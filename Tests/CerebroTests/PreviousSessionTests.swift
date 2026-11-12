@@ -8,14 +8,6 @@ private func request(_ path: String) -> HTTPTransaction {
         request: CapturedRequest(url: URL(string: "https://example.com\(path)"), method: "GET", startDate: Date()))
 }
 
-@Test @MainActor func onlyCerebrosOwnNotificationOpensTheDashboardAndOnlyWhenTheTriggerIsOn() {
-    let own = NotificationTrigger.identifier
-
-    #expect(NotificationTrigger.opensDashboard(identifier: own, isEnabled: true))
-    #expect(!NotificationTrigger.opensDashboard(identifier: own, isEnabled: false))
-    #expect(!NotificationTrigger.opensDashboard(identifier: "com.example.order-shipped", isEnabled: true))
-}
-
 @Test @MainActor func aSavedSessionOpensInTheSameListReadOnly() async throws {
     let store = TransactionStore(requestLimit: 10)
     await store.append(request("/saved"))

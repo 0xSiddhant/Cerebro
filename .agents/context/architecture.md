@@ -17,7 +17,7 @@ Pipeline            decompress → decode proto → redact, in the background   
 Transaction store   actor-backed ring buffer with size caps                   ◀── Network info: path monitor, interfaces, public IP
    │
    ▼
-Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (Cerebro)  ◀── Triggers: floating trigger, shake, notification
+Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (Cerebro)  ◀── Triggers: floating trigger, shake
 ```
 
 ## Patterns
@@ -66,7 +66,6 @@ Redaction still comes first. With JSON keys configured, a JSON body is parsed at
 | `NWConnection` | Create `MonitoredNWConnection` instead | Network.framework has no Objective-C methods to hook |
 | Starscream, Socket.IO, others | One `ExternalNetworkBridge` call per frame or event | Their engines bypass URLSession |
 | Proto rules | One argument to `Cerebro.start`, for apps that decode protobuf | Those rules live in the app's target |
-| Notification redirect trigger | One forwarded call, optional | The host app owns the notification delegate |
 
 ### Why `Cerebro.start()` stays
 

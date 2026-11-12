@@ -10,7 +10,6 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 - [Background transfers](#background-transfers)
 - [System Info](#system-info)
 - [Previous sessions](#previous-sessions)
-- [Opening the dashboard from a notification](#opening-the-dashboard-from-a-notification)
 - [Export](#export)
 - [When Cerebro runs](#when-cerebro-runs)
 - [What changes while Cerebro captures](#what-changes-while-cerebro-captures)
@@ -66,7 +65,6 @@ Every setting is optional. `Cerebro.start()` uses the defaults, and calling it a
 | `isPublicIPLookupEnabled` | `false` | Whether the System Info tab asks `api.ipify.org` for the device's public IP. See [System Info](#system-info) |
 | `isPersistenceEnabled` | `true` | Whether each session is also kept on disk. See [Previous sessions](#previous-sessions) |
 | `previousSessionLimit` | `1` | How many earlier sessions stay on disk |
-| `isNotificationTriggerEnabled` | `false` | Whether Cerebro posts a notification that opens the dashboard. See [Opening the dashboard from a notification](#opening-the-dashboard-from-a-notification) |
 
 ```swift
 Cerebro.start(CerebroConfiguration(
@@ -316,28 +314,6 @@ Cerebro keeps each session on disk as well as in memory, so you can still read w
 - **Turning it off:** `isPersistenceEnabled: false` writes nothing, and removes what earlier launches saved.
 
 A request that hadn't finished when the app ended isn't in the file, and neither is a download still in progress.
-
-## Opening the dashboard from a notification
-
-With `isNotificationTriggerEnabled` set, Cerebro posts one local notification when it starts, "Cerebro is capturing", and tapping it opens the dashboard. Your app owns notifications, so two things stay with it:
-
-- **Permission:** Cerebro never asks. It only posts if your app already has permission.
-- **The tap:** forward it from your notification delegate with one call.
-
-```swift
-func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    didReceive response: UNNotificationResponse,
-    withCompletionHandler completionHandler: @escaping () -> Void
-) {
-    if !Cerebro.handleNotificationResponse(response) {
-        // Not Cerebro's notification, so handle your own here.
-    }
-    completionHandler()
-}
-```
-
-`handleNotificationResponse` returns `true` only for Cerebro's own notification, and does nothing with the setting off. iOS doesn't show a notification posted while your app is in the foreground unless your delegate's `willPresent` asks for it, so you'll usually see this one after leaving the app. `Cerebro.stop()` removes it.
 
 ## Export
 

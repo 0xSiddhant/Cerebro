@@ -29,7 +29,7 @@ These win over the spec, which is older.
 | Session file cap | The newest `requestLimit` requests and 50 MB, trimmed from the oldest | The spec sets no disk limit, and an append-only file outgrows the store. The owner chose it |
 | Restore | The previous session is read when it's opened, not at launch | Launch stays free of disk reads, and most launches never open it |
 | Persistence off | Removes what earlier launches saved | A developer turning it off expects nothing left on disk |
-| Notification trigger | Cerebro posts one local notification of its own, and never asks for permission | The spec doesn't say which notification. The owner chose it |
+| Notification trigger | Removed. The dashboard opens from the floating button, a shake or `Cerebro.present()` | The owner found it too generic to be useful. It also needed the app's permission and delegate code, couldn't have its own layout without an app extension, and iOS sometimes dropped it |
 | Clearing the HTTP list | Also clears those requests from the saved session, through a marker line | The file is append-only, and a cleared request shouldn't come back after a relaunch |
 | Throughput | Bytes received on the wire divided by the request's whole duration. The System Info average only counts responses of 64 KB or more | Metrics have no separate download time, so a small response measures the server's delay |
 | System Info layout | Three pages, Network, Traffic and Device, under a status card | The owner's rule: one long list was hard to use |

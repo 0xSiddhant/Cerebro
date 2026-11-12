@@ -35,10 +35,6 @@ public struct CerebroConfiguration: Sendable {
     /// How many earlier sessions stay on disk. Older ones are removed at each launch.
     public var previousSessionLimit: Int
 
-    /// Whether Cerebro posts a notification that opens the dashboard when tapped. It only posts if the
-    /// app already has permission, and the app forwards the tap with `Cerebro.handleNotificationResponse`.
-    public var isNotificationTriggerEnabled: Bool
-
     /// Creates a configuration. Every argument has a working default.
     public init(
         allowsDistributionBuilds: Bool = false,
@@ -51,8 +47,7 @@ public struct CerebroConfiguration: Sendable {
         decoders: [any BodyDecoder] = [],
         isPublicIPLookupEnabled: Bool = false,
         isPersistenceEnabled: Bool = true,
-        previousSessionLimit: Int = 1,
-        isNotificationTriggerEnabled: Bool = false
+        previousSessionLimit: Int = 1
     ) {
         self.allowsDistributionBuilds = allowsDistributionBuilds
         self.consoleLevel = consoleLevel
@@ -65,6 +60,5 @@ public struct CerebroConfiguration: Sendable {
         self.isPublicIPLookupEnabled = isPublicIPLookupEnabled
         self.isPersistenceEnabled = isPersistenceEnabled
         self.previousSessionLimit = previousSessionLimit
-        self.isNotificationTriggerEnabled = isNotificationTriggerEnabled
     }
 }
