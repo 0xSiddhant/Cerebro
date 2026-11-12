@@ -59,6 +59,11 @@ public struct SessionTotals: Sendable, Equatable {
     /// Counts a request. One with no metrics has no sizes, so it only adds to the count.
     mutating func add(_ transaction: HTTPTransaction) {
         requestCount += 1
+        addBytes(of: transaction)
+    }
+
+    /// Adds a request's bytes without counting it again, for one that was counted before it had sizes.
+    mutating func addBytes(of transaction: HTTPTransaction) {
         guard let size = transaction.size else { return }
         bytesSent += size.bytesSent
         bytesReceived += size.bytesReceived

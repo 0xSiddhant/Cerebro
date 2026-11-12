@@ -28,6 +28,19 @@ struct RingBuffer<Element> {
         return evicted
     }
 
+    /// Replaces the newest element that matches, in place, and returns the one it replaced.
+    @discardableResult
+    mutating func replaceLast(where matches: (Element) -> Bool, with element: Element) -> Element? {
+        for offset in (0..<storedCount).reversed() {
+            let index = (oldest + offset) % capacity
+            if let existing = slots[index], matches(existing) {
+                slots[index] = element
+                return existing
+            }
+        }
+        return nil
+    }
+
     /// Removes every element.
     mutating func removeAll() {
         slots.removeAll()

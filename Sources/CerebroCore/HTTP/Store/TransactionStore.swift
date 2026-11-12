@@ -5,6 +5,7 @@ public actor TransactionStore {
     private var buffer: RingBuffer<HTTPTransaction>
     private var runningTotals = SessionTotals()
     private var observers = SnapshotObservers<[HTTPTransaction]>()
+    private var requestObservers = SnapshotObservers<[HTTPTransaction]>()
     private let updateInterval: Duration
 
     /// Where each change is also written, so the session survives a relaunch. `nil` for a store that
@@ -34,12 +35,35 @@ public actor TransactionStore {
         runningTotals
     }
 
-    /// Adds a finished transaction, dropping the oldest if the store is full.
+    /// Adds a transaction, dropping the oldest if the store is full. An event stream that's still open
+    /// is added too, and `update` then keeps it current.
     public func append(_ transaction: HTTPTransaction) {
         buffer.append(transaction)
         runningTotals.add(transaction)
-        journal?(.http(transaction))
+        // Only finished requests are saved, so an open stream waits for the update that ends it.
+        if !transaction.isOpen {
+            journal?(.http(transaction))
+        }
         schedulePublish()
+        scheduleRequestPublish()
+    }
+
+    /// Replaces the transaction with the same ID, for an event stream that got more events or ended.
+    /// Returns `false` if the store no longer holds it, because one that was dropped is never put back.
+    @discardableResult
+    func update(_ transaction: HTTPTransaction) -> Bool {
+        guard let previous = buffer.replaceLast(where: { $0.id == transaction.id }, with: transaction) else {
+            return false
+        }
+        if previous.size == nil {
+            runningTotals.addBytes(of: transaction)
+        }
+        if previous.isOpen, !transaction.isOpen {
+            journal?(.http(transaction))
+        }
+        // The list of requests is the same, so readers of `requestUpdates` aren't woken.
+        schedulePublish()
+        return true
     }
 
     /// Removes every transaction and starts the totals again, as if the session had just begun. Readers
@@ -49,6 +73,7 @@ public actor TransactionStore {
         runningTotals = SessionTotals()
         journal?(.httpCleared)
         publish()
+        publishRequests()
     }
 
     /// Delivers the current transactions now, then again after each batch of changes.
@@ -59,8 +84,17 @@ public actor TransactionStore {
         }
     }
 
+    /// The same as `updates`, but only after a request is added or removed. A reader that just counts
+    /// requests uses this, so an open event stream's new events never wake it.
+    public func requestUpdates() -> AsyncStream<[HTTPTransaction]> {
+        requestObservers.add(startingWith: buffer.elements) { [weak self] id in
+            Task { await self?.removeObserver(id) }
+        }
+    }
+
     private func removeObserver(_ id: UUID) {
         observers.remove(id)
+        requestObservers.remove(id)
     }
 
     private func schedulePublish() {
@@ -69,5 +103,13 @@ public actor TransactionStore {
 
     private func publish() {
         observers.publish(buffer.elements)
+    }
+
+    private func scheduleRequestPublish() {
+        requestObservers.schedulePublish(after: updateInterval) { [weak self] in await self?.publishRequests() }
+    }
+
+    private func publishRequests() {
+        requestObservers.publish(buffer.elements)
     }
 }
