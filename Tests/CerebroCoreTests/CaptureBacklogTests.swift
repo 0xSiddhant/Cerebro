@@ -27,6 +27,18 @@ import Testing
     #expect(backlog.admit(bytes: 100))
 }
 
+@Test func oneOversizedPayloadMayWaitAloneWhenAsked() {
+    let backlog = CaptureBacklog(byteLimit: 10)
+
+    #expect(!backlog.admit(bytes: 50))
+    #expect(backlog.admit(bytes: 50, evenIfAlone: true))
+    #expect(!backlog.admit(bytes: 1, evenIfAlone: true))
+
+    backlog.finish(bytes: 50)
+
+    #expect(backlog.admit(bytes: 1))
+}
+
 @Test func theLargestLimitDoesntOverflow() {
     let backlog = CaptureBacklog(frameLimit: 2, byteLimit: .max)
 

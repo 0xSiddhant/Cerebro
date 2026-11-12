@@ -19,9 +19,13 @@ final class CaptureBacklog: Sendable {
     }
 
     /// Returns whether a payload of this size may wait, and counts it if so.
-    func admit(bytes: Int) -> Bool {
+    ///
+    /// `evenIfAlone` lets one payload wait whatever its size while nothing else does. An event stream
+    /// uses it, because a chunk the network delivered whole isn't a sign that parsing has fallen behind.
+    func admit(bytes: Int, evenIfAlone: Bool = false) -> Bool {
         usage.withLock { usage in
-            guard usage.frames < frameLimit, bytes <= byteLimit - usage.bytes else { return false }
+            let fits = usage.frames < frameLimit && bytes <= byteLimit - usage.bytes
+            guard fits || (evenIfAlone && usage.bytes == 0) else { return false }
             usage.frames += 1
             usage.bytes += bytes
             return true

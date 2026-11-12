@@ -326,10 +326,11 @@ extension CustomURLProtocol {
     }
 
     /// Called after the app has the bytes. If the parser has fallen behind by more than the body limit,
-    /// the bytes are dropped here and parsing stops, since the event boundaries went with them.
+    /// the bytes are dropped here and parsing stops, since the event boundaries went with them. A chunk
+    /// larger than the limit still gets through when nothing is waiting, because it's already in memory.
     private func submit(_ data: Data, to backlog: CaptureBacklog) {
         guard !hasStreamOverflowed, !data.isEmpty else { return }
-        if backlog.admit(bytes: data.count) {
+        if backlog.admit(bytes: data.count, evenIfAlone: true) {
             engine?.submit(RawStreamActivity(id: id, content: .chunk(data, backlog: backlog), date: Date()))
         } else {
             hasStreamOverflowed = true
