@@ -299,6 +299,8 @@ Cerebro shows a Server-Sent Events (SSE) stream while it's open, with no code ch
 
 **Quiet streams and timeouts.** Cerebro runs each request through its own session, so a timeout set on your `URLSessionConfiguration` doesn't apply, as described in [What changes while Cerebro captures](#what-changes-while-cerebro-captures). The default of 60 seconds without data applies in its place, even if your configuration allows longer. If your stream can stay quiet for longer than that, set `timeoutInterval` on the `URLRequest`, which does carry over, or have the server send a comment line as a keep-alive.
 
+**Try it.** The [Example](../Example) app has two samples, a short stream at launch and a one-minute stream you start with a tap, both served by a small server inside the app. Their events show a redacted key, a multi-line event, a comment and a withheld `[DONE]`.
+
 **Not captured.** Streams from a `WKWebView`, from a networking stack that doesn't use `URLSession`, and from background sessions, which report only their metrics.
 
 ## Background transfers
