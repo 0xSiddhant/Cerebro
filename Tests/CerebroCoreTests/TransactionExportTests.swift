@@ -236,3 +236,34 @@ private func harContent(_ body: CapturedBody) throws -> [String: Any] {
         #expect(export.contains(Redactor.marker))
     }
 }
+
+@Test func bothExportsCarryAStreamsEvents() throws {
+    let events = [
+        Fixtures.event("one", id: "7", type: "tick"),
+        CapturedSSEEvent(data: CapturedBody(content: .withheld, byteCount: 6), date: Date()),
+    ]
+    let transaction = Fixtures.stream(.completed, events: events)
+
+    let json = try child("eventStream", of: object(TransactionExport.json(transaction)))
+    let har = try object(TransactionExport.har([transaction]))
+    let entries = try #require(try child("log", of: har)["entries"] as? [[String: Any]])
+    let harStream = try child("_eventStream", of: try #require(entries.first))
+
+    for stream in [json, harStream] {
+        #expect(stream["state"] as? String == "completed")
+        #expect(stream["eventCount"] as? Int == 2)
+        let exported = try #require(stream["events"] as? [[String: Any]])
+        #expect(exported.map { $0["type"] as? String } == ["tick", "message"])
+        #expect(exported.first?["id"] as? String == "7")
+        #expect((exported.first?["data"] as? [String: Any])?["text"] as? String == "one")
+        #expect(((exported.last?["data"] as? [String: Any])?["comment"] as? String)?.contains("Withheld") == true)
+    }
+}
+
+@Test func aRequestThatIsNotAStreamExportsNoEventStream() throws {
+    let document = try object(TransactionExport.json(Fixtures.transaction()))
+    let har = TransactionExport.har([Fixtures.transaction()])
+
+    #expect(document["eventStream"] == nil)
+    #expect(!har.contains("_eventStream"))
+}

@@ -100,3 +100,35 @@ private func fullLog(of body: CapturedBody) -> String {
     #expect(log.contains("truncated"))
     #expect(log.contains("313233"))
 }
+
+private let finishedStream = Fixtures.stream(
+    .completed,
+    events: [
+        Fixtures.event(#"{"n":1}"#, id: "7", type: "tick"),
+        CapturedSSEEvent(data: CapturedBody(content: .withheld, byteCount: 6), date: Date()),
+    ]
+)
+
+@Test func summaryOfAStreamIsOneLineWithoutItsEvents() {
+    let lines = logged(finishedStream, level: .summary)
+
+    #expect(lines.count == 1)
+    #expect(lines.first?.contains("tick") == false)
+}
+
+@Test func fullListsAStreamsEvents() throws {
+    let details = try #require(logged(finishedStream, level: .full).last)
+
+    #expect(details.contains("Events (2):"))
+    #expect(details.contains(#"tick #7: {"n":1}"#))
+    #expect(details.contains("message: withheld"))
+}
+
+@Test func fullSaysWhenOnlyTheNewestEventsWereKept() throws {
+    let stream = CapturedEventStream(
+        state: .completed, eventCount: 50, events: [Fixtures.event("last")], isTruncated: true)
+    let transaction = HTTPTransaction(
+        request: CapturedRequest(url: nil, method: "GET", startDate: Date()), eventStream: stream)
+
+    #expect(logged(transaction, level: .full).last?.contains("Events (newest 1 of 50):") == true)
+}
