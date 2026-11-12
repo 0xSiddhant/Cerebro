@@ -46,6 +46,19 @@ struct CaptureHarness {
         return try #require(match, "no matching socket in \(sockets)")
     }
 
+    /// Waits for a transaction that meets `condition`, such as an event stream reaching a state.
+    func transaction(where condition: @Sendable (HTTPTransaction) -> Bool) async throws -> HTTPTransaction {
+        for _ in 0..<Self.pollAttempts {
+            if let transaction = await runtime.store.transactions.first(where: condition) {
+                return transaction
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let transactions = await runtime.store.transactions
+        let match = transactions.first(where: condition)
+        return try #require(match, "no matching transaction in \(transactions)")
+    }
+
     func transaction() async throws -> HTTPTransaction {
         try #require(try await transactions(count: 1).first)
     }
