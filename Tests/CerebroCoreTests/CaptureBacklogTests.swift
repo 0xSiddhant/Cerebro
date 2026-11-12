@@ -39,6 +39,26 @@ import Testing
     #expect(backlog.admit(bytes: 1))
 }
 
+@Test func emptyPayloadsNeverUseUpTheFrameLimit() {
+    let backlog = CaptureBacklog(frameLimit: 2, byteLimit: 100)
+
+    for _ in 0..<10 {
+        #expect(backlog.admit(bytes: 0))
+        backlog.finish(bytes: 0)
+    }
+
+    #expect(backlog.admit(bytes: 1))
+    #expect(backlog.admit(bytes: 1))
+    #expect(!backlog.admit(bytes: 1))
+}
+
+@Test func anEmptyPayloadGetsThroughAFullBacklog() {
+    let backlog = CaptureBacklog(frameLimit: 1, byteLimit: 10)
+    #expect(backlog.admit(bytes: 10))
+
+    #expect(backlog.admit(bytes: 0))
+}
+
 @Test func theLargestLimitDoesntOverflow() {
     let backlog = CaptureBacklog(frameLimit: 2, byteLimit: .max)
 
