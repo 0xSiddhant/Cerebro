@@ -4,89 +4,6 @@ import Foundation
 import CerebroCore
 #endif
 
-/// Where the folder screen searches, in the order the scope bar shows them.
-enum FileSearchScope: Int, CaseIterable {
-    case thisFolder
-    case subfolders
-
-    var title: String {
-        switch self {
-        case .thisFolder: return "This Folder"
-        case .subfolders: return "Subfolders"
-        }
-    }
-}
-
-/// Something the developer can do with an item.
-enum FileAction: CaseIterable {
-    case quickLook
-    case openAsText
-    case info
-    case copyPath
-    case share
-    case rename
-    case duplicate
-    case copyTo
-    case moveTo
-    case deleteContents
-    case delete
-
-    var title: String {
-        switch self {
-        case .quickLook: return "Open in Quick Look"
-        case .openAsText: return "Open as Text or Hex"
-        case .info: return "Info"
-        case .copyPath: return "Copy Path"
-        case .share: return "Share"
-        case .rename: return "Rename"
-        case .duplicate: return "Duplicate"
-        case .copyTo: return "Copy To…"
-        case .moveTo: return "Move To…"
-        case .deleteContents: return "Delete Contents"
-        case .delete: return "Delete"
-        }
-    }
-
-    /// An SF Symbol.
-    var symbol: String {
-        switch self {
-        case .quickLook: return "eye"
-        case .openAsText: return "doc.plaintext"
-        case .info: return "info.circle"
-        case .copyPath: return "doc.on.clipboard"
-        case .share: return "square.and.arrow.up"
-        case .rename: return "pencil"
-        case .duplicate: return "plus.square.on.square"
-        case .copyTo: return "doc.on.doc"
-        case .moveTo: return "folder"
-        case .deleteContents: return "xmark.bin"
-        case .delete: return "trash"
-        }
-    }
-
-    var isDestructive: Bool {
-        self == .delete || self == .deleteContents
-    }
-}
-
-/// What tapping an item opens.
-enum FileOpening: Equatable {
-    case folder(URL)
-    case quickLook(URL)
-    case bodyViewer(URL)
-
-    /// It can't be opened, and this says why.
-    case refused(String)
-}
-
-/// One line of a folder's list.
-struct FileRow: Equatable {
-    let name: String
-    let symbol: String
-    let detail: String
-    let isFolder: Bool
-}
-
 /// What a folder screen shows: the folder's items, sorted and searched, with each folder's size worked out
 /// once its row appears. Listing, sorting, searching and measuring all run off the main thread, and the
 /// folder is watched while the screen is on, so changes show without a refresh.
@@ -98,6 +15,10 @@ final class FolderViewModel {
 
     /// The visible items, in order.
     private(set) var items: [URL] = []
+
+    /// The items that were already listed and now read differently, such as a file that grew. The list
+    /// has to redraw these itself, because their paths are the same.
+    private(set) var changedItems: [URL] = []
 
     /// What the list's footer says, such as why a search stopped, or `nil` for nothing.
     private(set) var notice: String?
@@ -128,6 +49,9 @@ final class FolderViewModel {
 
     private var entries: [FileEntry] = []
     private var visible: [URL: FileEntry] = [:]
+
+    /// Whether the rows are subfolder results, which also say where each one is.
+    private var showsParents = false
     private var sizes: [URL: FolderMeasurement] = [:]
     private var measurements: [URL: Task<Void, Never>] = [:]
     private var watching: Task<Void, Never>?
@@ -182,7 +106,10 @@ final class FolderViewModel {
             await pendingRefresh?.value
         case .failure(let error):
             entries = []
-            show([], notice: error.localizedDescription)
+            generation += 1
+            let failed = Listing(
+                items: [], visible: [:], changed: [], showsParents: false, notice: error.localizedDescription)
+            show(failed, generation: generation)
         }
     }
 
@@ -216,9 +143,11 @@ final class FolderViewModel {
     private func refresh() {
         pendingRefresh?.cancel()
         generation += 1
-        let (generation, root, folder, entries) = (generation, root, folder, entries)
+        let (generation, root, folder, entries, previous) = (generation, root, folder, entries, visible)
         let (order, query) = (sortOrder, searchText.trimmingCharacters(in: .whitespaces))
         let searchesSubfolders = searchScope == .subfolders && !query.isEmpty
+        // A row reads differently once it says where it is, so every row is redrawn when that changes.
+        let redrawsAll = searchesSubfolders != showsParents
         pendingRefresh = Task.detached(priority: .userInitiated) { [weak self] in
             let found: [FileEntry]
             var notice: String?
@@ -232,17 +161,39 @@ final class FolderViewModel {
                     notice = entries.isEmpty ? "This folder is empty." : "No matches in this folder."
                 }
             }
+            // Everything a large folder costs is worked out here, so the main thread only shows it.
             let sorted = order.sorted(found)
+            let listing = Listing(
+                items: sorted.map(\.url),
+                visible: Dictionary(sorted.map { ($0.url, $0) }, uniquingKeysWith: { first, _ in first }),
+                changed: sorted.filter { entry in
+                    previous[entry.url].map { redrawsAll || $0 != entry } ?? false
+                }
+                .map(\.url),
+                showsParents: searchesSubfolders,
+                notice: notice
+            )
             guard !Task.isCancelled else { return }
-            await self?.show(sorted, notice: notice, generation: generation)
+            await self?.show(listing, generation: generation)
         }
     }
 
-    private func show(_ found: [FileEntry], notice: String?, generation: Int? = nil) {
-        guard generation == nil || generation == self.generation else { return }
-        items = found.map(\.url)
-        visible = Dictionary(found.map { ($0.url, $0) }, uniquingKeysWith: { first, _ in first })
-        self.notice = notice
+    /// A folder's rows, ready to show.
+    private struct Listing: Sendable {
+        let items: [URL]
+        let visible: [URL: FileEntry]
+        let changed: [URL]
+        let showsParents: Bool
+        let notice: String?
+    }
+
+    private func show(_ listing: Listing, generation: Int) {
+        guard generation == self.generation else { return }
+        items = listing.items
+        visible = listing.visible
+        changedItems = listing.changed
+        showsParents = listing.showsParents
+        notice = listing.notice
         onChange?()
     }
 
@@ -263,8 +214,7 @@ final class FolderViewModel {
         guard let entry = visible[id] else { return nil }
         var detail: [String] = []
         // A result from a subfolder says where it is.
-        let isFromSubfolders = searchScope == .subfolders && !searchText.isEmpty
-        if isFromSubfolders, let parent = root.relativePath(of: entry.url.deletingLastPathComponent()) {
+        if showsParents, let parent = root.relativePath(of: entry.url.deletingLastPathComponent()) {
             detail.append(parent.isEmpty ? root.name : parent)
         }
         switch entry.kind {
@@ -303,8 +253,11 @@ final class FolderViewModel {
         onSizesChange?([id])
     }
 
-    // MARK: - Actions
+}
 
+// MARK: - Actions
+
+extension FolderViewModel {
     /// What an item offers. The app bundle's items, and any the process can't write, only offer the
     /// ones that change nothing.
     func actions(for entry: FileEntry) -> [FileAction] {

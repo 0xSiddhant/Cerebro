@@ -64,9 +64,14 @@ private func names(_ viewModel: FolderViewModel) -> [String] {
     #expect(names(viewModel) == ["small.txt"])
 
     viewModel.searchText = "log"
+    await viewModel.pendingRefresh?.value
+    #expect(names(viewModel) == ["Logs"])
+
+    // A row that stays gets redrawn, because a subfolder result also says where it is.
     viewModel.searchScope = .subfolders
     await viewModel.pendingRefresh?.value
     #expect(Set(names(viewModel)) == ["Logs", "today.log", "old.log"])
+    #expect(viewModel.changedItems.map(\.lastPathComponent) == ["Logs"])
     let deep = try #require(viewModel.items.first { $0.lastPathComponent == "old.log" })
     #expect(viewModel.row(for: deep)?.detail.hasPrefix("Logs/archive · ") == true)
 

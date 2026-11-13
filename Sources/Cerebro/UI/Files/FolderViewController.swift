@@ -104,12 +104,11 @@ final class FolderViewController: UITableViewController {
     }
 
     private func showItems() {
-        let previous = Set(dataSource.snapshot().itemIdentifiers)
         var snapshot = NSDiffableDataSourceSnapshot<Int, URL>()
         snapshot.appendSections([0])
         snapshot.appendItems(viewModel.items)
         // The snapshot only holds paths, so a row whose size or date changed wouldn't redraw without this.
-        snapshot.reconfigureItems(viewModel.items.filter(previous.contains))
+        snapshot.reconfigureItems(viewModel.changedItems)
         dataSource.apply(snapshot, animatingDifferences: false)
         footer.text = viewModel.notice
         sizeFooter()
