@@ -6,8 +6,8 @@ import CerebroCore
 
 /// Every colour the dashboard uses, in one place, so the whole of it changes together. The brand colours
 /// come from `CerebroIcon`, so the icon, the floating button and the screens always agree. Surfaces are
-/// Ultraviolet in dark mode and a soft lavender in light mode, and text uses the system's own colours,
-/// which read on both.
+/// Ultraviolet in dark mode and a soft lavender in light mode, and become the system's own under Increase
+/// Contrast. Text uses the system's colours, which read on all of them.
 enum DashboardTheme {
     // MARK: - Brand
 
@@ -31,27 +31,27 @@ enum DashboardTheme {
         cgColor: CerebroIcon.color(CerebroIcon.Palette.glyph, alpha: CerebroIcon.rimOpacity))
 
     /// The count of new requests on the floating button.
-    static let badge = UIColor.systemRed
+    static let badge = failure
 
     // MARK: - Surfaces
 
     /// The page behind everything, and the bars above it, so a screen reads as one surface.
-    static let background = dynamic(light: 0xF5F1_FC, dark: 0x0B06_14)
+    static let background = surface(light: 0xF5F1_FC, dark: 0x0B06_14, increasedContrast: .systemGroupedBackground)
 
     /// A card on the page, such as a list's row or a frame the other side sent.
-    static let card = dynamic(light: 0xFFFF_FF, dark: 0x170D_26)
+    static let card = surface(light: 0xFFFF_FF, dark: 0x170D_26, increasedContrast: .secondarySystemGroupedBackground)
 
     /// Something that floats above the page, such as a toast.
-    static let raised = dynamic(light: 0xEDE6_F8, dark: 0x2416_40)
+    static let raised = surface(light: 0xEDE6_F8, dark: 0x2416_40, increasedContrast: .systemGray5)
 
     /// A search field or another place to type.
-    static let field = dynamic(light: 0xECE5_F8, dark: 0x1F12_33)
+    static let field = surface(light: 0xECE5_F8, dark: 0x1F12_33, increasedContrast: .tertiarySystemFill)
 
     /// The lines between rows and under bars.
-    static let separator = dynamic(light: 0xE1D7_F1, dark: 0x2C1D_47)
+    static let separator = surface(light: 0xE1D7_F1, dark: 0x2C1D_47, increasedContrast: .separator)
 
     /// The empty part of a bar.
-    static let track = dynamic(light: 0xE4DB_F3, dark: 0x2C1D_47)
+    static let track = surface(light: 0xE4DB_F3, dark: 0x2C1D_47, increasedContrast: .tertiarySystemFill)
 
     // MARK: - Text
 
@@ -75,6 +75,12 @@ enum DashboardTheme {
     /// Neither good nor bad, such as a cancelled request or an action that only shows something.
     static let neutral = UIColor.systemGray
 
+    /// Something that worked.
+    static let success = UIColor.systemGreen
+
+    /// Something that's fine but points elsewhere, such as a redirect.
+    static let info = UIColor.systemBlue
+
     /// Something that went wrong.
     static let failure = UIColor.systemRed
 
@@ -87,15 +93,17 @@ enum DashboardTheme {
     /// A status badge's colour, the same on every screen.
     static func status(_ outcome: TransactionOutcome) -> UIColor {
         switch outcome {
-        case .success: return .systemGreen
-        case .redirection: return .systemBlue
+        case .success: return success
+        case .redirection: return info
         case .clientError: return warning
         case .serverError, .failed: return failure
         case .cancelled: return neutral
         }
     }
 
-    /// The colour a method is known by, so a list can be scanned for one. Anything else is neutral.
+    /// The colour a method is known by, so a list can be scanned for one. It's a palette of its own, not
+    /// the status colours, because a method says nothing about whether a request worked. Anything else is
+    /// neutral.
     static func method(_ method: String) -> UIColor {
         switch method.uppercased() {
         case "GET": return .systemBlue
@@ -110,7 +118,7 @@ enum DashboardTheme {
     /// How the System Info card colours the network's state.
     static func tone(_ tone: SystemInfoSummary.Tone) -> UIColor {
         switch tone {
-        case .good: return .systemGreen
+        case .good: return success
         case .warning: return warning
         case .bad: return failure
         case .unknown: return secondaryText
@@ -120,5 +128,14 @@ enum DashboardTheme {
     private static func dynamic(light: UInt32, dark: UInt32) -> UIColor {
         let (light, dark) = (UIColor(cgColor: CerebroIcon.color(light)), UIColor(cgColor: CerebroIcon.color(dark)))
         return UIColor { $0.userInterfaceStyle == .dark ? dark : light }
+    }
+
+    /// A surface in the Ultraviolet palette. Increase Contrast asks for stronger edges than a tinted palette
+    /// gives, so it gets the system colour the surface stands in for, which iOS strengthens itself.
+    private static func surface(light: UInt32, dark: UInt32, increasedContrast system: UIColor) -> UIColor {
+        let themed = dynamic(light: light, dark: dark)
+        return UIColor { traits in
+            (traits.accessibilityContrast == .high ? system : themed).resolvedColor(with: traits)
+        }
     }
 }

@@ -9,6 +9,25 @@ private func hex(_ color: UIColor, in style: UIUserInterfaceStyle = .light) -> U
     return [red, green, blue].reduce(0) { ($0 << 8) | UInt32(($1 * 255).rounded()) }
 }
 
+/// The RGB of a colour as it resolves with traits.
+private func rgb(_ color: UIColor, _ traits: UITraitCollection) -> [CGFloat] {
+    var (red, green, blue, alpha) = (CGFloat(0), CGFloat(0), CGFloat(0), CGFloat(0))
+    color.resolvedColor(with: traits).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+    return [red, green, blue, alpha]
+}
+
+@Test @MainActor func increaseContrastUsesTheSystemSurfaces() {
+    for style in [UIUserInterfaceStyle.light, .dark] {
+        let increased = UITraitCollection(traitsFrom: [
+            UITraitCollection(userInterfaceStyle: style), UITraitCollection(accessibilityContrast: .high),
+        ])
+        #expect(rgb(DashboardTheme.separator, increased) == rgb(.separator, increased))
+        #expect(rgb(DashboardTheme.card, increased) == rgb(.secondarySystemGroupedBackground, increased))
+        #expect(rgb(DashboardTheme.background, increased) == rgb(.systemGroupedBackground, increased))
+    }
+    #expect(hex(DashboardTheme.card, in: .dark) == 0x170D_26)
+}
+
 @Test func theGlyphFillsItsSquareAndStaysInside() {
     let bounds = CerebroIcon.glyph().boundingBoxOfPath
 
