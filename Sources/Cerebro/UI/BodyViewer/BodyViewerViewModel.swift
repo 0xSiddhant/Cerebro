@@ -46,10 +46,12 @@ final class BodyViewerViewModel {
     let shareWarning: ShareWarning
 
     private let body: CapturedBody
+    private let source: BodyViewerSource
 
     init(title: String, body: CapturedBody, source: BodyViewerSource = .capture) {
         self.title = title
         self.body = body
+        self.source = source
         modes = body.isDecoded ? [.tree, .pretty, .raw] : [.pretty, .raw]
         shareWarning = source == .file ? .files : .capturedData
         guard case .truncated(let data) = body.content else {
@@ -70,11 +72,17 @@ final class BodyViewerViewModel {
     }
 
     /// A name for this body when it's shared as a file from a mode. Hex is never JSON, even when the
-    /// stored bytes are.
+    /// stored bytes are. A file keeps its own name, with the extension of what's shared in place of its
+    /// own, so `settings.plist` shared as JSON is `settings.json`.
     func fileName(for mode: Mode) -> String {
-        let stem = title.lowercased().replacingOccurrences(of: " ", with: "-")
         let isHex = body.undecoded != nil || (mode == .raw && body.rawData != nil)
-        return stem + (!isHex && Self.looksLikeJSON(body.data ?? Data()) ? ".json" : ".txt")
+        let pathExtension = !isHex && Self.looksLikeJSON(body.data ?? Data()) ? "json" : "txt"
+        switch source {
+        case .capture:
+            return title.lowercased().replacingOccurrences(of: " ", with: "-") + "." + pathExtension
+        case .file:
+            return (title as NSString).deletingPathExtension + "." + pathExtension
+        }
     }
 
     private static func looksLikeJSON(_ data: Data) -> Bool {
