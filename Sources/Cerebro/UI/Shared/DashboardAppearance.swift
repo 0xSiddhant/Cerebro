@@ -20,10 +20,15 @@ extension DashboardTheme {
         UISearchTextField.appearance(whenContainedInInstancesOf: inside).backgroundColor = field
         UIRefreshControl.appearance(whenContainedInInstancesOf: inside).tintColor = accent
         UIActivityIndicatorView.appearance(whenContainedInInstancesOf: inside).color = accent
-        // The selected segment is light glass on iOS 26 and a light or grey pill before it, so its label
-        // takes the accent, which reads on all of them, rather than white.
-        UISegmentedControl.appearance(whenContainedInInstancesOf: inside)
-            .setTitleTextAttributes([.foregroundColor: accent], for: .selected)
+        // On iOS 26 the selected segment is light glass, where the system's label is hard to see, so it
+        // takes the accent. Earlier designs use a white or grey pill, where the system's label reads and
+        // violet wouldn't in dark mode, so they keep it. The glass needs the iOS 26 SDK, from Swift 6.2.
+        #if compiler(>=6.2)
+        if #available(iOS 26, *) {
+            UISegmentedControl.appearance(whenContainedInInstancesOf: inside)
+                .setTitleTextAttributes([.foregroundColor: accent], for: .selected)
+        }
+        #endif
     }
 
     /// The space between the bars and a list's first card.
