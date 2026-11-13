@@ -52,6 +52,7 @@ These win over the spec, which is older.
 | Scope | PLAN-08 adds a Files tab that browses the app's sandbox | The owner's requirement. The spec describes a network inspector only |
 | Files tab sharing | Quick Look's own share button shares a file with no privacy warning | No public API removes the button. The owner accepted it over dropping Quick Look, and Cerebro's own Share action still warns |
 | Files tab names | A new folder with a taken name is refused, like a rename. A copy, a move or an import is numbered | The plan named the other cases only. A name the developer typed shouldn't silently change |
+| Icon and theme | A globe with every signal it has found, in Ultraviolet. The dashboard's accent is the same violet, and backgrounds follow light and dark mode | The owner's choice. The name comes from the X-Men's Cerebro, which finds every mind, so the icon evokes that idea without copying Marvel's helmet, chamber or X. It's drawn in code because nothing loads from bundles, and `Scripts/render-icon.sh` renders every other copy from the same file |
 | Branches and releases | `develop` flow, with releases automated on `main` | The owner's rule. `rules/git.md` has it |
 | Versions | Breaking commits are a minor bump below 1.0, and `1.0.0` needs a `Release-As` footer | The spec makes `v1.0.0` a deliberate Plan 5 step |
 

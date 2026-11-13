@@ -33,7 +33,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 
 **Dashboard**
 
-- **Floating trigger:** sits above your app, drags anywhere and snaps to the nearest side, and counts the requests since you last looked.
+- **Floating trigger:** Cerebro's globe, which sits above your app, drags anywhere and snaps to the nearest side, and counts the requests since you last looked.
 - **HTTP list:** newest first and live, with each method in its own colour (`GET` blue, `POST` green, `PUT` orange, `PATCH` purple, `DELETE` red) and an `SSE` tag on event streams, plus search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests. The trash button clears every request and resets the session totals, after asking. Sockets are kept.
 - **Log Inspector:** Response, Request and Metrics pages for each request. Tap a row to expand it, or long-press to copy it. An event stream's events are listed live at the end of the Response page.
 - **Body Viewer:** pretty JSON or raw text, plus a collapsible tree for decoded protobuf, with copy and share buttons.

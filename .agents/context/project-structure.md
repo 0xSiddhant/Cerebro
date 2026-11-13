@@ -23,13 +23,17 @@ Cerebro/
 ├── .githooks/                 # pre-commit hook; a contributor tool, enabled once per clone
 ├── .github/workflows/         # ci.yml on PRs and develop; release.yml when develop merges into main
 ├── Scripts/                   # build-xcframework.sh, next-version.sh, set-version.sh, release-notes.sh;
-│                              # build-generator.sh
+│                              # build-generator.sh; render-icon.sh and IconRenderer.swift, which render
+│                              # the icon from CerebroIcon.swift
 ├── docs/                      # GUIDE.md for everything past setup, and the README's screenshots
+│   └── brand/                 # the icon, rendered: icon.svg and glyph.svg for any size, rounded/ PNGs up to
+│                              # 256, app-icon/ at each iOS size up to 180, and social-preview.jpg for GitHub.
+│                              # Kept small, because SPM downloads the whole history
 ├── Example/                   # example app using the package by local path
 │   ├── traffic_map.json       # proto rules the build plugin turns into ProtoRule.generated
 │   └── CerebroExample/        # App (delegates and the Cerebro.start call), Screens, Samples (each kind
 │                              # of traffic and its helpers, and the files written for the Files tab),
-│                              # Proto (generated .pb.swift), Resources
+│                              # Proto (generated .pb.swift), Resources (with the app icon)
 ├── Sources/
 │   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
 │   │   ├── HTTP/
@@ -53,10 +57,12 @@ Cerebro/
 │   │   └── Metrics/           # network path, interfaces, public IP, totals, connection quality, download progress
 │   ├── Cerebro/
 │   │   ├── Facade/            # Cerebro.start / stop / present
-│   │   ├── Triggers/          # shake hook, floating trigger, PassthroughWindow, DashboardWindowManager
+│   │   ├── Triggers/          # shake hook, floating trigger, PassthroughWindow, DashboardWindowManager,
+│   │   │                      # CerebroIcon, the icon drawn in code
 │   │   └── UI/                # tab bar shell, then one folder per screen holding its view controller,
 │   │                          # view model and views (HTTPList, LogInspector, BodyViewer, SocketList,
-│   │                          # SocketTimeline, ProtoConfig, SystemInfo, Files); Shared for the rest
+│   │                          # SocketTimeline, ProtoConfig, SystemInfo, Files); Shared for the rest,
+│   │                          # including DashboardTheme, where every colour comes from
 │   ├── CerebroProto/          # proto rules and decoder
 │   ├── CerebroProtoGenerator/ # the generator executable
 │   └── CerebroProtoGeneratorCore/ # reads traffic_map.json and .pb.swift files, writes ProtoRule.generated

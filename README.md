@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/brand/icon.svg" width="128" alt="Cerebro's icon: a glowing violet globe on a near-black background, with the signals it has found on its surface"></p>
+
 # Cerebro
 
 [![CI](https://github.com/0xSiddhant/Cerebro/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/0xSiddhant/Cerebro/actions/workflows/ci.yml)
