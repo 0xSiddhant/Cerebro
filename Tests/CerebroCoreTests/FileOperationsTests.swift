@@ -68,6 +68,25 @@ import Testing
     #expect(try folder.names(in: caches).isEmpty)
 }
 
+@Test func anItemInsideAnotherSelectedOneGoesWithIt() throws {
+    let folder = try TemporaryFolder()
+    defer { folder.remove() }
+    let logs = try folder.folder("Logs")
+    let today = try folder.file("Logs/today.log")
+    let copies = try folder.folder("Copies")
+    let moved = try folder.folder("Moved")
+
+    let copied = try folder.operations.copy([logs, today], into: copies)
+    try folder.operations.move([today, logs], into: moved)
+    try folder.operations.delete([moved.appendingPathComponent("Logs"), moved.appendingPathComponent("Logs/today.log")])
+
+    #expect(copied.map(\.lastPathComponent) == ["Logs"])
+    #expect(try folder.names(in: copies) == ["Logs"])
+    #expect(try folder.names(in: copies.appendingPathComponent("Logs")) == ["today.log"])
+    #expect(try folder.names(in: moved).isEmpty)
+    #expect(try folder.names() == ["Copies", "Moved"])
+}
+
 @Test func deletingALinkLeavesItsTarget() throws {
     let folder = try TemporaryFolder()
     defer { folder.remove() }

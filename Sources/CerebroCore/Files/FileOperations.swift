@@ -72,29 +72,29 @@ public struct FileOperations: Sendable {
     public func duplicate(_ item: URL) throws -> URL {
         try checkChangeable(item)
         let copy = try freeLocation(for: item.lastPathComponent, in: item.deletingLastPathComponent())
-        try FileManager.default.copyItem(at: item, to: copy)
+        try Self.copyItem(at: item, to: copy)
         return copy
     }
 
     /// Copies items into a folder of the same root, numbering any name that's taken. A link is copied
-    /// as a link.
+    /// as a link, and an item inside another one being copied goes with it, not on its own.
     @discardableResult
     public func copy(_ items: [URL], into folder: URL) throws -> [URL] {
         try checkDestination(folder, for: items)
-        return try items.map { item in
+        return try Self.outermost(items).map { item in
             let copy = try freeLocation(for: item.lastPathComponent, in: folder)
-            try FileManager.default.copyItem(at: item, to: copy)
+            try Self.copyItem(at: item, to: copy)
             return copy
         }
     }
 
     /// Moves items into a folder of the same root, numbering any name that's taken. An item already in
-    /// that folder stays where it is.
+    /// that folder stays where it is, and one inside another being moved goes with it.
     @discardableResult
     public func move(_ items: [URL], into folder: URL) throws -> [URL] {
         try checkDestination(folder, for: items)
         try items.forEach(checkChangeable)
-        return try items.map { item in
+        return try Self.outermost(items).map { item in
             guard !Self.isSameItem(item.deletingLastPathComponent(), folder) else { return item }
             let destination = try freeLocation(for: item.lastPathComponent, in: folder)
             try FileManager.default.moveItem(at: item, to: destination)
@@ -102,10 +102,11 @@ public struct FileOperations: Sendable {
         }
     }
 
-    /// Deletes items. A link is deleted, never its target. This can't be undone.
+    /// Deletes items. A link is deleted, never its target, and an item inside another being deleted goes
+    /// with it. This can't be undone.
     public func delete(_ items: [URL]) throws {
         try items.forEach(checkChangeable)
-        try items.forEach { try FileManager.default.removeItem(at: $0) }
+        try Self.outermost(items).forEach { try FileManager.default.removeItem(at: $0) }
     }
 
     /// Deletes everything in a folder and keeps the folder, for `Caches` and `tmp`. This can't be undone.
@@ -189,6 +190,31 @@ public struct FileOperations: Sendable {
             }
         }
         throw FileOperationError.noFreeName(name)
+    }
+
+    /// The items that aren't inside another of them, so a search through subfolders can select a folder
+    /// and something in it without the second one failing or being copied twice.
+    static func outermost(_ items: [URL]) -> [URL] {
+        let locations = items.map(FileRoot.location(of:))
+        return zip(items, locations).compactMap { item, location in
+            let isInsideAnother = locations.contains { other in
+                other.count < location.count && location.starts(with: other)
+            }
+            return isInsideAnother ? nil : item
+        }
+    }
+
+    /// Copies an item, and removes what was copied so far if the system stops partway, such as when the
+    /// disk is full. If the app took the name in the meantime, its item is left alone.
+    private static func copyItem(at item: URL, to copy: URL) throws {
+        do {
+            try FileManager.default.copyItem(at: item, to: copy)
+        } catch let error as CocoaError where error.code == .fileWriteFileExists {
+            throw error
+        } catch {
+            try? FileManager.default.removeItem(at: copy)
+            throw error
+        }
     }
 
     /// `fileExists` follows links, so a link whose target is gone would otherwise look free.
