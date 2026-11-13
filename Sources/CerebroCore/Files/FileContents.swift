@@ -27,7 +27,7 @@ public enum FileFormat: Sendable, Equatable {
     ]
 
     /// How many bytes from the start of a file the format looks at.
-    public static let headerLength = 64
+    static let headerLength = 64
 
     /// The format of a file, from its extension and then its first bytes. Pass an empty header to go
     /// by the name alone.
@@ -90,24 +90,30 @@ public enum FileContents {
         return (data, max(totalBytes, data.count))
     }
 
-    /// A property list as JSON. A value JSON can't hold is written as text: a date in ISO 8601, and data
-    /// as Base64. `nil` if the bytes aren't a property list.
-    public static func propertyListJSON(_ data: Data) -> Data? {
+    /// A property list as JSON. A value JSON can't hold is written as text: a date in ISO 8601, data as
+    /// Base64, and anything else, such as the references in an `NSKeyedArchiver` archive, as its
+    /// description. `nil` if the bytes aren't a property list.
+    static func propertyListJSON(_ data: Data) -> Data? {
         guard let object = try? PropertyListSerialization.propertyList(from: data, format: nil) else { return nil }
-        return try? JSONSerialization.data(
-            withJSONObject: jsonValue(of: object), options: [.fragmentsAllowed, .sortedKeys])
+        let value = jsonValue(of: object)
+        // JSONSerialization raises an Objective-C exception for a value it can't write, which `try?`
+        // doesn't catch and which would end the app, so it's checked first.
+        guard value is String || value is NSNumber || JSONSerialization.isValidJSONObject(value) else { return nil }
+        return try? JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
     }
 
     private static func jsonValue(of value: Any) -> Any {
         switch value {
         case let dictionary as [String: Any]: return dictionary.mapValues(jsonValue)
         case let array as [Any]: return array.map(jsonValue)
+        case let text as String: return text
         case let date as Date: return date.formatted(.iso8601)
         case let data as Data: return data.base64EncodedString()
-        case let number as NSNumber where CFGetTypeID(number) != CFBooleanGetTypeID():
+        case let number as NSNumber:
             // JSON has no infinity or NaN.
-            return number.doubleValue.isFinite ? number : number.stringValue
-        default: return value
+            let isBoolean = CFGetTypeID(number) == CFBooleanGetTypeID()
+            return isBoolean || number.doubleValue.isFinite ? number : number.stringValue
+        default: return String(describing: value)
         }
     }
 

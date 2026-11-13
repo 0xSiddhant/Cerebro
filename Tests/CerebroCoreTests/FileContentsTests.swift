@@ -49,6 +49,23 @@ import Testing
     #expect((json["list"] as? [Any])?.count == 2)
 }
 
+/// An archive's references are values JSON can't hold, and writing one raised an exception that ended the app.
+@Test func aKeyedArchiveOpensAsJSONWithoutCrashing() throws {
+    let folder = try TemporaryFolder()
+    defer { folder.remove() }
+    let file = folder.url.appendingPathComponent("cache")
+    let archive = try NSKeyedArchiver.archivedData(
+        withRootObject: ["token": "abc", "count": 3] as NSDictionary, requiringSecureCoding: false)
+    try archive.write(to: file)
+
+    let body = try FileContents.body(of: file, root: folder.root, limit: 100_000)
+    let json = try #require(body.data.flatMap { try JSONSerialization.jsonObject(with: $0) as? [String: Any] })
+
+    #expect(body.isDecoded)
+    #expect(json["$archiver"] as? String == "NSKeyedArchiver")
+    #expect(json["$top"] is [String: Any])
+}
+
 @Test func aPropertyListOpensAsItsBytesWhenAskedOrWhenItsOverTheLimit() throws {
     let folder = try TemporaryFolder()
     defer { folder.remove() }
