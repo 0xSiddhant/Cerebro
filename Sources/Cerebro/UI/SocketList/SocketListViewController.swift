@@ -21,7 +21,7 @@ final class SocketListViewController: UITableViewController {
         self.viewModel = viewModel
         self.store = store
         self.archive = previousSessionTitle == nil ? archive : nil
-        super.init(style: .plain)
+        super.init(style: .insetGrouped)
         title = previousSessionTitle ?? "Sockets"
         // The tabs belong to the live session, so they'd be misleading over a saved one.
         hidesBottomBarWhenPushed = previousSessionTitle != nil

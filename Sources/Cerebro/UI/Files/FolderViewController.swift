@@ -35,7 +35,7 @@ final class FolderViewController: UITableViewController {
 
     init(viewModel: FolderViewModel) {
         self.viewModel = viewModel
-        super.init(style: .plain)
+        super.init(style: .insetGrouped)
         title = viewModel.title
     }
 

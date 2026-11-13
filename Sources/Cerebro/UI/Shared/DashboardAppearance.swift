@@ -26,9 +26,9 @@ extension DashboardTheme {
             .setTitleTextAttributes([.foregroundColor: accent], for: .selected)
     }
 
-    /// A list's colours. A plain list is all card, and a grouped one sets its cards on the background.
+    /// A list's colours: its rows are cards on the page's background, as on every screen.
     static func style(_ tableView: UITableView) {
-        tableView.backgroundColor = tableView.style == .plain ? card : background
+        tableView.backgroundColor = background
         tableView.separatorColor = separator
     }
 

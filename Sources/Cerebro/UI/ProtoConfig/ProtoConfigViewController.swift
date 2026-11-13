@@ -8,7 +8,7 @@ final class ProtoConfigViewController: UITableViewController {
 
     init(viewModel: ProtoConfigViewModel) {
         self.viewModel = viewModel
-        super.init(style: .plain)
+        super.init(style: .insetGrouped)
         title = "Proto Config"
     }
 

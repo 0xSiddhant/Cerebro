@@ -64,7 +64,7 @@ final class SocketFrameCell: UITableViewCell {
         receivedConstraint.isActive = !row.isSent
         bubble.backgroundColor =
             row.didFail
-            ? DashboardTheme.failure : row.isSent ? DashboardTheme.accentFill : DashboardTheme.raised
+            ? DashboardTheme.failure : row.isSent ? DashboardTheme.accentFill : DashboardTheme.card
         message.textColor = row.isSent ? DashboardTheme.onFill : DashboardTheme.primaryText
         detail.textColor = row.isSent ? DashboardTheme.onFill.withAlphaComponent(0.8) : DashboardTheme.secondaryText
     }

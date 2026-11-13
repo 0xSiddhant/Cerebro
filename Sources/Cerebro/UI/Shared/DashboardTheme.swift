@@ -35,13 +35,13 @@ enum DashboardTheme {
 
     // MARK: - Surfaces
 
-    /// Behind everything, such as around a grouped list's cards, or a bar.
+    /// The page behind everything, and the bars above it, so a screen reads as one surface.
     static let background = dynamic(light: 0xF5F1_FC, dark: 0x0B06_14)
 
-    /// A card, a row, or a whole plain list.
+    /// A card on the page, such as a list's row or a frame the other side sent.
     static let card = dynamic(light: 0xFFFF_FF, dark: 0x170D_26)
 
-    /// Something raised on a card, such as a frame the other side sent.
+    /// Something that floats above the page, such as a toast.
     static let raised = dynamic(light: 0xEDE6_F8, dark: 0x2416_40)
 
     /// A search field or another place to type.

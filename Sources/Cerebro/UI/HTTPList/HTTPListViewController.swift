@@ -39,7 +39,7 @@ final class HTTPListViewController: UITableViewController {
         self.viewModel = viewModel
         self.archive = archive
         self.previousSessionTitle = previousSessionTitle
-        super.init(style: .plain)
+        super.init(style: .insetGrouped)
         title = previousSessionTitle ?? "HTTP"
         // The tabs belong to the live session, so they'd be misleading over a saved one.
         hidesBottomBarWhenPushed = previousSessionTitle != nil
