@@ -26,15 +26,17 @@ extension DashboardTheme {
             .setTitleTextAttributes([.foregroundColor: accent], for: .selected)
     }
 
+    /// The space between the bars and a list's first card.
+    private static let listTopSpacing: CGFloat = 16
+
     /// A list's colours: its rows are cards on the page's background, as on every screen.
     static func style(_ tableView: UITableView) {
         tableView.backgroundColor = background
         tableView.separatorColor = separator
-        // A grouped list leaves a tall gap above its first card when it has no header view. A screen that
-        // sets its own, such as System Info's summary card, replaces this one.
+        // A grouped list leaves a tall gap above its first card when it has no header view, so this one
+        // sets a smaller one. A screen that sets its own, such as System Info's summary card, replaces it.
         if tableView.style != .plain, tableView.tableHeaderView == nil {
-            let none = CGRect(x: 0, y: 0, width: 0, height: CGFloat.leastNonzeroMagnitude)
-            tableView.tableHeaderView = UIView(frame: none)
+            tableView.tableHeaderView = UIView(frame: CGRect(x: 0, y: 0, width: 0, height: listTopSpacing))
         }
     }
 
