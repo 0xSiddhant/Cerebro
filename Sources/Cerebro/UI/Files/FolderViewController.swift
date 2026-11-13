@@ -288,12 +288,14 @@ extension FolderViewController {
         let flexible = UIBarButtonItem.flexibleSpace()
         let buttons = [FileAction.share, .copyTo, .moveTo, .delete].compactMap { selectionButtons[$0] }
         toolbarItems = isSelecting ? Array(buttons.map { [$0, flexible] }.joined().dropLast()) : nil
-        // The tab bar floats over the toolbar on iOS 26, so it steps aside while items are selected.
-        if #available(iOS 18, *) {
+        // On iOS 26 the tab bar floats over the toolbar, so it steps aside while items are selected.
+        // Earlier designs place the toolbar above the tab bar. The floating bar needs an app built with
+        // the iOS 26 SDK, which comes with Swift 6.2, and older compilers don't know `setTabBarHidden`.
+        #if compiler(>=6.2)
+        if #available(iOS 26, *) {
             tabBarController?.setTabBarHidden(isSelecting, animated: true)
-        } else {
-            tabBarController?.tabBar.isHidden = isSelecting
         }
+        #endif
         navigationController?.setToolbarHidden(!isSelecting, animated: true)
         updateSelectionButtons()
     }
