@@ -424,7 +424,8 @@ Long-press an item for its menu, or swipe it: left for Delete and Share, right f
 - **Nothing is overwritten.** A copy, a move or an import into a folder that already has that name gets `name 2.ext`, then `name 3.ext`. A rename or a new folder with a taken name is refused.
 - **Nothing can be undone,** which is why both deletes ask first.
 - **Only what applies is offered.** The app bundle's items, and any item your app can't write, offer only the previews, Info, Copy Path and Share.
-- **A failure changes nothing else.** It shows the system's reason.
+- **Checks come first.** A name that's taken or not allowed, a path outside the location, or the app bundle is refused before anything changes. If the system fails partway instead, for example when the disk fills during a copy, the alert shows its reason. A copy it stopped is removed, but in a selection, the items already moved or deleted stay that way.
+- **A folder and something inside it** can both be selected in a search through subfolders. The item inside goes with its folder, so it isn't copied twice.
 - **Nothing outside a location can be reached.** Every path is checked after following symbolic links, so a link or a name such as `..` that leads outside is refused. A device's sandbox already stops that, but a simulator doesn't, and this keeps Cerebro away from your Mac's files. Deleting or renaming a link changes the link, never its target.
 
 Deleting `Library/Caches/Cerebro` only removes the [saved sessions](#previous-sessions).
