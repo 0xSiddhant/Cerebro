@@ -4,6 +4,15 @@ import Foundation
 import CerebroCore
 #endif
 
+/// Where a body came from, which changes what the viewer says about it.
+enum BodyViewerSource {
+    /// Captured traffic.
+    case capture
+
+    /// A file in the app's sandbox, read up to the stored-body cap.
+    case file
+}
+
 /// Formats a body only when it's opened, and off the main thread.
 @MainActor
 final class BodyViewerViewModel {
@@ -30,16 +39,33 @@ final class BodyViewerViewModel {
     /// The views this body offers, in order. Only a decoded body has a tree, and it opens there.
     let modes: [Mode]
 
+    /// A line above the body saying it was cut off, for a file. A captured body says so where it's listed.
+    let notice: String?
+
+    /// What the warning says before the body is shared.
+    let shareWarning: ShareWarning
+
     private let body: CapturedBody
 
-    init(title: String, body: CapturedBody) {
+    init(title: String, body: CapturedBody, source: BodyViewerSource = .capture) {
         self.title = title
         self.body = body
         modes = body.isDecoded ? [.tree, .pretty, .raw] : [.pretty, .raw]
-        if case .truncated = body.content {
-            copyMessage = "Copied. This body was cut off at capture, so it's incomplete."
-        } else {
+        shareWarning = source == .file ? .files : .capturedData
+        guard case .truncated(let data) = body.content else {
             copyMessage = "Copied."
+            notice = nil
+            return
+        }
+        switch source {
+        case .capture:
+            copyMessage = "Copied. This body was cut off at capture, so it's incomplete."
+            notice = nil
+        case .file:
+            copyMessage = "Copied. This file was cut off at the body limit, so it's incomplete."
+            let shown = DisplayFormat.bytes(Int64(data.count))
+            let hex = body.undecoded == nil ? "" : ", as hex"
+            notice = "Truncated: the first \(shown) of \(DisplayFormat.bytes(Int64(body.byteCount)))\(hex)"
         }
     }
 
