@@ -14,6 +14,33 @@ struct DashboardSources {
 
     /// The sessions kept on disk, or `nil` if persistence is off.
     let archive: SessionArchive?
+
+    /// The most bytes the Files tab reads of a file for the Body Viewer.
+    let bodyLimit: Int
+
+    /// Whether the dashboard has a Files tab.
+    let isFileBrowserEnabled: Bool
+
+    /// The data container, the app bundle and the named App Group containers that exist. Empty while
+    /// the Files tab is off.
+    let fileRoots: [FileRoot]
+}
+
+/// The dashboard's tabs, in the order the bar shows them. An iPhone shows five before it adds More.
+enum DashboardTab: Equatable {
+    case http
+    case sockets
+    case protoConfig
+    case files
+    case systemInfo
+
+    /// Proto Config only shows with rules to list, and Files only while it's on.
+    static func visible(hasProtoMappings: Bool, isFileBrowserEnabled: Bool) -> [Self] {
+        [.http, .sockets]
+            + (hasProtoMappings ? [.protoConfig] : [])
+            + (isFileBrowserEnabled ? [.files] : [])
+            + [.systemInfo]
+    }
 }
 
 /// The dashboard's shell.
@@ -23,40 +50,51 @@ final class DashboardTabBarController: UITabBarController {
     init(sources: DashboardSources, onClose: @escaping () -> Void) {
         self.onClose = onClose
         super.init(nibName: nil, bundle: nil)
-        let (store, socketStore, decoders) = (sources.store, sources.socketStore, sources.decoders)
-        var tabs = [
-            makeTab(
-                root: HTTPListViewController(viewModel: HTTPListViewModel(store: store), archive: sources.archive),
-                title: "HTTP",
-                image: "network"
-            ),
-            makeTab(
-                root: SocketListViewController(
-                    viewModel: SocketListViewModel(store: socketStore), store: socketStore, archive: sources.archive),
-                title: "Sockets",
-                image: "bolt.horizontal"
-            ),
-        ]
-        if ProtoConfigViewModel.hasMappings(in: decoders) {
-            let viewModel = ProtoConfigViewModel(decoders: decoders, store: store, socketStore: socketStore)
-            tabs.append(
-                makeTab(
-                    root: ProtoConfigViewController(viewModel: viewModel), title: "Proto Config", image: "curlybraces")
-            )
-        }
-        tabs.append(
-            makeTab(
-                root: SystemInfoViewController(viewModel: SystemInfoViewModel(sources: sources)),
-                title: "System Info",
-                image: "info.circle"
-            )
+        let tabs = DashboardTab.visible(
+            hasProtoMappings: ProtoConfigViewModel.hasMappings(in: sources.decoders),
+            isFileBrowserEnabled: sources.isFileBrowserEnabled
         )
-        viewControllers = tabs
+        viewControllers = tabs.map { makeTab($0, sources: sources) }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("DashboardTabBarController is built in code")
+    }
+
+    private func makeTab(_ tab: DashboardTab, sources: DashboardSources) -> UINavigationController {
+        let (store, socketStore, decoders) = (sources.store, sources.socketStore, sources.decoders)
+        switch tab {
+        case .http:
+            return makeTab(
+                root: HTTPListViewController(viewModel: HTTPListViewModel(store: store), archive: sources.archive),
+                title: "HTTP",
+                image: "network"
+            )
+        case .sockets:
+            return makeTab(
+                root: SocketListViewController(
+                    viewModel: SocketListViewModel(store: socketStore), store: socketStore, archive: sources.archive),
+                title: "Sockets",
+                image: "bolt.horizontal"
+            )
+        case .protoConfig:
+            let viewModel = ProtoConfigViewModel(decoders: decoders, store: store, socketStore: socketStore)
+            return makeTab(
+                root: ProtoConfigViewController(viewModel: viewModel), title: "Proto Config", image: "curlybraces")
+        case .files:
+            return makeTab(
+                root: FileLocationsViewController(roots: sources.fileRoots, bodyLimit: sources.bodyLimit),
+                title: "Files",
+                image: "folder"
+            )
+        case .systemInfo:
+            return makeTab(
+                root: SystemInfoViewController(viewModel: SystemInfoViewModel(sources: sources)),
+                title: "System Info",
+                image: "info.circle"
+            )
+        }
     }
 
     private func makeTab(root: UIViewController, title: String, image: String) -> UINavigationController {

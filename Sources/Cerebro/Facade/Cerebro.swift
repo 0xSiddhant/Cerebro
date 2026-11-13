@@ -23,6 +23,7 @@ public enum Cerebro {
         }
         guard let started else { return }
         Task { @MainActor in
+            let isFileBrowserEnabled = configuration.isFileBrowserEnabled
             dashboard = DashboardWindowManager(
                 sources: DashboardSources(
                     store: started.store,
@@ -30,7 +31,11 @@ public enum Cerebro {
                     decoders: configuration.decoders,
                     systemInfo: started.systemInfo,
                     downloads: started.downloads,
-                    archive: started.archive
+                    archive: started.archive,
+                    bodyLimit: max(configuration.bodyLimit, 0),
+                    isFileBrowserEnabled: isFileBrowserEnabled,
+                    fileRoots: isFileBrowserEnabled
+                        ? FileRoot.available(appGroupIdentifiers: configuration.appGroupIdentifiers) : []
                 ),
                 isShakeGestureEnabled: configuration.isShakeGestureEnabled
             )
