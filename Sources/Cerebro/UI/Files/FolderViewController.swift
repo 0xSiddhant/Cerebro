@@ -91,6 +91,8 @@ final class FolderViewController: UITableViewController {
 
     private func cell(in table: UITableView, at indexPath: IndexPath, for id: URL) -> UITableViewCell {
         let cell = table.dequeueReusableCell(withIdentifier: Self.cellIdentifier, for: indexPath)
+        // Here rather than when a row scrolls in, so a row redrawn after its size was reset is measured too.
+        viewModel.measureIfNeeded(id)
         guard let row = viewModel.row(for: id) else { return cell }
         var content = UIListContentConfiguration.subtitleCell()
         content.image = UIImage(systemName: row.symbol)
@@ -137,16 +139,6 @@ final class FolderViewController: UITableViewController {
         Task {
             await viewModel.load(resettingSizes: true)
             refreshControl?.endRefreshing()
-        }
-    }
-
-    override func tableView(
-        _ tableView: UITableView,
-        willDisplay cell: UITableViewCell,
-        forRowAt indexPath: IndexPath
-    ) {
-        if let id = dataSource.itemIdentifier(for: indexPath) {
-            viewModel.measureIfNeeded(id)
         }
     }
 

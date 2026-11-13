@@ -53,7 +53,8 @@ final class FolderViewModel {
     /// Whether the rows are subfolder results, which also say where each one is.
     private var showsParents = false
     private var sizes: [URL: FolderMeasurement] = [:]
-    private var measurements: [URL: Task<Void, Never>] = [:]
+    private var measurements: [URL: Measuring] = [:]
+    private var measuringCount = 0
     private var watching: Task<Void, Never>?
     private var generation = 0
 
@@ -69,7 +70,7 @@ final class FolderViewModel {
     deinit {
         pendingRefresh?.cancel()
         watching?.cancel()
-        measurements.values.forEach { $0.cancel() }
+        measurements.values.forEach { $0.task.cancel() }
     }
 
     var title: String {
@@ -86,11 +87,17 @@ final class FolderViewModel {
 
     // MARK: - Listing
 
-    /// Reads the folder again. `resettingSizes` also measures its folders again when they next appear,
-    /// which a reload for an added or removed entry doesn't need.
-    func load(resettingSizes: Bool = false) async {
+    /// Reads the folder again. `resettingSizes` also measures its folders again, which a reload for an
+    /// added or removed entry doesn't need. `refreshingSearch` runs a subfolder search again, which the
+    /// watcher skips because it only sees this folder.
+    func load(resettingSizes: Bool = false, refreshingSearch: Bool = true) async {
         loads += 1
         let (load, root, folder) = (loads, root, folder)
+        // Now, not once the listing arrives, so a newer load that arrives first can't skip it.
+        if resettingSizes {
+            sizes = [:]
+            cancelMeasurements()
+        }
         let result = await Task.detached(priority: .userInitiated) {
             Result {
                 let entries = try FolderListing.entries(in: folder, root: root)
@@ -104,13 +111,12 @@ final class FolderViewModel {
         case .success(let (entries, isWritable)):
             self.entries = entries
             isFolderWritable = isWritable
-            if resettingSizes {
-                sizes = [:]
-            }
+            guard refreshingSearch || !isSearchingSubfolders else { return }
             refresh()
             await pendingRefresh?.value
         case .failure(let error):
             entries = []
+            isFolderWritable = false
             generation += 1
             let failed = Listing(
                 items: [], visible: [:], changed: [], showsParents: false, notice: error.localizedDescription)
@@ -124,7 +130,7 @@ final class FolderViewModel {
         let changes = FolderWatcher.changes(in: folder)
         watching = Task { [weak self] in
             for await _ in changes {
-                await self?.load()
+                await self?.load(refreshingSearch: false)
             }
         }
     }
@@ -133,8 +139,11 @@ final class FolderViewModel {
     func stopWatching() {
         watching?.cancel()
         watching = nil
-        measurements.values.forEach { $0.cancel() }
-        measurements = [:]
+        cancelMeasurements()
+    }
+
+    private var isSearchingSubfolders: Bool {
+        searchScope == .subfolders && !searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private func refreshIfChanged(_ isChanged: Bool) {
@@ -150,7 +159,7 @@ final class FolderViewModel {
         generation += 1
         let (generation, root, folder, entries, previous) = (generation, root, folder, entries, visible)
         let (order, query) = (sortOrder, searchText.trimmingCharacters(in: .whitespaces))
-        let searchesSubfolders = searchScope == .subfolders && !query.isEmpty
+        let (searchesSubfolders, measured) = (isSearchingSubfolders, Set(sizes.keys))
         // A row reads differently once it says where it is, so every row is redrawn when that changes.
         let redrawsAll = searchesSubfolders != showsParents
         pendingRefresh = Task.detached(priority: .userInitiated) { [weak self] in
@@ -171,8 +180,10 @@ final class FolderViewModel {
             let listing = Listing(
                 items: sorted.map(\.url),
                 visible: Dictionary(sorted.map { ($0.url, $0) }, uniquingKeysWith: { first, _ in first }),
+                // A folder with no size yet is redrawn too, which is what measures it.
                 changed: sorted.filter { entry in
-                    previous[entry.url].map { redrawsAll || $0 != entry } ?? false
+                    let isUnmeasured = entry.kind == .folder && !measured.contains(entry.url)
+                    return previous[entry.url].map { redrawsAll || isUnmeasured || $0 != entry } ?? false
                 }
                 .map(\.url),
                 showsParents: searchesSubfolders,
@@ -241,21 +252,36 @@ final class FolderViewModel {
         )
     }
 
-    /// Works out a folder's size once its row is on screen. Leaving the screen cancels it.
+    /// Works out a folder's size when its row is drawn. Leaving the screen cancels it.
     func measureIfNeeded(_ id: URL) {
         guard visible[id]?.kind == .folder, sizes[id] == nil, measurements[id] == nil else { return }
-        let root = root
-        measurements[id] = Task.detached(priority: .utility) { [weak self] in
+        measuringCount += 1
+        let (root, token) = (root, measuringCount)
+        let task = Task.detached(priority: .utility) { [weak self] in
             let measurement = try? FolderMeasurement.measure(id, root: root)
-            await self?.finishMeasuring(id, measurement)
+            await self?.finishMeasuring(id, measurement, token: token)
         }
+        measurements[id] = Measuring(token: token, task: task)
     }
 
-    private func finishMeasuring(_ id: URL, _ measurement: FolderMeasurement?) {
+    /// A measurement that was cancelled or replaced finds a different token, and changes nothing.
+    private func finishMeasuring(_ id: URL, _ measurement: FolderMeasurement?, token: Int) {
+        guard measurements[id]?.token == token else { return }
         measurements[id] = nil
         guard let measurement else { return }
         sizes[id] = measurement
         onSizesChange?([id])
+    }
+
+    private func cancelMeasurements() {
+        measurements.values.forEach { $0.task.cancel() }
+        measurements = [:]
+    }
+
+    /// One folder being measured.
+    private struct Measuring {
+        let token: Int
+        let task: Task<Void, Never>
     }
 
 }
