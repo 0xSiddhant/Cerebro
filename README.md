@@ -9,9 +9,9 @@
 [![SPM compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)](#swift-package-manager)
 [![CocoaPods via Git](https://img.shields.io/badge/CocoaPods-via%20Git-EE3322)](#cocoapods)
 
-A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app, shows [Server-Sent Events](docs/GUIDE.md#server-sent-events) live while a stream is still open, and decodes protobuf to JSON when you add rules for it. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
+A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app, shows [Server-Sent Events](docs/GUIDE.md#server-sent-events) live while a stream is still open, and decodes protobuf to JSON when you add rules for it. Its [Files](docs/GUIDE.md#files) tab browses, previews and changes the files your app keeps in its sandbox. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
 
-**Status:** HTTP, live Server-Sent Events, WebSocket and NWConnection capture, protobuf decoding, the dashboard, System Info, export and previous sessions work today.
+**Status:** HTTP, live Server-Sent Events, WebSocket and NWConnection capture, protobuf decoding, the dashboard, System Info, export, previous sessions and the Files tab work today.
 
 ## Screenshots
 
@@ -20,13 +20,16 @@ A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket an
     <td align="center" valign="top"><img src="docs/screenshots/http-list.png" width="180" alt="The HTTP list with a search field, status filters and one row per request, each with a coloured method tag, and an SSE tag on a live and an ended event stream"><br><sub>HTTP list</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/inspector-response.png" width="180" alt="The Log Inspector's Response page with the summary, a body preview and the response headers"><br><sub>Log Inspector: Response</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/inspector-request.png" width="180" alt="The Log Inspector's Request page with the URL, method, body, query and headers"><br><sub>Log Inspector: Request</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/inspector-metrics.png" width="180" alt="The Log Inspector's Metrics page with timing bars for DNS, Connect, TLS and first byte, and body sizes"><br><sub>Log Inspector: Metrics</sub></td>
   </tr>
   <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/inspector-metrics.png" width="180" alt="The Log Inspector's Metrics page with timing bars for DNS, Connect, TLS and first byte, and body sizes"><br><sub>Log Inspector: Metrics</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/body-viewer.png" width="180" alt="The Body Viewer showing a JSON response, pretty-printed, with copy and share buttons"><br><sub>Body Viewer</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/inspector-events.png" width="180" alt="The Log Inspector on a live Server-Sent Events stream, with the event count in the summary and each event listed with its type, ID, time and data, one of them redacted"><br><sub>Log Inspector: live events</sub></td>
+  </tr>
+  <tr>
     <td align="center" valign="top"><img src="docs/screenshots/sockets-list.png" width="180" alt="The Sockets list with one NWConnection, one WebSocket and one external socket, each with a tag for its source"><br><sub>Sockets</sub></td>
     <td align="center" valign="top"><img src="docs/screenshots/socket-timeline.png" width="180" alt="A WebSocket timeline with sent and received frames, ping, pong and close events"><br><sub>Socket timeline</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/inspector-events.png" width="180" alt="The Log Inspector on a live Server-Sent Events stream, with the event count in the summary and each event listed with its type, ID, time and data, one of them redacted"><br><sub>Log Inspector: live events</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/files.png" width="180" alt="The Files tab on a folder, with an icon, size and date for an image, a JSON file, a file with no extension and a property list, and a search field"><br><sub>Files</sub></td>
   </tr>
 </table>
 
@@ -156,6 +159,7 @@ The [guide](docs/GUIDE.md) covers everything past setup:
 | [System Info](docs/GUIDE.md#system-info) | Network status, addresses, performance, session totals, app and device info, and the opt-in public IP |
 | [Previous sessions](docs/GUIDE.md#previous-sessions) | Reading the last session after a relaunch or a crash, and what's kept on disk |
 | [Export](docs/GUIDE.md#export) | Sharing a request as cURL or JSON, or the whole session as HAR |
+| [Files](docs/GUIDE.md#files) | Browsing, previewing, changing and sharing your app's files, and showing App Group containers |
 | [When Cerebro runs](docs/GUIDE.md#when-cerebro-runs) | On in simulators and development-signed builds, off elsewhere unless you opt in |
 | [What changes while Cerebro captures](docs/GUIDE.md#what-changes-while-cerebro-captures) | Side effects on your app's requests |
 | [What Cerebro can't capture](docs/GUIDE.md#what-cerebro-cant-capture) | WKWebView, AVPlayer and other limits |
