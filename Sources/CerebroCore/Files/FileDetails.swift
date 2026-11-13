@@ -5,7 +5,7 @@ public struct FileDetails: Sendable, Equatable {
     /// The POSIX permission bits, such as `0o644`.
     public let permissions: Int?
 
-    /// The data protection class, such as `NSFileProtectionComplete`. A simulator usually has none.
+    /// The data protection class, such as `NSURLFileProtectionComplete`. A simulator usually has none.
     public let protection: String?
 
     /// Whether the item is left out of iCloud and computer backups.
