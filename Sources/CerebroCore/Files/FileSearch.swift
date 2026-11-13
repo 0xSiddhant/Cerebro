@@ -17,11 +17,6 @@ public struct FileSearchResult: Sendable, Equatable {
     /// Why it stopped early, or `nil` if it looked everywhere.
     public let stop: Stop?
 
-    /// Creates a result.
-    public init(entries: [FileEntry], stop: Stop?) {
-        self.entries = entries
-        self.stop = stop
-    }
 }
 
 /// Finds items by name.

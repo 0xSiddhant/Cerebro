@@ -14,13 +14,6 @@ public struct FolderMeasurement: Sendable, Equatable {
     /// Whether counting stopped at the limit, so the folder holds more than this says.
     public let isPartial: Bool
 
-    /// Creates a measurement.
-    public init(byteCount: Int64, itemCount: Int, isPartial: Bool) {
-        self.byteCount = byteCount
-        self.itemCount = itemCount
-        self.isPartial = isPartial
-    }
-
     /// Measures a folder. It blocks, so call it from a task off the main thread, and cancelling that
     /// task stops it with `CancellationError`.
     public static func measure(
