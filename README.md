@@ -1,19 +1,35 @@
 <p align="center"><img src="docs/brand/icon.svg" width="128" alt="Cerebro's icon: a glowing violet globe on a near-black background, with the signals it has found on its surface"></p>
 
-# Cerebro
+<h1 align="center">Cerebro</h1>
 
-[![CI](https://github.com/0xSiddhant/Cerebro/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/0xSiddhant/Cerebro/actions/workflows/ci.yml)
-[![Release](https://github.com/0xSiddhant/Cerebro/actions/workflows/release.yml/badge.svg)](https://github.com/0xSiddhant/Cerebro/actions/workflows/release.yml)
-[![Latest release](https://img.shields.io/github/v/release/0xSiddhant/Cerebro?sort=semver)](https://github.com/0xSiddhant/Cerebro/releases/latest)
-[![License: MIT](https://img.shields.io/github/license/0xSiddhant/Cerebro)](LICENSE)
-[![iOS 16+](https://img.shields.io/badge/iOS-16%2B-000000?logo=apple&logoColor=white)](#requirements)
-[![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white)](Package.swift)
-[![SPM compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)](#swift-package-manager)
-[![CocoaPods via Git](https://img.shields.io/badge/CocoaPods-via%20Git-EE3322)](#cocoapods)
+<p align="center"><b>See every request your iOS app makes, and every file it keeps, from inside the app.</b></p>
 
-A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket and NWConnection traffic and shows it in a dashboard inside your app, shows [Server-Sent Events](docs/GUIDE.md#server-sent-events) live while a stream is still open, and decodes protobuf to JSON when you add rules for it. Its [Files](docs/GUIDE.md#files) tab browses, previews and changes the files your app keeps in its sandbox. It is built around zero code change: add it, start it with one line, and the rest of your app stays as it is.
+<p align="center">
+  <a href="https://github.com/0xSiddhant/Cerebro/actions/workflows/ci.yml"><img src="https://github.com/0xSiddhant/Cerebro/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI"></a>
+  <a href="https://github.com/0xSiddhant/Cerebro/actions/workflows/release.yml"><img src="https://github.com/0xSiddhant/Cerebro/actions/workflows/release.yml/badge.svg" alt="Release"></a>
+  <a href="https://github.com/0xSiddhant/Cerebro/releases/latest"><img src="https://img.shields.io/github/v/release/0xSiddhant/Cerebro?sort=semver" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/0xSiddhant/Cerebro" alt="License: MIT"></a>
+  <a href="#requirements"><img src="https://img.shields.io/badge/iOS-16%2B-000000?logo=apple&logoColor=white" alt="iOS 16+"></a>
+  <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white" alt="Swift 5.9+"></a>
+  <a href="#swift-package-manager"><img src="https://img.shields.io/badge/SPM-compatible-brightgreen" alt="SPM compatible"></a>
+  <a href="#cocoapods"><img src="https://img.shields.io/badge/CocoaPods-via%20Git-EE3322" alt="CocoaPods via Git"></a>
+</p>
 
-**Status:** HTTP, live Server-Sent Events, WebSocket and NWConnection capture, protobuf decoding, the dashboard, System Info, export, previous sessions and the Files tab work today.
+Cerebro is a debug-only inspector that lives in your app. Add the package, call `Cerebro.start()`, and a floating button opens a dashboard with everything your app sent and received, live, with no proxy, no certificates and no Mac.
+
+- **Every kind of traffic:** `URLSession`, including `URLSession.shared` and background sessions, `URLSessionWebSocketTask`, `NWConnection`, and [Server-Sent Events](docs/GUIDE.md#server-sent-events) as they stream in.
+- **Readable payloads:** pretty JSON, gzip unpacked, and [protobuf decoded to JSON](docs/GUIDE.md#protobuf-decoding) from rules you write once.
+- **Your app's files:** the [Files](docs/GUIDE.md#files) tab browses, previews, shares and changes what your app keeps on disk.
+- **Answers, not just logs:** timings, sizes, connection details, [System Info](docs/GUIDE.md#system-info), and [previous sessions](docs/GUIDE.md#previous-sessions) that survive a crash.
+- **Easy to share:** a request as cURL or JSON, or the whole session as [HAR](docs/GUIDE.md#export).
+- **Safe by default:** it [turns itself off](docs/GUIDE.md#when-cerebro-runs) in TestFlight and App Store builds, [redacts](docs/GUIDE.md#redaction) what you choose before anything is stored, and sends nothing off the device unless you ask.
+
+## Requirements
+
+> [!IMPORTANT]
+> **iOS and iPadOS 16+ · Swift 5.9 or later · No permissions · No `Info.plist` keys**
+>
+> One line of code to start. CI builds with Xcode 26.
 
 ## Screenshots
 
@@ -31,10 +47,6 @@ A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket an
 The [Example](Example) app produced these, and it's a quick way to try Cerebro: open `Example/CerebroExample.xcodeproj` and run it on a simulator.
 
 ## Getting started
-
-### Requirements
-
-iOS or iPadOS 16+ and Swift 5.9 or later. CI builds with Xcode 26. Cerebro needs no permissions and no `Info.plist` keys.
 
 ### 1. Install
 
