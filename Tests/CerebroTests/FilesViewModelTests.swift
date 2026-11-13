@@ -295,3 +295,78 @@ private func names(_ viewModel: FolderViewModel) -> [String] {
         try FileSharePreparation.prepare([FileEntry(url: fixture.base, kind: .folder)], root: fixture.root())
     }
 }
+
+@Test @MainActor func aSharedFileKeepsItsNameWithTheExtensionOfWhatsShared() {
+    let json = CapturedBody(content: .complete(Data("{\"a\":1}".utf8)), byteCount: 7)
+    let text = CapturedBody(content: .complete(Data("hello".utf8)), byteCount: 5)
+
+    #expect(
+        BodyViewerViewModel(title: "profile.json", body: json, source: .file).fileName(for: .pretty) == "profile.json")
+    #expect(
+        BodyViewerViewModel(title: "My Settings.plist", body: json, source: .file).fileName(for: .pretty)
+            == "My Settings.json")
+    #expect(BodyViewerViewModel(title: "notes.txt", body: text, source: .file).fileName(for: .raw) == "notes.txt")
+    #expect(
+        BodyViewerViewModel(title: "session-token", body: text, source: .file).fileName(for: .raw)
+            == "session-token.txt")
+    #expect(BodyViewerViewModel(title: "Response Body", body: json).fileName(for: .pretty) == "response-body.json")
+}
+
+@Test @MainActor func aFolderWithoutASizeIsRedrawnSoItGetsMeasured() async throws {
+    let fixture = try FilesFixture()
+    defer { fixture.remove() }
+    try fixture.file("Caches/a")
+    try fixture.file("note.txt")
+    let viewModel = await loaded(fixture)
+    let caches = try #require(viewModel.items.first { $0.lastPathComponent == "Caches" })
+    let measured = AsyncStream.makeStream(of: [URL].self)
+    viewModel.onSizesChange = { measured.continuation.yield($0) }
+
+    // Not measured yet, so a reload redraws it.
+    await viewModel.load()
+    #expect(viewModel.changedItems == [caches])
+
+    viewModel.measureIfNeeded(caches)
+    var updates = measured.stream.makeAsyncIterator()
+    _ = await updates.next()
+
+    // Measured, so an ordinary reload leaves it alone, and one that resets sizes redraws it again.
+    await viewModel.load()
+    #expect(viewModel.changedItems.isEmpty)
+    await viewModel.load(resettingSizes: true)
+    #expect(viewModel.changedItems == [caches])
+    #expect(viewModel.row(for: caches)?.detail.hasPrefix("…") == true)
+}
+
+@Test @MainActor func aWatcherReloadDoesntSearchSubfoldersAgain() async throws {
+    let fixture = try FilesFixture()
+    defer { fixture.remove() }
+    try fixture.file("Logs/today.log")
+    let viewModel = await loaded(fixture)
+    viewModel.searchScope = .subfolders
+    viewModel.searchText = "log"
+    await viewModel.pendingRefresh?.value
+    try fixture.file("Logs/tomorrow.log")
+
+    await viewModel.load(refreshingSearch: false)
+    #expect(!names(viewModel).contains("tomorrow.log"))
+
+    await viewModel.load()
+    #expect(names(viewModel).contains("tomorrow.log"))
+}
+
+@Test @MainActor func aFolderThatsGoneTakesNoNewItems() async throws {
+    let fixture = try FilesFixture()
+    defer { fixture.remove() }
+    let folder = fixture.url.appendingPathComponent("Doomed", isDirectory: true)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let viewModel = FolderViewModel(root: fixture.root(), folder: folder, bodyLimit: 1)
+    await viewModel.load()
+    #expect(viewModel.isFolderWritable)
+
+    try FileManager.default.removeItem(at: folder)
+    await viewModel.load()
+
+    #expect(!viewModel.isFolderWritable)
+    #expect(viewModel.notice != nil)
+}
