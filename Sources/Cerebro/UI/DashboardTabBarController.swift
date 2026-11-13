@@ -18,12 +18,9 @@ struct DashboardSources {
     /// The most bytes the Files tab reads of a file for the Body Viewer.
     let bodyLimit: Int
 
-    /// Whether the dashboard has a Files tab.
-    let isFileBrowserEnabled: Bool
-
-    /// The data container, the app bundle and the named App Group containers that exist. Empty while
-    /// the Files tab is off.
-    let fileRoots: [FileRoot]
+    /// The data container, the app bundle and the named App Group containers that exist, worked out off
+    /// the main thread once Cerebro starts. `nil` while the Files tab is off, which leaves it out.
+    let fileRoots: Task<[FileRoot], Never>?
 }
 
 /// The dashboard's tabs, in the order the bar shows them. An iPhone shows five before it adds More.
@@ -52,7 +49,7 @@ final class DashboardTabBarController: UITabBarController {
         super.init(nibName: nil, bundle: nil)
         let tabs = DashboardTab.visible(
             hasProtoMappings: ProtoConfigViewModel.hasMappings(in: sources.decoders),
-            isFileBrowserEnabled: sources.isFileBrowserEnabled
+            isFileBrowserEnabled: sources.fileRoots != nil
         )
         viewControllers = tabs.map { makeTab($0, sources: sources) }
     }

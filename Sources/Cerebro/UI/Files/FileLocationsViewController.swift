@@ -9,13 +9,15 @@ import CerebroCore
 final class FileLocationsViewController: UITableViewController {
     private static let cellIdentifier = "location"
 
-    private let roots: [FileRoot]
+    private let resolving: Task<[FileRoot], Never>?
     private let bodyLimit: Int
+    private var roots: [FileRoot] = []
     private var sizes: [FileRoot: FolderMeasurement] = [:]
     private var measuring: [Task<Void, Never>] = []
 
-    init(roots: [FileRoot], bodyLimit: Int) {
-        self.roots = roots
+    /// `roots` is still being worked out when the dashboard opens, so the screen waits for it.
+    init(roots: Task<[FileRoot], Never>?, bodyLimit: Int) {
+        resolving = roots
         self.bodyLimit = bodyLimit
         super.init(style: .insetGrouped)
         title = "Files"
@@ -33,7 +35,22 @@ final class FileLocationsViewController: UITableViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        measuring = roots.map { root in
+        let resolving = resolving
+        let showing = Task { [weak self] in
+            let roots = await resolving?.value ?? []
+            // Leaving the screen while this waited cancels it, and nothing should start after that.
+            guard !Task.isCancelled else { return }
+            self?.measure(roots)
+        }
+        measuring = [showing]
+    }
+
+    private func measure(_ roots: [FileRoot]) {
+        if roots != self.roots {
+            self.roots = roots
+            tableView.reloadData()
+        }
+        measuring += roots.map { root in
             Task.detached(priority: .utility) { [weak self] in
                 guard let size = try? FolderMeasurement.measure(root.url, root: root) else { return }
                 await self?.show(size, for: root)

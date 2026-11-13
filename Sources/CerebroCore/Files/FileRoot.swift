@@ -46,12 +46,17 @@ public struct FileRoot: Sendable, Hashable {
     }
 
     /// The data container, the app bundle, and each App Group container that resolves to a folder
-    /// that exists. An identifier that doesn't is left out, and the console says which.
-    public static func available(appGroupIdentifiers: [String]) -> [Self] {
+    /// that exists. An identifier that doesn't is left out, and the console says which unless
+    /// `consoleLevel` is `.off`. It blocks, so call it off the main thread.
+    public static func available(appGroupIdentifiers: [String], consoleLevel: ConsoleLevel) -> [Self] {
         available(
             appGroupIdentifiers: appGroupIdentifiers,
             containerURL: { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) },
-            log: { print($0) }
+            log: { line in
+                if consoleLevel != .off {
+                    print(line)
+                }
+            }
         )
     }
 
@@ -80,7 +85,7 @@ public struct FileRoot: Sendable, Hashable {
 
     /// Whether the item at `url` is this root or inside it. Symlinks in its folders are followed, but
     /// not one in its own name, so a link can be renamed or deleted without reaching its target.
-    public func containsItem(at url: URL) -> Bool {
+    func containsItem(at url: URL) -> Bool {
         Self.location(of: url).starts(with: canonicalComponents)
     }
 
