@@ -59,7 +59,9 @@ final class FileInfoViewModel {
             rows.append(FileInfoRow(title: "Link Target", value: target))
         }
         if let size = entry.size {
-            rows.append(FileInfoRow(title: "Size", value: "\(DisplayFormat.bytes(size)) (\(size.formatted()) bytes)"))
+            let rounded = DisplayFormat.bytes(size)
+            let exact = "\(size.formatted()) bytes"
+            rows.append(FileInfoRow(title: "Size", value: rounded == exact ? exact : "\(rounded) (\(exact))"))
         }
         if let contents {
             rows.append(FileInfoRow(title: "Contents", value: DisplayFormat.folderContents(contents)))
