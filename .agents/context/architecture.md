@@ -17,7 +17,8 @@ Pipeline            decompress → decode proto → redact, in the background   
 Transaction store   actor-backed ring buffer with size caps                   ◀── Network info: path monitor, interfaces, public IP
    │
    ▼
-Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (Cerebro)  ◀── Triggers: floating trigger, shake
+Dashboard           UIKit tabs: HTTP, sockets, proto, files, system info      (Cerebro)  ◀── Triggers: floating trigger, shake
+                                                                                          ◀── Files: the app's sandbox, read when a folder opens
 ```
 
 ## Patterns
@@ -58,6 +59,18 @@ Every other request reaches the store once, when it finishes. An event stream is
 4. The store saves a stream to disk only when it ends, and never puts back one it has evicted. One that was cleared while open is different: `update` reports when the clear was, and the processor adds the stream again with only the events since. When capture stops, the processor closes every stream still open.
 5. `TransactionStore.requestUpdates()` only fires when a request is added or removed. The trigger badge reads that, so an open stream causes no main-thread work while the dashboard is closed.
 
+## Files
+
+The Files tab browses the app's own sandbox. Files aren't traffic, so they never pass through capture, the pipeline or a store: they plug into the dashboard from the side, as network info does, and nothing is read until a folder opens.
+
+- `CerebroCore/Files/` has the logic, in Foundation only: the roots, listing, sizes, search, operations, classification for previews, and the folder watcher. `Cerebro/UI/Files/` has the screens, Quick Look and sharing.
+- There's no store and no cache of the tree. Each folder is read when its screen appears, sorted and searched off the main thread, and watched while it's on screen.
+- `FileRoot` is the boundary. The roots are the data container, the app bundle and each App Group named in `appGroupIdentifiers`, resolved once at start. Every operation resolves its paths, symlinks included, and refuses one that ends outside its root, because a simulator doesn't stop an app reaching the Mac's files. A link's own name isn't followed, so it can be renamed or deleted without touching its target.
+- The app bundle refuses every change, on a device and a simulator alike.
+- Files aren't redacted. Cerebro's own Share warns first, and Quick Look's share button can't be removed.
+
+The tab bar holds at most five tabs: HTTP, Sockets, Proto Config when there are rules, Files unless `isFileBrowserEnabled` is off, and System Info. That's what an iPhone shows before it adds More, so a sixth tab needs the bar rethought.
+
 ## Performance
 
 Speed comes from design, not language. The engine stays in Swift, because decompression and JSON already run in Apple's native libraries.
@@ -77,6 +90,7 @@ Redaction still comes first. With JSON keys configured, a JSON body is parsed at
 | `NWConnection` | Create `MonitoredNWConnection` instead | Network.framework has no Objective-C methods to hook |
 | Starscream, Socket.IO, others | One `ExternalNetworkBridge` call per frame or event | Their engines bypass URLSession |
 | Proto rules | One argument to `Cerebro.start`, for apps that decode protobuf | Those rules live in the app's target |
+| App Group containers in the Files tab | `appGroupIdentifiers`, for apps that share files with a widget or an extension | Entitlements can't be read at runtime, so iOS has no way to list an app's groups |
 
 ### Why `Cerebro.start()` stays
 
@@ -91,7 +105,7 @@ Every install option uses the same runtime check, because `#if DEBUG` inside a p
 | Module | Contains | Depends on |
 |---|---|---|
 | `CerebroCore` | Capture, pipeline, store, metrics, models, configuration | Foundation, Network, Compression, Security, CFNetwork, CoreTelephony |
-| `Cerebro` | Public facade, triggers, dashboard UI | `CerebroCore`, UIKit |
+| `Cerebro` | Public facade, triggers, dashboard UI | `CerebroCore`, UIKit, QuickLook, UniformTypeIdentifiers |
 | `CerebroProto` | Proto rules and decoder | `CerebroCore`, SwiftProtobuf |
 | `CerebroProtoPlugin` | Build-tool plugin that runs the generator on the app's target | SPM only |
 | `CerebroProtoGeneratorCore` | Reads `traffic_map.json` and `.pb.swift` files, writes `ProtoRule.generated`. A library so tests can link it on iOS | Foundation |

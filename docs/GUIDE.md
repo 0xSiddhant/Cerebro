@@ -12,6 +12,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 - [System Info](#system-info)
 - [Previous sessions](#previous-sessions)
 - [Export](#export)
+- [Files](#files)
 - [When Cerebro runs](#when-cerebro-runs)
 - [What changes while Cerebro captures](#what-changes-while-cerebro-captures)
 - [What Cerebro can't capture](#what-cerebro-cant-capture)
@@ -42,11 +43,12 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 - **System Info:** the network the device is on, how your requests are performing, session byte totals, downloads in progress, and the app and device. See [System Info](#system-info).
 - **Copy and share:** copy any request as cURL from its page, or by swiping or long-pressing it in the list, and share a command or body as text or a file.
 - **Export:** share one request as JSON, or the whole session as a HAR file. See [Export](#export).
+- **Files:** browse, preview, rename, copy, move, delete, share and import the app's own files, in its data container, its bundle and any App Group container you name. See [Files](#files).
 
 **Safety**
 
 - Stays off in Ad Hoc, TestFlight and App Store builds unless you opt in. See [When Cerebro runs](#when-cerebro-runs).
-- Redacts only what you select, before anything is stored: common credential headers, your own headers, body fields and query parameters. With no rules, `Authorization` and cookies are stored and shown as sent. See [Redaction](#redaction). Cerebro warns you before anything is shared.
+- Redacts only what you select, before anything is stored: common credential headers, your own headers, body fields and query parameters. With no rules, `Authorization` and cookies are stored and shown as sent. See [Redaction](#redaction). Cerebro warns you before anything is shared. Files are never redacted: the Files tab shows them exactly as they are on disk.
 - Keeps the live session in memory, capped by count and size, and sends nothing off the device. A redacted copy goes to the app's Caches folder, so the previous session survives a relaunch. See [Previous sessions](#previous-sessions).
 - Lives in its own window, so it never touches your navigation stack or takes touches outside its own views.
 
@@ -67,6 +69,8 @@ Every setting is optional. `Cerebro.start()` uses the defaults, and calling it a
 | `isPublicIPLookupEnabled` | `false` | Whether the System Info tab asks `api.ipify.org` for the device's public IP. See [System Info](#system-info) |
 | `isPersistenceEnabled` | `true` | Whether each session is also kept on disk. See [Previous sessions](#previous-sessions) |
 | `previousSessionLimit` | `1` | How many earlier sessions stay on disk |
+| `isFileBrowserEnabled` | `true` | Whether the dashboard has a Files tab. See [Files](#files) |
+| `appGroupIdentifiers` | `[]` | App Group containers the Files tab also shows, such as `"group.com.example.shared"` |
 
 ```swift
 Cerebro.start(CerebroConfiguration(
@@ -369,6 +373,91 @@ Every export goes through the share sheet, which warns first, because captured d
 - A [Server-Sent Events](#server-sent-events) stream is exported with the events it holds at that moment, and its `state` says whether it was still open.
 - A whole session can be large: up to twice `bodyLimit` for each of `requestLimit` requests. Lower either if exports are too big to share.
 
+## Files
+
+The Files tab shows your app's sandbox as folders and files, so you can see what your app wrote to disk, such as a stale cache, a bad preferences file or a database that should have been removed, without downloading the container from Xcode. It needs no code.
+
+It opens on a list of locations, each with its size:
+
+| Location | What it is | Changes |
+|---|---|---|
+| Data Container | Your app's home folder, with `Documents`, `Library`, `tmp` and `SystemData` | Allowed |
+| App Bundle | The installed app | Never. It's signed on a device, and Cerebro refuses changes on a simulator too, so both behave the same |
+| Each App Group you name | A container your app shares with a widget or an extension | Allowed |
+
+Open a location to see its folders, one level per screen. Tap the title to jump back to any folder above. Each row shows the item's size and when it changed, and a folder's size and item count appear once its row is on screen. Hidden files are listed like any other. A symbolic link is listed as a link with its target.
+
+- **Sort** by name, date modified or size from the **⋯** menu. Folders always come first.
+- **Search** by name in **This Folder**, or in **Subfolders**, which lists where each match is.
+- **Live:** a file your app adds, removes or renames shows up while its folder is open. A file that only grew keeps its old size until you pull down to refresh.
+
+### Previews
+
+Tap a file to open it in the viewer that suits it:
+
+| File | Opens in |
+|---|---|
+| Property list, binary or XML, by its extension or its first bytes | The Body Viewer, as JSON with a tree view. This makes `Library/Preferences`, where `UserDefaults` lives, readable. A date is shown in ISO 8601 and data as Base64 |
+| JSON | The Body Viewer, pretty-printed |
+| Images, PDF, audio, video, HTML, RTF, CSV, office and iWork documents, plain text | Quick Look, with zoom, paging and text search |
+| Anything else, such as SQLite or a file with no extension | The Body Viewer, as text if it's UTF-8 and as hex if not |
+
+The Body Viewer reads at most `bodyLimit` bytes, 1 MB by default, and says when a file was cut off. A property list over `bodyLimit` isn't converted and opens as hex. If a guess is wrong, long-press the file and choose **Open in Quick Look** or **Open as Text or Hex**. The first Quick Look preview can take a few seconds to appear. Quick Look's editing and markup are off.
+
+### Actions
+
+Long-press an item for its menu, or swipe it: left for Delete and Share, right for Info. Choose **Select** from the **⋯** menu to act on several items at once.
+
+| Action | On | What it does |
+|---|---|---|
+| Open in Quick Look, Open as Text or Hex | A file | Overrides the viewer Cerebro picked |
+| Info | One item | Name, type, location, path, size, created and modified dates, whether it's writable, permissions, data protection class, whether it's backed up, a link's target, and a folder's contents |
+| Copy Path | One item | The full path, or the path inside its location, such as `Library/Preferences/com.example.plist` |
+| Share | One item or a selection | Through the share sheet, after a warning. A folder is zipped first |
+| Rename | One item | Refused if the name is taken, empty, `.` or `..`, or holds a `/` |
+| Duplicate | One item | Makes `name 2.ext` beside it |
+| Copy To, Move To | One item or a selection | To a folder you pick in the same location |
+| Delete | One item or a selection | Asks first, and says how many items its folders hold |
+| Delete Contents | A folder | Empties it and keeps the folder, for `Caches` and `tmp`. Asks first |
+| New Folder, Import File | The open folder, from the **⋯** menu | Import copies in a file you pick with the system's document picker, to seed test data |
+
+- **Nothing is overwritten.** A copy, a move or an import into a folder that already has that name gets `name 2.ext`, then `name 3.ext`. A rename or a new folder with a taken name is refused.
+- **Nothing can be undone,** which is why both deletes ask first.
+- **Only what applies is offered.** The app bundle's items, and any item your app can't write, offer only the previews, Info, Copy Path and Share.
+- **Checks come first.** A name that's taken or not allowed, a path outside the location, or the app bundle is refused before anything changes. If the system fails partway instead, for example when the disk fills during a copy, the alert shows its reason. A copy it stopped is removed, but in a selection, the items already moved or deleted stay that way.
+- **A folder and something inside it** can both be selected in a search through subfolders. The item inside goes with its folder, so it isn't copied twice.
+- **Nothing outside a location can be reached.** Every path is checked after following symbolic links, so a link or a name such as `..` that leads outside is refused. A device's sandbox already stops that, but a simulator doesn't, and this keeps Cerebro away from your Mac's files. Deleting or renaming a link changes the link, never its target.
+
+Deleting `Library/Caches/Cerebro` only removes the [saved sessions](#previous-sessions).
+
+### Your app doesn't see the change
+
+Cerebro changes files, not your app's memory. If your app has a database open, or already read `UserDefaults`, it keeps its own copy until it reads again. **Relaunch your app** after changing a file it holds open.
+
+### Privacy
+
+Files aren't redacted. Your [redaction rules](#redaction) name headers, body keys and query parameters in traffic, and don't apply to files, which the tab shows exactly as they are on disk. Browsing copies, stores and sends nothing. A file leaves the device only when you share it, and Cerebro's Share warns first.
+
+Quick Look's own share button is the exception: it shares the file with no warning, because iOS has no public way to remove it.
+
+### Settings
+
+- `isFileBrowserEnabled: false` removes the tab, for example in builds you give testers with `allowsDistributionBuilds`, where you want traffic inspection without the power to delete your app's data.
+- `appGroupIdentifiers` adds each App Group container. iOS can't tell Cerebro which groups your app has, so name them:
+
+```swift
+Cerebro.start(CerebroConfiguration(appGroupIdentifiers: ["group.com.example.shared"]))
+```
+
+A group your app isn't entitled to is left out, and the console says which.
+
+### Limits
+
+- A folder's size and item count stop at 20,000 items, and then say "more than".
+- A search through subfolders stops at 50,000 items looked at or 500 matches, and says so.
+- Listing, sizes, search and every action run off the main thread, and leaving a screen stops its sizes.
+- Not shown: the Keychain, which isn't files, iCloud containers, and thumbnails. A file's contents can't be edited.
+
 ## When Cerebro runs
 
 `Cerebro.start()` decides from how the app is signed. Every install option uses the same check.
@@ -442,6 +531,9 @@ Cerebro keeps both the request and response body of up to 500 requests, so it ca
 | Build error: `no type in the .pb.swift files matches` | A name in `traffic_map.json` isn't in the files the generator read | Use the full proto name with its package, and check the `.pb.swift` file is in the target or under `--sources` |
 | No Proto Config tab | No rules were registered | Pass them to `registering(_:)` |
 | A socket is missing | It's a raw `NWConnection` or a third-party engine | See [Traffic that needs code](#traffic-that-needs-code) |
+| No Files tab | `isFileBrowserEnabled` is `false` | Remove the setting, or set it to `true` |
+| An App Group isn't in the Files tab | It isn't named in `appGroupIdentifiers`, or the app isn't entitled to it. The console says which | Name it, and check the App Groups capability of the app's target |
+| A file you changed in the Files tab didn't change in your app | Your app read it before and kept its own copy | Relaunch your app. See [Files](#files) |
 | `Authorization`, cookies or tokens are visible | Cerebro redacts nothing until you select it | Select them in `RedactionRules`. See [Redaction](#redaction) |
 | A body says it's withheld | `jsonKeys` are set and the body couldn't be redacted: it couldn't be parsed, it passed `bodyLimit`, or it's other text containing a key name | Expected, because a body that can't be redacted isn't stored. Raise `bodyLimit` if it was cut off, or use a longer key if a short one matches too much |
 | `No such module 'Cerebro'` | The product isn't linked to this target, or you opened the `.xcodeproj` of a CocoaPods app | Add the `Cerebro` product to the target, or open the `.xcworkspace` |

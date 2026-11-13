@@ -21,6 +21,7 @@ final class TrafficViewController: UITableViewController {
         super.viewDidLoad()
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
         TrafficSample.allCases.filter { $0.hint == nil }.forEach(run)
+        writeSampleFiles()
         // Also fires for a download an earlier launch started, if it's still running.
         BackgroundTransfers.onProgress = { [weak self] progress in
             self?.show(progress, for: .backgroundLargeDownload)
@@ -55,6 +56,17 @@ final class TrafficViewController: UITableViewController {
                 show(try await sample.run(), for: sample)
             } catch {
                 show(error.localizedDescription, for: sample)
+            }
+        }
+    }
+
+    /// Gives the dashboard's Files tab something to open.
+    private func writeSampleFiles() {
+        Task {
+            do {
+                print(try await SampleFiles.write())
+            } catch {
+                print("Couldn't write the sample files:", error.localizedDescription)
             }
         }
     }

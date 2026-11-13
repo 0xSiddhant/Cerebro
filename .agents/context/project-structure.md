@@ -28,7 +28,8 @@ Cerebro/
 ├── Example/                   # example app using the package by local path
 │   ├── traffic_map.json       # proto rules the build plugin turns into ProtoRule.generated
 │   └── CerebroExample/        # App (delegates and the Cerebro.start call), Screens, Samples (each kind
-│                              # of traffic and its helpers), Proto (generated .pb.swift), Resources
+│                              # of traffic and its helpers, and the files written for the Files tab),
+│                              # Proto (generated .pb.swift), Resources
 ├── Sources/
 │   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
 │   │   ├── HTTP/
@@ -47,13 +48,15 @@ Cerebro/
 │   │   │   ├── Store/         # ring buffer, snapshot observers, session archive
 │   │   │   ├── Models/        # captured body, named value
 │   │   │   └── Configuration/ # CerebroConfiguration, redaction rules, release gate
+│   │   ├── Files/             # Files tab: roots and containment, listing, sizes, search, operations,
+│   │   │                      # classification and reading for previews, folder watcher
 │   │   └── Metrics/           # network path, interfaces, public IP, totals, connection quality, download progress
 │   ├── Cerebro/
 │   │   ├── Facade/            # Cerebro.start / stop / present
 │   │   ├── Triggers/          # shake hook, floating trigger, PassthroughWindow, DashboardWindowManager
 │   │   └── UI/                # tab bar shell, then one folder per screen holding its view controller,
 │   │                          # view model and views (HTTPList, LogInspector, BodyViewer, SocketList,
-│   │                          # SocketTimeline, ProtoConfig); Shared for the rest
+│   │                          # SocketTimeline, ProtoConfig, SystemInfo, Files); Shared for the rest
 │   ├── CerebroProto/          # proto rules and decoder
 │   ├── CerebroProtoGenerator/ # the generator executable
 │   └── CerebroProtoGeneratorCore/ # reads traffic_map.json and .pb.swift files, writes ProtoRule.generated
@@ -66,6 +69,6 @@ Cerebro/
     └── CerebroProtoGeneratorTests/
 ```
 
-In `CerebroCore`, a file goes in `HTTP/` or `Socket/` if only that traffic uses it, and in `Shared/` if both do. Inside those, it goes in the subfolder for its layer: `Capture/`, `Pipeline/`, `Store/` or `Models/`.
+In `CerebroCore`, a file goes in `HTTP/` or `Socket/` if only that traffic uses it, and in `Shared/` if both do. Inside those, it goes in the subfolder for its layer: `Capture/`, `Pipeline/`, `Store/` or `Models/`. `Files/` isn't traffic, so it has no layers.
 
 An empty folder holds a `.gitkeep` so it gets committed. Delete that file when the folder gets real content.

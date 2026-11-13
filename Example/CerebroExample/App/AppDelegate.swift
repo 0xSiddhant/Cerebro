@@ -63,6 +63,16 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         //     Cerebro.start(CerebroConfiguration(isPersistenceEnabled: false))
         //     Cerebro.start(CerebroConfiguration(previousSessionLimit: 3))
         //
+        // Also show App Group containers in the Files tab, for files the app shares with a widget or an
+        // extension. iOS can't list an app's groups, so name each one. One the app isn't entitled to is left
+        // out, and the console says so:
+        //
+        //     Cerebro.start(CerebroConfiguration(appGroupIdentifiers: ["group.com.example.shared"]))
+        //
+        // Leave out the Files tab, which can delete the app's data, for example in builds for testers:
+        //
+        //     Cerebro.start(CerebroConfiguration(isFileBrowserEnabled: false))
+        //
         // Stop a shake from showing and hiding the floating button:
         //
         //     Cerebro.start(CerebroConfiguration(isShakeGestureEnabled: false))

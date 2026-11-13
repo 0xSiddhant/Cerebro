@@ -35,6 +35,15 @@ public struct CerebroConfiguration: Sendable {
     /// How many earlier sessions stay on disk. Older ones are removed at each launch.
     public var previousSessionLimit: Int
 
+    /// Whether the dashboard has a Files tab, which browses, previews, changes and shares the app's
+    /// files. Turn it off to hand testers traffic inspection without the power to delete the app's data.
+    public var isFileBrowserEnabled: Bool
+
+    /// App Group containers the Files tab also shows, by identifier, such as `group.com.example.shared`.
+    /// iOS can't list an app's groups, so only apps that share files with a widget or an extension set
+    /// this. One the app isn't entitled to is left out, and the console says so.
+    public var appGroupIdentifiers: [String]
+
     /// Creates a configuration. Every argument has a working default.
     public init(
         allowsDistributionBuilds: Bool = false,
@@ -47,7 +56,9 @@ public struct CerebroConfiguration: Sendable {
         decoders: [any BodyDecoder] = [],
         isPublicIPLookupEnabled: Bool = false,
         isPersistenceEnabled: Bool = true,
-        previousSessionLimit: Int = 1
+        previousSessionLimit: Int = 1,
+        isFileBrowserEnabled: Bool = true,
+        appGroupIdentifiers: [String] = []
     ) {
         self.allowsDistributionBuilds = allowsDistributionBuilds
         self.consoleLevel = consoleLevel
@@ -60,5 +71,7 @@ public struct CerebroConfiguration: Sendable {
         self.isPublicIPLookupEnabled = isPublicIPLookupEnabled
         self.isPersistenceEnabled = isPersistenceEnabled
         self.previousSessionLimit = previousSessionLimit
+        self.isFileBrowserEnabled = isFileBrowserEnabled
+        self.appGroupIdentifiers = appGroupIdentifiers
     }
 }

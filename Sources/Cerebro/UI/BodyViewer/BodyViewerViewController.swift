@@ -67,6 +67,7 @@ final class BodyViewerViewController: UIViewController {
         modes.selectedSegmentIndex = 0
         modes.addAction(UIAction { [weak self] _ in self?.showSelectedMode() }, for: .valueChanged)
         navigationItem.titleView = modes
+        navigationItem.prompt = viewModel.notice
         navigationItem.rightBarButtonItems = [shareButton, copyButton]
         showSelectedMode()
     }
@@ -108,6 +109,7 @@ final class BodyViewerViewController: UIViewController {
             textView.text,
             as: format,
             fileName: viewModel.fileName(for: viewModel.modes[modes.selectedSegmentIndex]),
+            warning: viewModel.shareWarning,
             from: self,
             anchor: shareButton
         )

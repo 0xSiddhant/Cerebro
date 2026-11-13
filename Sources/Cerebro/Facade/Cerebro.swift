@@ -22,6 +22,14 @@ public enum Cerebro {
             return runtime
         }
         guard let started else { return }
+        // Looking up App Group containers is a call to the system, so it stays off the launch path.
+        let fileRoots =
+            configuration.isFileBrowserEnabled
+            ? Task.detached(priority: .utility) {
+                FileRoot.available(
+                    appGroupIdentifiers: configuration.appGroupIdentifiers, consoleLevel: configuration.consoleLevel)
+            }
+            : nil
         Task { @MainActor in
             dashboard = DashboardWindowManager(
                 sources: DashboardSources(
@@ -30,7 +38,9 @@ public enum Cerebro {
                     decoders: configuration.decoders,
                     systemInfo: started.systemInfo,
                     downloads: started.downloads,
-                    archive: started.archive
+                    archive: started.archive,
+                    bodyLimit: max(configuration.bodyLimit, 0),
+                    fileRoots: fileRoots
                 ),
                 isShakeGestureEnabled: configuration.isShakeGestureEnabled
             )

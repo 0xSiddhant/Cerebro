@@ -4,9 +4,9 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-06 is on `develop`. The owner wants PLAN-08, the Files tab, in `v1.0.0` too, so the release waits for it. PLAN-06 was gated on that release, and the owner chose to start it first.
+`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-08 is on `develop`, so PLAN-05's release step is all that's left before `v1.0.0`. PLAN-06 and PLAN-08 were planned after that release, and the owner chose to ship them in it.
 
-Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, and a burst of large responses on a real device. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
+Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, a burst of large responses on a real device, and the Files tab on a real device: Quick Look, a file with complete data protection, App Group containers, AirDrop and import from the Files app. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
 
 ## Where we differ from the spec
 
@@ -20,7 +20,7 @@ These win over the spec, which is older.
 | Release gate | One runtime signing check, not `#if DEBUG` | A prebuilt XCFramework reports Release even in a Debug app |
 | WebSocket hooks | Also hook `resume`, `sendPing`, `cancel(with:reason:)` and plain `cancel` | `send` and `receive` can't see open, close or ping |
 | Trigger badge | Counts requests since the dashboard was last opened, not errors | The owner's rule |
-| Dashboard | Four tabs, with Proto Config hidden when no decoder is registered | The spec says five but lists four |
+| Dashboard | Up to five tabs: HTTP, Sockets, Proto Config when a decoder has rules, Files unless it's turned off, and System Info | The spec says five but lists four. PLAN-08 added Files. An iPhone adds More past five, so a sixth tab needs the bar rethought |
 | Public IP | Looked up at `https://api.ipify.org`, one fixed address | The spec names no service, and the owner chose it |
 | Download progress | An Active downloads section on the System Info tab, for foreground downloads only | The spec doesn't say where. A background transfer has no row in the HTTP list until it ends |
 | Raw JSON export | One request as a JSON document, from the Log Inspector | The Body Viewer already shares a body as a file, and HAR covers the session |
@@ -51,6 +51,7 @@ These win over the spec, which is older.
 | SSE timeout | The 60-second idle timeout of Cerebro's session still applies to a stream, and the guide says so | A longer timeout for streams would remove a limit an app may rely on. A probe protocol saw a configuration timeout of 3600 arrive as 60 |
 | Scope | PLAN-08 adds a Files tab that browses the app's sandbox | The owner's requirement. The spec describes a network inspector only |
 | Files tab sharing | Quick Look's own share button shares a file with no privacy warning | No public API removes the button. The owner accepted it over dropping Quick Look, and Cerebro's own Share action still warns |
+| Files tab names | A new folder with a taken name is refused, like a rename. A copy, a move or an import is numbered | The plan named the other cases only. A name the developer typed shouldn't silently change |
 | Branches and releases | `develop` flow, with releases automated on `main` | The owner's rule. `rules/git.md` has it |
 | Versions | Breaking commits are a minor bump below 1.0, and `1.0.0` needs a `Release-As` footer | The spec makes `v1.0.0` a deliberate Plan 5 step |
 
@@ -69,6 +70,9 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 | Do the WebSocket hooks see `async` calls? | Yes, on iOS 18.5 and 26.4. The `async` forms call the same Objective-C methods as the completion-handler ones |
 | Cost of a fast socket stream? | 30,000 frames in 5.5 s, in a Release build. Behind the host app there were no slow frames and the worst took 17 ms. With the timeline open, 4 of 315 frames went over 34 ms and the worst took 72 ms |
 | Does a background transfer survive the app exiting? | Yes, on an iOS 26.4.1 simulator after `exit(0)` mid-transfer. iOS relaunched the app in the background, and the recreated session delivered full metrics for the whole transfer. A real device, a termination by the system and a force-quit are untested |
+| How does Quick Look load in Cerebro's window? | On an iPhone 17 simulator, the first preview showed a blank screen for 2 to 3 s. Quick Look adds its content above any view of its own controller and keeps it clear until it draws, and the only public sign it's ready is that it sets its toolbar: for PDF and text, not for an image with markup off. So the spinner stops then, sits behind the content, and stops after 6 s regardless. A transparent image can show it until then |
+| Is Quick Look's markup off without a delegate? | No. On iOS 26.4 an image showed a markup button, although the header says editing is off by default. The delegate returns `.disabled` |
+| A folder of 10,000 files? | On the simulator, listing and sorting took about 0.5 s off the main thread. The main thread spent 42 ms showing it and about 33 ms on each live reload, once only changed rows were redrawn. Redrawing every row took about 108 ms |
 | How should a URLProtocol handle redirects? | Tell the client, then hold the 3xx until `stopLoading` (followed) or 500 ms (refused, which sends no signal). Sending the 3xx straight away passed a small spike, but with a new session per request it failed about 1 run in 20 to 100: the app got the 302, or `URLSession.data(for:)` crashed. Never sending it hangs a refused redirect, and Apple's sample approach fails one with `NSCocoaErrorDomain 3072` |
 
 ## Worth knowing

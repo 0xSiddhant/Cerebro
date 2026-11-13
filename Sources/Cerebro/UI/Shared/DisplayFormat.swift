@@ -83,6 +83,23 @@ enum DisplayFormat {
         "\(count.formatted()) \(count == 1 ? "event" : "events")"
     }
 
+    /// When a file changed, such as "13 Nov 2026 at 14:02".
+    static func fileDate(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    /// How many items there are, such as "1 item" or "more than 20,000 items" for a count that stopped.
+    static func itemCount(_ count: Int, isPartial: Bool = false) -> String {
+        "\(isPartial ? "more than " : "")\(count.formatted()) \(count == 1 ? "item" : "items")"
+    }
+
+    /// What a folder holds, such as "12 items, 4.2 MB", or "More than 20,000 items" once counting stopped.
+    static func folderContents(_ measurement: FolderMeasurement) -> String {
+        let items = itemCount(measurement.itemCount, isPartial: measurement.isPartial)
+        return (items.prefix(1).uppercased() + items.dropFirst()) + ", "
+            + (measurement.isPartial ? "more than " : "") + bytes(measurement.byteCount)
+    }
+
     static func status(of transaction: HTTPTransaction) -> String {
         switch transaction.outcome {
         case .failed: return "Failed"
