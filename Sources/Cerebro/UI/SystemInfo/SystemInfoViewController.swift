@@ -92,7 +92,7 @@ final class SystemInfoViewController: UITableViewController {
         content.secondaryTextProperties.font = .monospacedDigitSystemFont(ofSize: isLong ? 12 : 15, weight: .regular)
         content.secondaryTextProperties.numberOfLines = 0
         content.image = row.symbol.flatMap { UIImage(systemName: $0) }
-        content.imageProperties.tintColor = .secondaryLabel
+        content.imageProperties.tintColor = DashboardTheme.secondaryText
         content.imageProperties.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .footnote)
         content.imageProperties.reservedLayoutSize = CGSize(width: 22, height: 0)
         cell.contentConfiguration = content

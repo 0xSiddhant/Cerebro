@@ -14,8 +14,6 @@ enum TrafficRowMarker: Equatable {
 final class TrafficRowCell: UITableViewCell {
     static let reuseIdentifier = "TrafficRowCell"
 
-    private static let liveTint = UIColor.systemTeal
-
     private let method = TrafficTagLabel()
     private let marker = TrafficTagLabel()
     private let path = UILabel()
@@ -28,7 +26,7 @@ final class TrafficRowCell: UITableViewCell {
         path.font = .preferredFont(forTextStyle: .subheadline)
         path.lineBreakMode = .byTruncatingMiddle
         detail.font = .preferredFont(forTextStyle: .caption1)
-        detail.textColor = .secondaryLabel
+        detail.textColor = DashboardTheme.secondaryText
 
         let top = UIStackView(arrangedSubviews: [method, marker, path])
         top.spacing = 6
@@ -59,7 +57,7 @@ final class TrafficRowCell: UITableViewCell {
     /// `tagTint` colours the tag, and `marker` adds a second one beside it.
     func show(
         tag: String,
-        tagTint: UIColor = .systemGray,
+        tagTint: UIColor = DashboardTheme.neutral,
         marker: TrafficRowMarker? = nil,
         title: String,
         detail: String,
@@ -70,7 +68,7 @@ final class TrafficRowCell: UITableViewCell {
         switch marker {
         case .eventStream(let isLive):
             // The dot and the colour both say it's still arriving, so colour isn't the only sign.
-            self.marker.show(isLive ? "● SSE" : "SSE", tint: isLive ? Self.liveTint : .systemGray)
+            self.marker.show(isLive ? "● SSE" : "SSE", tint: isLive ? DashboardTheme.live : DashboardTheme.neutral)
         case nil:
             break
         }

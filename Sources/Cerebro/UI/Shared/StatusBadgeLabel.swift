@@ -9,7 +9,7 @@ final class StatusBadgeLabel: UILabel {
     override init(frame: CGRect) {
         super.init(frame: frame)
         font = .monospacedDigitSystemFont(ofSize: 12, weight: .bold)
-        textColor = .white
+        textColor = DashboardTheme.onFill
         textAlignment = .center
         layer.cornerRadius = 6
         clipsToBounds = true
@@ -29,16 +29,6 @@ final class StatusBadgeLabel: UILabel {
 
     func show(_ status: String, outcome: TransactionOutcome) {
         text = "  \(status)  "
-        backgroundColor = Self.color(for: outcome)
-    }
-
-    private static func color(for outcome: TransactionOutcome) -> UIColor {
-        switch outcome {
-        case .success: return .systemGreen
-        case .redirection: return .systemBlue
-        case .clientError: return .systemOrange
-        case .serverError, .failed: return .systemRed
-        case .cancelled: return .systemGray
-        }
+        backgroundColor = DashboardTheme.status(outcome)
     }
 }

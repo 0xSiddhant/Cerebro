@@ -87,7 +87,7 @@ final class FileLocationsViewController: UITableViewController {
         content.text = root.name
         let size = sizes[root].map(DisplayFormat.folderContents) ?? "…"
         content.secondaryText = root.isReadOnly ? "\(size) · Read-only" : size
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = DashboardTheme.secondaryText
         cell.contentConfiguration = content
         cell.accessoryType = .disclosureIndicator
         return cell

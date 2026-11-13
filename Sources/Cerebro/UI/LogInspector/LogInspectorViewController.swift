@@ -139,7 +139,7 @@ final class LogInspectorViewController: UITableViewController {
         var content = UIListContentConfiguration.groupedHeader()
         content.text = sections[section].title
         content.textProperties.font = .preferredFont(forTextStyle: .footnote).withBoldTraits()
-        content.textProperties.color = .secondaryLabel
+        content.textProperties.color = DashboardTheme.secondaryText
         content.directionalLayoutMargins.top = 8
         content.directionalLayoutMargins.bottom = 4
         header?.contentConfiguration = content
@@ -163,7 +163,7 @@ final class LogInspectorViewController: UITableViewController {
         content.textProperties.font = .preferredFont(forTextStyle: .subheadline)
         content.secondaryText = row.preview
         content.secondaryTextProperties.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = DashboardTheme.secondaryText
         content.secondaryTextProperties.numberOfLines = 4
         content.textToSecondaryTextVerticalPadding = 6
         cell.contentConfiguration = content

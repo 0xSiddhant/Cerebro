@@ -95,7 +95,7 @@ final class HTTPListViewController: UITableViewController {
             self?.copyCurl(of: request)
             finished(true)
         }
-        copy.backgroundColor = .systemBlue
+        copy.backgroundColor = DashboardTheme.accentFill
         copy.image = UIImage(systemName: "doc.on.doc")
         return UISwipeActionsConfiguration(actions: [copy])
     }
@@ -152,7 +152,7 @@ final class HTTPListViewController: UITableViewController {
         if let row = viewModel.rows.first(where: { $0.id == id }) {
             (cell as? TrafficRowCell)?.show(
                 tag: row.method,
-                tagTint: TrafficTagLabel.tint(forMethod: row.method),
+                tagTint: DashboardTheme.method(row.method),
                 marker: row.marker,
                 title: row.path,
                 detail: row.detail,

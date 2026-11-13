@@ -142,7 +142,7 @@ extension BodyViewerViewController: UITableViewDataSource, UITableViewDelegate {
 
     private func chevron(isExpanded: Bool) -> UIImageView {
         let view = UIImageView(image: UIImage(systemName: isExpanded ? "chevron.down" : "chevron.right"))
-        view.tintColor = .tertiaryLabel
+        view.tintColor = DashboardTheme.tertiaryText
         return view
     }
 }

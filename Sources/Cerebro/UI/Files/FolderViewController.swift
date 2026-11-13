@@ -51,7 +51,7 @@ final class FolderViewController: UITableViewController {
         tableView.allowsMultipleSelectionDuringEditing = true
         tableView.tableFooterView = footer
         footer.font = .preferredFont(forTextStyle: .footnote)
-        footer.textColor = .secondaryLabel
+        footer.textColor = DashboardTheme.secondaryText
         footer.textAlignment = .center
         footer.numberOfLines = 0
         navigationItem.searchController = makeSearchController()
@@ -98,7 +98,7 @@ final class FolderViewController: UITableViewController {
         content.image = UIImage(systemName: row.symbol)
         content.text = row.name
         content.secondaryText = row.detail
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = DashboardTheme.secondaryText
         content.secondaryTextProperties.numberOfLines = 1
         cell.contentConfiguration = content
         cell.accessoryType = row.isFolder ? .disclosureIndicator : .none

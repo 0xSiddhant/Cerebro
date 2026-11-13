@@ -20,7 +20,7 @@ final class InspectorFieldCell: UITableViewCell {
 
         name.font = .preferredFont(forTextStyle: .caption1)
         name.adjustsFontForContentSizeCategory = true
-        name.textColor = .secondaryLabel
+        name.textColor = DashboardTheme.secondaryText
         name.numberOfLines = 2
         name.lineBreakMode = .byTruncatingMiddle
         value.font = .preferredFont(forTextStyle: .footnote)
@@ -72,10 +72,10 @@ private final class InspectorTimelineView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = .tertiarySystemFill
+        backgroundColor = DashboardTheme.track
         layer.cornerRadius = 1.5
         clipsToBounds = true
-        fill.backgroundColor = .tintColor
+        fill.backgroundColor = DashboardTheme.accent
         addSubview(fill)
         translatesAutoresizingMaskIntoConstraints = false
         heightAnchor.constraint(equalToConstant: 3).isActive = true

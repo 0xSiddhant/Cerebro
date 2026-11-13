@@ -34,10 +34,10 @@ final class FileInfoViewController: UITableViewController {
         var content = UIListContentConfiguration.subtitleCell()
         content.text = row.title
         content.textProperties.font = .preferredFont(forTextStyle: .footnote)
-        content.textProperties.color = .secondaryLabel
+        content.textProperties.color = DashboardTheme.secondaryText
         content.secondaryText = row.value
         content.secondaryTextProperties.font = .preferredFont(forTextStyle: .body)
-        content.secondaryTextProperties.color = .label
+        content.secondaryTextProperties.color = DashboardTheme.primaryText
         content.textToSecondaryTextVerticalPadding = 4
         cell.contentConfiguration = content
         return cell

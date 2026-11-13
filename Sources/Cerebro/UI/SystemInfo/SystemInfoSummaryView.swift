@@ -14,9 +14,9 @@ final class SystemInfoSummaryView: UIView {
         icon.setContentHuggingPriority(.required, for: .horizontal)
         title.font = .preferredFont(forTextStyle: .title3).withWeight(.semibold)
         detail.font = .preferredFont(forTextStyle: .subheadline)
-        detail.textColor = .secondaryLabel
+        detail.textColor = DashboardTheme.secondaryText
         badges.font = .preferredFont(forTextStyle: .footnote)
-        badges.textColor = .systemOrange
+        badges.textColor = DashboardTheme.warning
         for label in [title, detail, badges] {
             label.adjustsFontForContentSizeCategory = true
             label.numberOfLines = 0
@@ -30,7 +30,7 @@ final class SystemInfoSummaryView: UIView {
         card.spacing = 14
         card.isLayoutMarginsRelativeArrangement = true
         card.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16)
-        card.backgroundColor = .secondarySystemGroupedBackground
+        card.backgroundColor = DashboardTheme.card
         card.layer.cornerRadius = 14
         card.layer.cornerCurve = .continuous
         card.translatesAutoresizingMaskIntoConstraints = false
@@ -54,12 +54,7 @@ final class SystemInfoSummaryView: UIView {
 
     func show(_ summary: SystemInfoSummary) {
         icon.image = UIImage(systemName: summary.symbol)
-        switch summary.tone {
-        case .good: icon.tintColor = .systemGreen
-        case .warning: icon.tintColor = .systemOrange
-        case .bad: icon.tintColor = .systemRed
-        case .unknown: icon.tintColor = .secondaryLabel
-        }
+        icon.tintColor = DashboardTheme.tone(summary.tone)
         title.text = summary.title
         detail.text = summary.detail
         badges.text = summary.badges.joined(separator: " · ")

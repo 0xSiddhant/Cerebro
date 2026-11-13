@@ -61,7 +61,7 @@ final class InspectorSummaryView: UIView {
         label.font = UIFontMetrics(forTextStyle: .footnote)
             .scaledFont(for: .monospacedSystemFont(ofSize: 13, weight: .regular))
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = DashboardTheme.secondaryText
         label.numberOfLines = 3
         return label
     }
@@ -71,7 +71,7 @@ final class InspectorSummaryView: UIView {
         label.text = error
         label.font = .preferredFont(forTextStyle: .footnote)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .systemRed
+        label.textColor = DashboardTheme.failure
         label.numberOfLines = 3
         return label
     }
@@ -82,7 +82,7 @@ final class InspectorSummaryView: UIView {
         row.spacing = 4
         row.isLayoutMarginsRelativeArrangement = true
         row.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 10, leading: 8, bottom: 10, trailing: 8)
-        row.backgroundColor = .secondarySystemGroupedBackground
+        row.backgroundColor = DashboardTheme.card
         row.layer.cornerRadius = 14
         row.layer.cornerCurve = .continuous
         return row
@@ -93,7 +93,7 @@ final class InspectorSummaryView: UIView {
         title.text = stat.title
         title.font = .preferredFont(forTextStyle: .caption2)
         title.adjustsFontForContentSizeCategory = true
-        title.textColor = .secondaryLabel
+        title.textColor = DashboardTheme.secondaryText
         title.textAlignment = .center
         let value = UILabel()
         value.text = stat.value

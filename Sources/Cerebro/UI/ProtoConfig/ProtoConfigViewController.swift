@@ -41,7 +41,7 @@ final class ProtoConfigViewController: UITableViewController {
         content.text = row.title
         content.textProperties.font = .preferredFont(forTextStyle: .headline)
         content.secondaryText = "\(row.mapping)\n\(row.detail)"
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = DashboardTheme.secondaryText
         content.secondaryTextProperties.numberOfLines = 0
         content.textToSecondaryTextVerticalPadding = 4
         cell.contentConfiguration = content

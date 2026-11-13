@@ -40,7 +40,7 @@ extension FolderViewController {
                 finished(true)
             }
             share.image = UIImage(systemName: "square.and.arrow.up")
-            share.backgroundColor = .systemBlue
+            share.backgroundColor = DashboardTheme.accentFill
             swipes.append(share)
         }
         return UISwipeActionsConfiguration(actions: swipes)
@@ -56,7 +56,7 @@ extension FolderViewController {
             finished(true)
         }
         info.image = UIImage(systemName: "info.circle")
-        info.backgroundColor = .systemGray
+        info.backgroundColor = DashboardTheme.neutral
         return UISwipeActionsConfiguration(actions: [info])
     }
 
