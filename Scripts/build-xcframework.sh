@@ -67,7 +67,8 @@ let rule = ProtoRule(
     stripPrefixBytes: 0,
     source: .file
 )
-Cerebro.start(CerebroConfiguration().registering([rule]))
+let configuration = CerebroConfiguration(isFileBrowserEnabled: true, appGroupIdentifiers: ["group.example"])
+Cerebro.start(configuration.registering([rule]))
 Cerebro.present()
 Cerebro.stop()
 SWIFT
