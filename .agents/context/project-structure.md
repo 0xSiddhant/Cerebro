@@ -35,7 +35,8 @@ Cerebro/
 │                              # of traffic and its helpers, and the files written for the Files tab),
 │                              # Proto (generated .pb.swift), Resources (with the app icon)
 ├── Sources/
-│   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together
+│   ├── CerebroCore/           # CaptureRuntime.swift wires the folders below together, and
+│   │                          # PrivacyInfo.xcprivacy is the privacy manifest every install option ships
 │   │   ├── HTTP/
 │   │   │   ├── Capture/       # URLProtocol, config injection, background delegate proxy
 │   │   │   ├── Pipeline/      # raw exchange, transaction builder, console logger; for event streams,

@@ -126,4 +126,5 @@ The split keeps SwiftProtobuf out of apps that don't use protobuf, and lets the 
 - `SwiftProtobuf.framework` is compiled from `.build/checkouts/swift-protobuf`, so `swift package resolve` must run first. `Package.resolved` pins the version, and `Scripts/build-xcframework.sh` runs the resolve.
 - `CerebroProto.framework` links `SwiftProtobuf.framework` dynamically, because the app's generated `.pb.swift` types must conform to the same module.
 - `.gitkeep` files are excluded through `EXCLUDED_SOURCE_FILE_NAMES`, or the synchronized folders would copy them into the framework as resources.
+- That copying is how `PrivacyInfo.xcprivacy` reaches the root of `Cerebro.framework`, and how SwiftProtobuf's own manifest reaches `SwiftProtobuf.framework`. Don't exclude either.
 - The script ends by compiling a client against all three XCFrameworks, because a broken `.swiftinterface` otherwise fails only in a consumer's build.
