@@ -17,21 +17,14 @@ A debug-only network inspector for iOS apps. Cerebro captures HTTP, WebSocket an
 
 ## Screenshots
 
+<p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="A tour of Cerebro in the Example app. The floating button opens the dashboard, a search narrows the HTTP list, and a request's Request and Metrics pages open. The app then turns dark and shows a socket's timeline, the Proto Config rules, the Files tab down to a property list shown as a tree, and the three System Info pages, before closing back to the app."></p>
+
 <table>
   <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/http-list.png" width="180" alt="The HTTP list with a search field, status filters and one row per request, each with a coloured method tag, and an SSE tag on a live and an ended event stream"><br><sub>HTTP list</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/inspector-response.png" width="180" alt="The Log Inspector's Response page with the summary, a body preview and the response headers"><br><sub>Log Inspector: Response</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/inspector-request.png" width="180" alt="The Log Inspector's Request page with the URL, method, body, query and headers"><br><sub>Log Inspector: Request</sub></td>
-  </tr>
-  <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/inspector-metrics.png" width="180" alt="The Log Inspector's Metrics page with timing bars for DNS, Connect, TLS and first byte, and body sizes"><br><sub>Log Inspector: Metrics</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/body-viewer.png" width="180" alt="The Body Viewer showing a JSON response, pretty-printed, with copy and share buttons"><br><sub>Body Viewer</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/inspector-events.png" width="180" alt="The Log Inspector on a live Server-Sent Events stream, with the event count in the summary and each event listed with its type, ID, time and data, one of them redacted"><br><sub>Log Inspector: live events</sub></td>
-  </tr>
-  <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/sockets-list.png" width="180" alt="The Sockets list with one NWConnection, one WebSocket and one external socket, each with a tag for its source"><br><sub>Sockets</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/socket-timeline.png" width="180" alt="A WebSocket timeline with sent and received frames, ping, pong and close events"><br><sub>Socket timeline</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/files.png" width="180" alt="The Files tab on a folder, with an icon, size and date for an image, a JSON file, a file with no extension and a property list, and a search field"><br><sub>Files</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/http-list.png" width="180" alt="The HTTP list in light mode, with a search field, status filters, and one card per request with a coloured method tag and a status badge"><br><sub>HTTP list</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/inspector.png" width="180" alt="The Log Inspector in dark mode on a request's Response page, with its time, size, type and protocol, a body preview, and the response headers"><br><sub>Log Inspector</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/socket-timeline.png" width="180" alt="A socket's timeline in light mode, with the frame sent in violet on the right and the reply on the left"><br><sub>Socket timeline</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/files.png" width="180" alt="The Files tab in dark mode on a folder of sample files, each with its icon, size and date"><br><sub>Files</sub></td>
   </tr>
 </table>
 
