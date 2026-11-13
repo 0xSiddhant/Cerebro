@@ -25,8 +25,10 @@ enum FileAlerts {
             field.autocapitalizationType = .none
             field.autocorrectionType = .no
             field.clearButtonMode = .whileEditing
+            // The field keeps its actions, so it's held weakly here or it would never be freed.
             field.addAction(
-                UIAction { _ in
+                UIAction { [weak field] _ in
+                    guard let field else { return }
                     let stem = (initial as NSString).deletingPathExtension
                     let end = field.position(from: field.beginningOfDocument, offset: stem.utf16.count)
                     field.selectedTextRange = end.flatMap { field.textRange(from: field.beginningOfDocument, to: $0) }
