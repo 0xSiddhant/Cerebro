@@ -25,6 +25,7 @@ Pod::Spec.new do |s|
 
   s.subspec 'Core' do |core|
     core.source_files = 'Sources/CerebroCore/**/*.swift'
+    core.resource_bundles = { 'Cerebro_Privacy' => ['Sources/CerebroCore/PrivacyInfo.xcprivacy'] }
     core.frameworks = 'Foundation', 'Network', 'Security', 'CFNetwork', 'CoreTelephony'
     core.libraries = 'compression'
   end
