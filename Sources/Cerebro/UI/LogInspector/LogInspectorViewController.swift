@@ -51,6 +51,7 @@ final class LogInspectorViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(InspectorFieldCell.self, forCellReuseIdentifier: InspectorFieldCell.reuseIdentifier)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.bodyCellIdentifier)
         tableView.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: Self.headerIdentifier)

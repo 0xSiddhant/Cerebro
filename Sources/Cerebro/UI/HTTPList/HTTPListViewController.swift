@@ -52,6 +52,7 @@ final class HTTPListViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(TrafficRowCell.self, forCellReuseIdentifier: TrafficRowCell.reuseIdentifier)
         tableView.dataSource = dataSource
         navigationItem.searchController = makeSearchController()

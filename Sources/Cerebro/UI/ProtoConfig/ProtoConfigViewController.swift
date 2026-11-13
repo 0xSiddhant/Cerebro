@@ -19,6 +19,7 @@ final class ProtoConfigViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
         tableView.allowsSelection = false
         viewModel.onChange = { [weak self] in self?.tableView.reloadData() }

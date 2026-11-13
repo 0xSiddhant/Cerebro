@@ -25,6 +25,7 @@ final class SystemInfoViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
         tableView.tableHeaderView = summaryView
         tabs.selectedSegmentIndex = selectedTab.rawValue

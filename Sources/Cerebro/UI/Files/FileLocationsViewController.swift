@@ -30,6 +30,7 @@ final class FileLocationsViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
     }
 

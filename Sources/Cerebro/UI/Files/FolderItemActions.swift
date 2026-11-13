@@ -194,7 +194,7 @@ extension FolderViewController {
             folder.appendPathComponent(String(name), isDirectory: true)
             screens.append(folder)
         }
-        let navigation = UINavigationController()
+        let navigation = DashboardNavigationController()
         navigation.viewControllers = screens.map { screen in
             FolderPickerViewController(
                 root: root, folder: screen, excluding: Set(items), confirmTitle: moving ? "Move Here" : "Copy Here",

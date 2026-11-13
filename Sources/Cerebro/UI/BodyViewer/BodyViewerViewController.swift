@@ -48,12 +48,15 @@ final class BodyViewerViewController: UIViewController {
 
     override func loadView() {
         textView.isEditable = false
+        textView.backgroundColor = DashboardTheme.card
         textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         treeView.register(UITableViewCell.self, forCellReuseIdentifier: Self.treeCellIdentifier)
+        DashboardTheme.style(treeView)
         treeView.dataSource = self
         treeView.delegate = self
         let container = UIView()
+        container.backgroundColor = DashboardTheme.card
         for content in [textView, treeView] {
             content.frame = container.bounds
             content.autoresizingMask = [.flexibleWidth, .flexibleHeight]

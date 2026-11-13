@@ -19,6 +19,7 @@ final class DashboardWindowManager: NSObject {
     init(sources: DashboardSources, isShakeGestureEnabled: Bool) {
         self.sources = sources
         super.init()
+        DashboardTheme.register()
         overlay.trigger.onTap = { [weak self] in self?.present() }
         if isShakeGestureEnabled {
             ShakeDetector.install { [weak self] in self?.toggleTrigger() }

@@ -5,8 +5,9 @@ import CerebroCore
 #endif
 
 /// Every colour the dashboard uses, in one place, so the whole of it changes together. The brand colours
-/// come from `CerebroIcon`, so the icon, the floating button and the screens always agree. Text and
-/// surfaces use the system's own colours, which follow light and dark mode.
+/// come from `CerebroIcon`, so the icon, the floating button and the screens always agree. Surfaces are
+/// Ultraviolet in dark mode and a soft lavender in light mode, and text uses the system's own colours,
+/// which read on both.
 enum DashboardTheme {
     // MARK: - Brand
 
@@ -32,7 +33,27 @@ enum DashboardTheme {
     /// The count of new requests on the floating button.
     static let badge = UIColor.systemRed
 
-    // MARK: - Text and surfaces
+    // MARK: - Surfaces
+
+    /// Behind everything, such as around a grouped list's cards, or a bar.
+    static let background = dynamic(light: 0xF5F1_FC, dark: 0x0B06_14)
+
+    /// A card, a row, or a whole plain list.
+    static let card = dynamic(light: 0xFFFF_FF, dark: 0x170D_26)
+
+    /// Something raised on a card, such as a frame the other side sent.
+    static let raised = dynamic(light: 0xEDE6_F8, dark: 0x2416_40)
+
+    /// A search field or another place to type.
+    static let field = dynamic(light: 0xECE5_F8, dark: 0x1F12_33)
+
+    /// The lines between rows and under bars.
+    static let separator = dynamic(light: 0xE1D7_F1, dark: 0x2C1D_47)
+
+    /// The empty part of a bar.
+    static let track = dynamic(light: 0xE4DB_F3, dark: 0x2C1D_47)
+
+    // MARK: - Text
 
     /// Text that leads, such as a value.
     static let primaryText = UIColor.label
@@ -42,15 +63,6 @@ enum DashboardTheme {
 
     /// Marks that stay out of the way, such as a fold arrow.
     static let tertiaryText = UIColor.tertiaryLabel
-
-    /// A card that sits on a grouped background.
-    static let card = UIColor.secondarySystemGroupedBackground
-
-    /// The empty part of a bar.
-    static let track = UIColor.tertiarySystemFill
-
-    /// A message bubble from the other side.
-    static let receivedBubble = UIColor.systemGray5
 
     /// Text on a solid fill, such as a status badge or a sent frame.
     static let onFill = UIColor.white

@@ -19,6 +19,7 @@ final class FileInfoViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
         viewModel.onChange = { [weak self] in self?.tableView.reloadData() }
         Task { await viewModel.load() }

@@ -34,6 +34,7 @@ final class SocketListViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(TrafficRowCell.self, forCellReuseIdentifier: TrafficRowCell.reuseIdentifier)
         navigationItem.rightBarButtonItem = archive.map { archive in
             PreviousSessions.button(archive: archive) { [weak self] session in
