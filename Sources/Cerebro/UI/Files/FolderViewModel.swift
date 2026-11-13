@@ -57,6 +57,9 @@ final class FolderViewModel {
     private var watching: Task<Void, Never>?
     private var generation = 0
 
+    /// Counts loads, so one that finishes after a newer one doesn't replace it.
+    private var loads = 0
+
     init(root: FileRoot, folder: URL, bodyLimit: Int) {
         self.root = root
         self.folder = folder
@@ -86,7 +89,8 @@ final class FolderViewModel {
     /// Reads the folder again. `resettingSizes` also measures its folders again when they next appear,
     /// which a reload for an added or removed entry doesn't need.
     func load(resettingSizes: Bool = false) async {
-        let (root, folder) = (root, folder)
+        loads += 1
+        let (load, root, folder) = (loads, root, folder)
         let result = await Task.detached(priority: .userInitiated) {
             Result {
                 let entries = try FolderListing.entries(in: folder, root: root)
@@ -95,6 +99,7 @@ final class FolderViewModel {
             }
         }
         .value
+        guard load == loads else { return }
         switch result {
         case .success(let (entries, isWritable)):
             self.entries = entries
@@ -295,11 +300,10 @@ extension FolderViewModel {
                 return .refused("This link leads outside \(root.name), so Cerebro doesn't follow it.")
             }
             let target = entry.url.resolvingSymlinksInPath()
-            var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: target.path, isDirectory: &isDirectory) else {
+            guard let resolved = try? FileEntry.read(target) else {
                 return .refused("This link's target doesn't exist.")
             }
-            return isDirectory.boolValue ? .folder(target) : Self.viewer(for: target)
+            return resolved.kind == .folder ? .folder(target) : Self.viewer(for: target)
         }
     }
 

@@ -15,7 +15,7 @@ enum FileSharePreparation {
         do {
             let files = try entries.map { entry in
                 let item = entry.kind == .symbolicLink ? entry.url.resolvingSymlinksInPath() : entry.url
-                guard (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { return item }
+                guard (try? FileEntry.read(item).kind) == .folder else { return item }
                 zipsFolders = true
                 return try zip(item, into: temporaryFolder)
             }
