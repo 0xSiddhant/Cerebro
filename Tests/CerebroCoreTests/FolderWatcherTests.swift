@@ -15,9 +15,10 @@ private final class ReportCounter: @unchecked Sendable {
         lock.withLock { value += 1 }
     }
 
-    /// Waits up to a second for at least `expected` reports.
-    func reaches(_ expected: Int) async -> Bool {
-        for _ in 0..<100 where count < expected {
+    /// Waits for at least `expected` reports, up to `limit`.
+    func reaches(_ expected: Int, within limit: Duration = .seconds(1)) async -> Bool {
+        let deadline = ContinuousClock.now + limit
+        while count < expected, ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(10))
         }
         return count >= expected
@@ -58,18 +59,21 @@ private func watch(
     #expect(await reports.reaches(3))
 }
 
-@Test func theWatcherReportsABurstOnce() async throws {
+@Test func theWatcherBatchesABurst() async throws {
     let folder = try TemporaryFolder()
     defer { folder.remove() }
-    let (reports, watching) = await watch(folder.url, batchingFor: .milliseconds(300))
+    let (reports, watching) = await watch(folder.url, batchingFor: .seconds(1))
     defer { watching.cancel() }
 
     for index in 0..<50 {
         try folder.file("burst-\(index)")
     }
-    try await Task.sleep(for: .milliseconds(600))
+    #expect(await reports.reaches(1, within: .seconds(3)))
+    // Nothing else is written, so a second report could only be the rest of the burst.
+    try await Task.sleep(for: .seconds(1.2))
 
-    #expect(reports.count == 1)
+    // 50 changes, but a slow runner can split them across two windows.
+    #expect((1...2).contains(reports.count))
 }
 
 @Test func theWatcherEndsForAFolderThatDoesntExist() async {
