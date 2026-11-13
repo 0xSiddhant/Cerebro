@@ -14,9 +14,9 @@ Each plan follows the same format: goal → gate → scope → decisions & reaso
 | ✅ 03 | Protobuf decoding and the Proto Config tab | `plan/3-proto` | PLAN-02 merged |
 | ✅ 07 | Background transfer metrics | `plan/7-background-metrics` | PLAN-03 merged |
 | ✅ 04 | System info and export | `plan/4-system-info` | PLAN-07 merged |
-| 05 | [Persistence and 1.0](PLAN-05-background-and-1.0.md) | `plan/5-background-and-1.0` | PLAN-04 merged. Its code is merged, and its release step waits for PLAN-08 |
+| 05 | [Persistence and 1.0](PLAN-05-background-and-1.0.md) | `plan/5-background-and-1.0` | PLAN-04 merged. Its code is merged, and its release step is next |
 | ✅ 06 | Server-Sent Events capture and live inspection | `plan/6-sse` | PLAN-05 merged and `v1.0.0` released |
-| 08 | [Sandbox file browser](PLAN-08-files.md) | `plan/8-files` | PLAN-06 merged |
+| ✅ 08 | Sandbox file browser | `plan/8-files` | PLAN-06 merged |
 | 99 | [Response mocking and replay](PLAN-99-mocking-and-replay.md) | Named when scheduled | Reference only: after 1.0, pulled into a new numbered plan when scheduled |
 
 A plan's file is deleted in the PR that finishes it, and its row here gets a ✅. After that the code and `context/notes.md` carry what matters.

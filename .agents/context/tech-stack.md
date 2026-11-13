@@ -10,6 +10,7 @@
 | Socket capture | Hooks on `URLSessionWebSocketTask`, `MonitoredNWConnection`, `ExternalNetworkBridge` | No call-site changes where hooks can reach; a wrapper where they can't |
 | Storage | Actor-backed ring buffer capped by count and size, plus JSON Lines in Caches | Large bodies cause out-of-memory crashes; no database schema to migrate |
 | UI | Programmatic UIKit in a `PassthroughWindow` | Full control over windows and touches; nothing to load from bundles |
+| File previews | Quick Look for documents and media, the Body Viewer for property lists, JSON and everything else | Quick Look renders images, PDF and media well, but shows a binary plist as bytes and JSON on one line |
 | Proto decoding | SwiftProtobuf 1.27.0 up to, not including, 2.0.0 | Apps with `.pb.swift` files already link it; 1.27.0 is the first version where `Message` is `Sendable` |
 | Tests | Swift Testing on an iOS simulator | The package is iOS-only |
 | Linting | `swift-format` from Xcode, and SwiftLint 0.62.2 in a CI container | Rules nothing enforces get skipped. Neither tool reaches apps that use Cerebro |
