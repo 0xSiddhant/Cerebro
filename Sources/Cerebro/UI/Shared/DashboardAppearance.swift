@@ -30,6 +30,12 @@ extension DashboardTheme {
     static func style(_ tableView: UITableView) {
         tableView.backgroundColor = background
         tableView.separatorColor = separator
+        // A grouped list leaves a tall gap above its first card when it has no header view. A screen that
+        // sets its own, such as System Info's summary card, replaces this one.
+        if tableView.style != .plain, tableView.tableHeaderView == nil {
+            let none = CGRect(x: 0, y: 0, width: 0, height: CGFloat.leastNonzeroMagnitude)
+            tableView.tableHeaderView = UIView(frame: none)
+        }
     }
 
     /// A navigation stack's bars.
