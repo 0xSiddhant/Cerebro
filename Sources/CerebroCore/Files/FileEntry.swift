@@ -104,9 +104,10 @@ public enum FileSortOrder: Sendable, CaseIterable {
             let (firstIsFolder, secondIsFolder) = (first.kind == .folder, second.kind == .folder)
             guard firstIsFolder == secondIsFolder else { return firstIsFolder }
             switch self {
-            case .date where first.modified != second.modified:
+            // Missing values compare as their stand-ins in both places, so the order is always the same.
+            case .date where (first.modified ?? .distantPast) != (second.modified ?? .distantPast):
                 return (first.modified ?? .distantPast) > (second.modified ?? .distantPast)
-            case .size where !firstIsFolder && first.size != second.size:
+            case .size where !firstIsFolder && (first.size ?? 0) != (second.size ?? 0):
                 return (first.size ?? 0) > (second.size ?? 0)
             default:
                 return first.name.localizedStandardCompare(second.name) == .orderedAscending

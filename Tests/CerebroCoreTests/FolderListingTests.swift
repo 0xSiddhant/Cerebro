@@ -58,6 +58,21 @@ import Testing
     #expect(FileSortOrder.size.sorted(entries).map(\.name) == ["Alpha", "Zeta", "a10.txt", "a2.txt", "b.txt"])
 }
 
+/// A link has no size and an empty file has zero. They must sort as the same size every time.
+@Test func theSizeOrderIsTheSameEveryTime() {
+    let base = URL(fileURLWithPath: "/root")
+    let entries = [
+        FileEntry(url: base.appendingPathComponent("c"), kind: .file, size: 0),
+        FileEntry(url: base.appendingPathComponent("b"), kind: .symbolicLink),
+        FileEntry(url: base.appendingPathComponent("a"), kind: .file, size: 0),
+        FileEntry(url: base.appendingPathComponent("big"), kind: .file, size: 10),
+    ]
+
+    for permutation in [entries, entries.reversed(), entries.shuffled(), entries.shuffled()] {
+        #expect(FileSortOrder.size.sorted(permutation).map(\.name) == ["big", "a", "b", "c"])
+    }
+}
+
 @Test func aFolderIsMeasuredThroughItsSubfoldersWithoutFollowingLinks() throws {
     let folder = try TemporaryFolder()
     defer { folder.remove() }
