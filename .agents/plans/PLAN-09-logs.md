@@ -24,7 +24,7 @@ The owner has already decided two things, on 2026-11-14: Proto Config moves into
 - Logs of other processes, such as widgets and extensions, and system log entries of earlier launches. iOS gives an app neither.
 - Crash reports and MetricKit.
 - Matching a log line to a request by its content, such as a URL in the text. The link from a request is by time only.
-- Streaming logs to a Mac, which the spec rules out with the companion app.
+- Streaming logs to a Mac. PLAN-99 holds that idea, for the whole session and not only its logs.
 
 ## Decisions & reasoning
 

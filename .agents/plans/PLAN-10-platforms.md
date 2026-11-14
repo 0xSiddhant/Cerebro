@@ -18,7 +18,7 @@ The owner decided the dashboards on 2026-11-14: Mac Catalyst and visionOS in thi
 
 **Out:**
 - The dashboard on tvOS, on native macOS and on watchOS. The owner moved them to PLAN-99.
-- Viewing another device's traffic live, such as a watch's on its iPhone, or anything on a Mac companion app, which the spec rules out. A session moves between devices as a file, by hand.
+- Viewing another device's traffic live, such as a watch's on its iPhone or a phone's on a Mac. PLAN-99 holds that idea. Here a session moves between devices as a file, by hand.
 - Lower minimum versions. The core uses `OSAllocatedUnfairLock` and `Duration`, which start at the iOS 16 generation on every platform.
 - The OSLog view on platforms without a dashboard. It reads the system log live, so it needs a screen.
 - Linux.
@@ -85,7 +85,7 @@ This gives the platforms without a dashboard a full one: run the TV, watch or Ma
 
 An opened file is read where the picker put it and never copied into the archive. It shows what was saved, redacted by the rules of the build that wrote it. A file is refused, with a message, if it has no header or a newer format version. Lines that don't decode are skipped, as they are today, and the stores' caps apply, so a huge or damaged file can't exhaust memory.
 
-It's a file moved by hand, not a connection between devices, so it stays inside the spec's rule against a companion app.
+It's a file moved by hand, not a connection between devices, so it stays inside the spec's rule against a companion app. PLAN-99's live stream idea would send these same records over a connection.
 
 ### A keyboard shortcut where there's no shake
 
