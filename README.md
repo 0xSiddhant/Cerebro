@@ -172,6 +172,10 @@ The [guide](docs/GUIDE.md) covers everything past setup:
 | [What Cerebro can't capture](docs/GUIDE.md#what-cerebro-cant-capture) | WKWebView, AVPlayer and other limits |
 | [Troubleshooting](docs/GUIDE.md#troubleshooting) | Common problems and fixes |
 
+## Contributing
+
+Bug reports and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the checks every change passes and the rules it follows. Each release's changes are in [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

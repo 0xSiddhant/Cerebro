@@ -6,6 +6,7 @@ Cerebro/
 ├── CLAUDE.md                  # Claude-specific notes; imports AGENTS.md
 ├── README.md                  # overview, screenshots, install and first steps
 ├── CHANGELOG.md               # every release's changes, written by release.yml
+├── CONTRIBUTING.md            # how to report, set up, check a change and get it merged
 ├── LICENSE                    # MIT
 ├── Package.swift              # SPM targets and products
 ├── Package.resolved           # pins the SwiftProtobuf version the XCFramework ships
