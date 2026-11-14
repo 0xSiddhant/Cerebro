@@ -1,5 +1,5 @@
-# Consumed from Git. The owner may also push a release to CocoaPods trunk by hand until
-# trunk goes read-only on December 2, 2026. Later versions come from Git only.
+# Consumed from Git only. CocoaPods trunk refuses a prepare_command from new pods, and
+# goes read-only on December 2, 2026, so this podspec is never pushed there.
 Pod::Spec.new do |s|
   s.name = 'Cerebro'
   s.version = '1.0.1'

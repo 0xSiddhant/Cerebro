@@ -75,6 +75,8 @@ SPM also downloads `swift-protobuf`, because the package declares it. Only `Cere
 
 #### CocoaPods
 
+Cerebro comes from Git and is never published to CocoaPods trunk, so a bare `pod 'Cerebro'` fails. Always include `:git`.
+
 ```ruby
 platform :ios, '16.0'
 
@@ -84,8 +86,6 @@ end
 ```
 
 Replace `X.Y.Z` with the [latest release](https://github.com/0xSiddhant/Cerebro/releases/latest), then run `pod install` and open the `.xcworkspace`. Pod tags start with `v`, and SPM versions don't.
-
-`pod 'Cerebro', '~> 1.0'` also works, from CocoaPods trunk. Trunk stops taking new versions on December 2, 2026, so it keeps the last release published before then. Anything newer comes only from Git, so prefer the line above.
 
 #### XCFramework
 
