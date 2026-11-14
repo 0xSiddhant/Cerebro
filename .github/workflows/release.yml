@@ -2,7 +2,7 @@ name: Release
 
 # Runs when develop is merged into main. It works out the version from the
 # commits since the last tag, runs every test, and only then updates the
-# version, tags, publishes and merges main back into develop.
+# version and CHANGELOG.md, tags, publishes and merges main back into develop.
 
 on:
   push:
@@ -56,6 +56,11 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN || github.token }}
       - name: Update the version
         run: Scripts/set-version.sh "$VERSION"
+      # GitHub writes the section from the pull requests since the last tag, and the release page reuses it.
+      - name: Update the changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: Scripts/update-changelog.sh "v$VERSION"
       # Built before anything is pushed, so a failed build can't leave a tag with no release.
       - name: Build XCFrameworks
         run: Scripts/build-xcframework.sh
@@ -67,7 +72,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Cerebro.podspec Cerebro.xcodeproj/project.pbxproj Example/CerebroExample.xcodeproj/project.pbxproj
+          git add CHANGELOG.md Cerebro.podspec Cerebro.xcodeproj/project.pbxproj Example/CerebroExample.xcodeproj/project.pbxproj
           git commit -m "chore(release): v$VERSION"
           git tag "v$VERSION"
           git push --atomic origin main "v$VERSION"
@@ -81,7 +86,6 @@ jobs:
             build/generator/cerebro-proto-gen.zip \
             --title "v$VERSION" \
             --notes-file build/release-notes.md \
-            --generate-notes \
             --verify-tag
       - name: Merge main back into develop
         run: |
