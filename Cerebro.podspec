@@ -2,7 +2,7 @@
 # this podspec is never pushed there.
 Pod::Spec.new do |s|
   s.name = 'Cerebro'
-  s.version = '0.1.0'
+  s.version = '1.0.0'
   s.summary = 'A debug-only network inspector and file browser for iOS apps.'
   s.description = <<~DESC
     Cerebro captures an iOS app's HTTP, Server-Sent Events, WebSocket and
