@@ -2,23 +2,22 @@
 
 ## Goal
 
-Make `import Cerebro` and `Cerebro.start()` compile and capture on tvOS, watchOS, macOS and visionOS as they do on iOS, and run the dashboard on the two platforms where UIKit already carries it: Mac Catalyst and visionOS. Today a multiplatform app has to wrap its one Cerebro line in `#if os(iOS)`, which is a code change Cerebro exists to avoid. Pulse covers these platforms with one SwiftUI interface. Cerebro's dashboard is UIKit, chosen after measuring, so this plan also sizes what a dashboard costs on each remaining platform, for the owner to schedule. Until then, a session captured on any platform can be opened in the dashboard on another device, which also lets a tester hand a session to a developer.
+Make `import Cerebro` and `Cerebro.start()` compile and capture on tvOS, watchOS, macOS and visionOS as they do on iOS, and run the dashboard on the two platforms where UIKit already carries it: Mac Catalyst and visionOS. Today a multiplatform app has to wrap its one Cerebro line in `#if os(iOS)`, which is a code change Cerebro exists to avoid. Pulse covers these platforms with one SwiftUI interface. Cerebro's dashboard is UIKit, chosen after measuring, so a dashboard on each remaining platform is its own piece of work, which PLAN-99 now holds. Until then, a session captured on any platform can be opened in the dashboard on another device, which also lets a tester hand a session to a developer.
 
 ## Gate
 
 PLAN-09 merged. Single PR on `plan/10-platforms`. Nothing here needs the Logs tab, so the owner can swap the two plans.
 
-Two owner checkpoints come before the main work:
+One owner checkpoint comes before the main work: the spike. This plan was drafted where nothing could be compiled, so every platform fact in it comes from reading the code and from memory of the SDKs. The spike is the first task, and the owner sees its answers before the rest starts.
 
-1. **Which platforms get a dashboard in this plan.** "A dashboard where UIKit carries it" below is a recommendation. Adding tvOS, native macOS or watchOS makes this several plans, and "What the other dashboards take" sizes each.
-2. **The spike.** This plan was drafted where nothing could be compiled, so every platform fact in it comes from reading the code and from memory of the SDKs. The spike is the first task, and the owner sees its answers before the rest starts.
+The owner decided the dashboards on 2026-11-14: Mac Catalyst and visionOS in this plan, and tvOS, native macOS and watchOS in PLAN-99 for later.
 
 ## Scope
 
 **In:** `CerebroCore`, `CerebroProto` and the `Cerebro` facade on tvOS 16, watchOS 9, macOS 13 and visionOS 1; capture, console output and a session file on all of them; the dashboard on Mac Catalyst and visionOS; sharing a session as a file and opening one from another device; a keyboard shortcut for the dashboard; a release gate that works for macOS signing; all three install options on every platform; CI for each platform; a small multiplatform target in the Example project; documentation.
 
 **Out:**
-- The dashboard on tvOS, on native macOS and on watchOS. Each is its own plan.
+- The dashboard on tvOS, on native macOS and on watchOS. The owner moved them to PLAN-99.
 - Viewing another device's traffic live, such as a watch's on its iPhone, or anything on a Mac companion app, which the spec rules out. A session moves between devices as a file, by hand.
 - Lower minimum versions. The core uses `OSAllocatedUnfairLock` and `Duration`, which start at the iOS 16 generation on every platform.
 - The OSLog view on platforms without a dashboard. It reads the system log live, so it needs a screen.
@@ -34,9 +33,9 @@ Two owner checkpoints come before the main work:
 | iPad apps running on a Mac or a Vision Pro | Today, expected | Today, expected | They run the iOS binary. Never tested |
 | Mac Catalyst | This plan | This plan | The release gate, a missing XCFramework slice, no shake, and the Files tab when the app has no sandbox |
 | visionOS 1 | This plan | This plan, if the spike's overlay check passes | CoreTelephony, no shake, and whether an overlay window works |
-| tvOS 16 | This plan | A later plan | No touch, so no floating button and no shake, and about a dozen UIKit classes the dashboard uses don't exist there |
-| macOS 13 | This plan | A later plan | No UIKit, so every view is rewritten in AppKit |
-| watchOS 9 | This plan, for `URLSession` | A later plan, if ever | No UIKit views, so it needs SwiftUI, which the rules forbid. The OS itself restricts WebSockets and `NWConnection` to a few kinds of app |
+| tvOS 16 | This plan | PLAN-99 | No touch, so no floating button and no shake, and about a dozen UIKit classes the dashboard uses don't exist there |
+| macOS 13 | This plan | PLAN-99 | No UIKit, so every view is rewritten in AppKit |
+| watchOS 9 | This plan, for `URLSession` | PLAN-99 | No UIKit views, so it needs SwiftUI, which the rules forbid. The OS itself restricts WebSockets and `NWConnection` to a few kinds of app |
 
 The core is close already. It imports Foundation, Network, Compression, Security, CFNetwork, CoreTelephony, ObjectiveC and `os`, and only CoreTelephony is iOS-only, in two files. Every hook is on `URLSession`, `URLSessionConfiguration` or `URLSessionWebSocketTask`, which all five platforms share. The dashboard is the cost: 36 of its files import UIKit, about 4,100 lines of views over 1,771 lines of view models that import only Foundation.
 
@@ -50,14 +49,14 @@ It runs on a Mac with Xcode, against each platform's simulator, plus a Mac for m
 | Do the hooks hold on each platform? One request on `URLSession.shared`, one on a custom session, one background transfer, one WebSocket | Yes. CFNetwork is the same underneath | A platform where capture misses traffic says so in the guide, or is dropped |
 | Does a development build on tvOS, watchOS and visionOS carry `embedded.mobileprovision` with `get-task-allow`? | Yes | That platform is off unless the developer opts in, and the owner is told |
 | On macOS and Catalyst, does a Debug build's own signature carry `com.apple.security.get-task-allow`, signed with a team and signed to run locally, and does a distribution build lack it? | Yes, then no | macOS is off unless the developer opts in, and the owner is told |
-| On visionOS, does `PassthroughWindow` show the trigger above the app and pass input through around it, and does the dashboard present over it? | Unknown | visionOS gets capture and console only, and its dashboard joins the later plans |
+| On visionOS, does `PassthroughWindow` show the trigger above the app and pass input through around it, and does the dashboard present over it? | Unknown | visionOS gets capture and console only, and its dashboard joins the others in PLAN-99 |
 | On Catalyst, do the trigger's drag, the dashboard, Quick Look and the share popovers work with a pointer? | Yes | Fix what's small. Anything larger is listed for the owner |
 | Does `pod lib lint` pass for all five platforms with the CocoaPods on the CI runner? | Yes, for a version that knows visionOS | The pod leaves that platform out, the guide says so, and the owner is told, because the three install options would differ |
 | Do ten XCFramework slices build, and what do the release zip and the release job grow to? | They build. Size and time unknown | If either is unreasonable, the owner chooses which slices ship |
 | Can a session file be taken off a real Apple TV and a real Watch with Xcode's container download? | Yes for Apple TV, unknown for a Watch | The guide says which devices need a simulator to get the file |
 | Does a key command added by hooking `UIApplication` open the dashboard on an iPad with a keyboard, on Catalyst and on visionOS, and does an app's own command with the same keys still win? | Yes | No shortcut ships, and the floating button stays the only automatic trigger there |
 | Which simulator runtimes does `macos-26` have? | iOS, tvOS, watchOS and visionOS | A platform with no runtime is built for its device only, and tested by hand |
-| With its guard removed, how many errors does the dashboard give on tvOS? | Unknown | Nothing changes here. The number sizes the tvOS plan |
+| With its guard removed, how many errors does the dashboard give on tvOS? | Unknown | Nothing changes here. The number goes in PLAN-99's tvOS row |
 
 ### A dashboard where UIKit carries it, and capture everywhere else
 
@@ -124,17 +123,11 @@ Tests keep running on the iOS simulator. `CerebroCoreTests` and `CerebroProtoTes
 
 `swift build` and `swift test` on a Mac become a valid check for the core, though not for the dashboard. `AGENTS.md` says so once that's true.
 
-### What the other dashboards take
+### The other dashboards wait in PLAN-99
 
-None of this is in scope. It's the owner's price list.
+tvOS, native macOS and watchOS get capture, the console and a session file here, and no dashboard. PLAN-99 has a row for each with what it needs and how large it is, and tvOS is the first when one is scheduled.
 
-| Dashboard | What it needs | Size |
-|---|---|---|
-| tvOS | UIKit is there, so it's adapted, not rewritten. Every screen has to work with the focus engine. The trigger needs a remote gesture, since there's no touch or shake. The clipboard, share sheet, document picker, Quick Look, pull to refresh, swipe actions and inset grouped tables don't exist, so copy, export and file import go, and previews fall back to the Body Viewer | One plan. It touches most of the 36 UIKit files |
-| Native macOS | No UIKit. A new AppKit view layer over the existing view models, a window in place of the overlay, and a menu item or shortcut as the trigger. Catalyst apps are already covered by this plan | The largest. About 4,100 lines of views rewritten |
-| watchOS | No UIKit views, so it has to be SwiftUI. The rules forbid SwiftUI in the dashboard, and `notes.md` records why: slower updates, and `Text` couldn't show a large body. The owner would lift the rule for watchOS only, for a reduced dashboard on a very small screen | One plan, and a rule change |
-
-Pulse reaches all of these with one SwiftUI interface, and with a Mac app that reads logs remotely. Cerebro measured SwiftUI and chose UIKit, and its spec rules out a companion app, so it pays for each platform's dashboard separately. That's the trade this table prices.
+Pulse reaches all of these with one SwiftUI interface, and with a Mac app that reads logs remotely. Cerebro measured SwiftUI and chose UIKit, and its spec rules out a companion app, so it pays for each platform's dashboard separately. Opening a session file on another device is what covers the gap until then.
 
 ## Public API
 
@@ -182,7 +175,7 @@ None is added. Three existing ones behave differently by platform, and their doc
 - [ ] Add to the guide how to share a session, where the file is on each platform, how to open it on another device, and the shortcut
 - [ ] Update `AGENTS.md` (the description and the commands), `architecture.md` (platforms, the release gate, the modules' frameworks), `tech-stack.md`, `project-structure.md` and `notes.md` (the spec says iOS only)
 - [ ] Update the `build-and-test`, `build-xcframework` and `podspec-lint` skills for the new destinations
-- [ ] Rewrite PLAN-99's macOS row to what remains, and add the tvOS and watchOS dashboards beside it
+- [ ] Add what the spike learned to PLAN-99's three dashboard rows, such as the tvOS error count
 - [ ] Verify SPM, CocoaPods and XCFramework builds on every platform
 
 ## Acceptance criteria
@@ -252,7 +245,4 @@ None is added. Three existing ones behave differently by platform, and their doc
 
 ## Open questions
 
-1. **Which platforms get a dashboard now?** Recommendation: Catalyst and visionOS only, as written. They reuse the UIKit dashboard, and the other three are each a plan.
-2. **Which dashboard comes next?** Recommendation: tvOS. It adapts the UIKit code that exists, while macOS is a rewrite and already has Catalyst.
-3. **Should watchOS ever get a dashboard?** Recommendation: no, unless someone asks. It means SwiftUI against a rule that was measured, for a screen too small to read a body on.
-4. **Should every XCFramework slice ship?** Recommendation: decide from the spike's zip size and release time. Leaving watchOS out is the first cut if they're too large.
+1. **Should every XCFramework slice ship?** Recommendation: decide from the spike's zip size and release time. Leaving watchOS out is the first cut if they're too large.

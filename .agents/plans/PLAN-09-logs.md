@@ -172,7 +172,22 @@ A marker is a `LogLine` on a third stream, so it's stored, saved, evicted and cl
 
 `isLogCaptureEnabled` turns on the capture of standard output and error. It defaults to `false`, which is the owner's decision: redirecting two descriptors the whole process shares is the most intrusive thing Cerebro does, so a developer asks for it. `Cerebro.start()` still needs no arguments.
 
-The setting covers capture only. The Logs tab is always there, because the OSLog view redirects nothing and reads only while it's on screen. While capture is off, the Console view is an empty state that names the setting, so the feature can be found from inside the app.
+The setting covers capture only. The owner's decision is that the Logs tab is always there, because the OSLog view redirects nothing and reads only while it's on screen.
+
+While capture is off, the Console view shows a message in place of the list, so the feature can be found and turned on from inside the app. It's centred and made to look finished, not like an error:
+
+- the `terminal` symbol, large, in the accent colour
+- a title, "Console capture is off"
+- one sentence: "Turn it on to see `print`, `debugPrint` and standard error here."
+- the one line of code in a monospaced card, with a Copy button:
+
+  ```swift
+  Cerebro.start(CerebroConfiguration(isLogCaptureEnabled: true))
+  ```
+
+- a quieter line under it, "`NSLog`, `os_log` and `Logger` need no code", with a Show OSLog button that switches the view
+
+One view, `LogEmptyStateView`, draws this and the two ordinary empty states, which have a symbol, a title and a sentence but no code card. Its colours come from `DashboardTheme`, and it follows Dynamic Type and dark mode like the rest of the dashboard.
 
 This is the one place the tab needs code, so it joins the table of those places in `architecture.md`.
 
@@ -216,7 +231,7 @@ Nothing else changes for the host app, and no code is needed for the tab or its 
 - [ ] "Logs Around This Request" in the Log Inspector, opening the list limited to that window
 - [ ] Read the system log only while the OSLog view is on screen, with a loading state and pull to refresh
 - [ ] The previous sessions button, and a read-only list for a saved session
-- [ ] Empty states that say what each view shows, that Console starts at `Cerebro.start()`, and while capture is off, that `isLogCaptureEnabled` turns it on
+- [ ] `LogEmptyStateView`: the capture-off message with its code card, Copy and Show OSLog, and the two ordinary empty states, which say what each view shows and that Console starts at `Cerebro.start()`
 
 **Tests, documentation, and distribution**
 - [ ] Unit and view-model tests from the test checklist
@@ -231,7 +246,7 @@ Nothing else changes for the host app, and no code is needed for the tab or its 
 
 ## Acceptance criteria
 
-1. With no code change, the dashboard has a Logs tab that shows the OSLog view, and its Console view says how to turn capture on.
+1. With no code change, the dashboard has a Logs tab that shows the OSLog view. Its Console view shows the capture-off message, with the line of code that turns capture on and a button that copies it.
 2. With `isLogCaptureEnabled` set, a line the app prints after `Cerebro.start()` with `print`, `debugPrint`, `dump` or a write to standard error shows in Console within a second, launched from Xcode or from the Home screen.
 3. With capture on, everything the app writes still reaches Xcode's console, in order within each stream.
 4. OSLog shows the newest 2,000 `NSLog`, `os_log` and `Logger` entries the system log holds for this launch, with their level, subsystem and category, and system framework entries are hidden until the filter shows them.
@@ -309,6 +324,7 @@ Nothing else changes for the host app, and no code is needed for the tab or its 
 - [ ] Following stops when scrolled up, resumes at the bottom, and each view keeps its own position
 - [ ] The shared text is what the view and its filter show, share is off with nothing to share, and "Since Last Marker" starts after the newest marker
 - [ ] The tab opens on Console with capture on, and on OSLog with it off
+- [ ] With capture off, Console offers the code, Copy and Show OSLog. With capture on and nothing printed, it shows the ordinary empty state with no code
 - [ ] A previous session with no lines shows the empty state
 - [ ] "Logs Around This Request": a finished request, one still open, one whose lines were evicted, and hidden with capture off
 - [ ] A system log that can't be opened shows the message and leaves Console working
@@ -323,6 +339,7 @@ Nothing else changes for the host app, and no code is needed for the tab or its 
 - [ ] Crash the app after printing, relaunch, and see which lines the previous session has
 - [ ] Turn capture on in an app that already redirects standard output, and stop Cerebro
 - [ ] Mark, reproduce, share since the marker, and read the file on a Mac
+- [ ] The capture-off message in light and dark mode, at the largest text size, and on the smallest iPhone, and the copied line pasted into the Example app compiles
 - [ ] An app with swift-log or CocoaLumberjack shows its lines
 - [ ] Exercise the tab through SPM, CocoaPods and XCFramework client builds
 
