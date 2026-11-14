@@ -4,7 +4,7 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v1.0.0` is released with every numbered plan, in the first full run of `release.yml`. On 2026-11-14, a throwaway SwiftUI app installed it through SPM, CocoaPods and the XCFramework, and each one showed the floating button on a simulator and captured its request. The pod in `v1.0.0` deletes `cerebro-proto-gen` while installing, so its Run Script phase fails; the next release fixes it.
+`v1.0.0` is released with every numbered plan, in the first full run of `release.yml`. On 2026-11-14, a throwaway SwiftUI app installed it through SPM, CocoaPods and the XCFramework, and each one showed the floating button on a simulator and captured its request. The pod in `v1.0.0` deleted `cerebro-proto-gen` while installing, and `v1.0.1` fixed it. The same three installs of `v1.0.1`, from scratch, passed, and so did its generator from the pod and from the release zip.
 
 Not yet proven:
 
@@ -84,6 +84,7 @@ Don't repeat these without a new reason. All ran on an Apple M1 Mac, the UI ones
 
 ## Worth knowing
 
+- CocoaPods trunk has refused a `prepare_command` from new pods since April 2025, and reports it as a generic internal server error. That's what `pod trunk push` showed for 1.0.1 on 2026-11-14, so the pod stays Git-only.
 - A URLProtocol can't read the app's session, so the side effects in the "What changes while Cerebro captures" section of `docs/GUIDE.md` follow from the design. Don't try to fix them without a new idea.
 - A whole-session HAR is built in memory, so at the worst case of 500 requests with two 1 MB bodies each it needs about as much again as the store holds. Streaming it to a file is the fix if that ever matters.
 - A session delegate that answers a redirect just as the held 3xx goes out, about 500 ms in, can still crash `URLSession.data(for:)`. Nothing public can close that window, because a refusal sends no signal. Delegates that answer sooner never reach it.
