@@ -25,7 +25,7 @@ Users choose one of three install options, and all three are first-class: SPM, C
 
 ## Current plan
 
-PLAN-05's release step is next: merging `develop` into `main` releases `v1.0.0`. See `.agents/plans/README.md` for the order and gates.
+Every numbered plan is done, and `v1.0.0` ships them. PLAN-99 is reference only until it's scheduled. See `.agents/plans/README.md` for the order and gates.
 
 ## Commands
 
