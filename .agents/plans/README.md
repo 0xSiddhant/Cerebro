@@ -17,6 +17,7 @@ Each plan follows the same format: goal → gate → scope → decisions & reaso
 | ✅ 05 | Persistence and 1.0 | `plan/5-background-and-1.0` | PLAN-04 merged |
 | ✅ 06 | Server-Sent Events capture and live inspection | `plan/6-sse` | PLAN-05 merged and `v1.0.0` released |
 | ✅ 08 | Sandbox file browser | `plan/8-files` | PLAN-06 merged |
+| 09 | [Logs tab](PLAN-09-logs.md) | `plan/9-logs` | PLAN-08 merged and `v1.0.1` released. The owner picks where the sixth tab goes, and sees the spike's answers before the core tasks |
 | 99 | [Response mocking and replay](PLAN-99-mocking-and-replay.md) | Named when scheduled | Reference only: after 1.0, pulled into a new numbered plan when scheduled |
 
 A plan's file is deleted in the PR that finishes it, and its row here gets a ✅. After that the code and `context/notes.md` carry what matters.
