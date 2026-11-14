@@ -4,11 +4,10 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. Every numbered plan is on `develop` with a `Release-As: 1.0.0` footer, so merging `develop` into `main` releases `v1.0.0`. PLAN-06 and PLAN-08 were planned after that release, and the owner chose to ship them in it.
+`v1.0.0` is released with every numbered plan, in the first full run of `release.yml`. On 2026-11-14, a throwaway SwiftUI app installed it through SPM, CocoaPods and the XCFramework, and each one showed the floating button on a simulator and captured its request. The pod in `v1.0.0` deletes `cerebro-proto-gen` while installing, so its Run Script phase fails; the next release fixes it.
 
 Not yet proven:
 
-- a full `release.yml` run on GitHub, and installing `v1.0.0` through each install option
 - the Release gate on a real device. If it doesn't hold, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner
 - a burst of large responses on a real device
 - a real crash, with the previous session read back. Tests only cut a line short
