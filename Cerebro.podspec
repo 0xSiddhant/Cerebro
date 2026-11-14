@@ -3,10 +3,11 @@
 Pod::Spec.new do |s|
   s.name = 'Cerebro'
   s.version = '0.1.0'
-  s.summary = 'A debug-only network inspector for iOS apps.'
+  s.summary = 'A debug-only network inspector and file browser for iOS apps.'
   s.description = <<~DESC
-    Cerebro captures an iOS app's HTTP, WebSocket and NWConnection traffic and
-    shows it in an in-app dashboard, including compressed and protobuf payloads.
+    Cerebro captures an iOS app's HTTP, Server-Sent Events, WebSocket and
+    NWConnection traffic, including compressed and protobuf payloads, and shows
+    it in an in-app dashboard that also browses the app's sandbox.
   DESC
   s.homepage = 'https://github.com/0xSiddhant/Cerebro'
   s.license = { :type => 'MIT', :file => 'LICENSE' }
