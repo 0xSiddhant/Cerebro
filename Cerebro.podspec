@@ -2,7 +2,7 @@
 # trunk goes read-only on December 2, 2026. Later versions come from Git only.
 Pod::Spec.new do |s|
   s.name = 'Cerebro'
-  s.version = '1.0.0'
+  s.version = '1.0.1'
   s.summary = 'A debug-only network inspector and file browser for iOS apps.'
   s.description = <<~DESC
     Cerebro captures an iOS app's HTTP, Server-Sent Events, WebSocket and

@@ -2,6 +2,14 @@
 
 Every release of Cerebro, newest first. The release workflow writes each section from the pull requests merged since the release before, and the release's [GitHub page](https://github.com/0xSiddhant/Cerebro/releases) shows the same section under its install steps. Don't edit it by hand.
 
+## [1.0.1](https://github.com/0xSiddhant/Cerebro/releases/tag/v1.0.1) - 2026-11-14
+
+### What's Changed
+* fix: keep cerebro-proto-gen in CocoaPods installs by @0xSiddhant in https://github.com/0xSiddhant/Cerebro/pull/18
+
+
+**Full Changelog**: https://github.com/0xSiddhant/Cerebro/compare/v1.0.0...v1.0.1
+
 ## [1.0.0](https://github.com/0xSiddhant/Cerebro/releases/tag/v1.0.0) - 2026-11-14
 
 ### What's Changed
