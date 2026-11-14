@@ -19,6 +19,7 @@ final class DashboardWindowManager: NSObject {
     init(sources: DashboardSources, isShakeGestureEnabled: Bool) {
         self.sources = sources
         super.init()
+        DashboardTheme.register()
         overlay.trigger.onTap = { [weak self] in self?.present() }
         if isShakeGestureEnabled {
             ShakeDetector.install { [weak self] in self?.toggleTrigger() }
@@ -94,6 +95,8 @@ final class DashboardWindowManager: NSObject {
         } else {
             let window = PassthroughWindow(windowScene: scene)
             window.windowLevel = .statusBar + 1
+            // Cerebro's own window, so the accent reaches every screen and alert without touching the app.
+            window.tintColor = DashboardTheme.accent
             window.rootViewController = overlay
             window.isHidden = false
             self.window = window

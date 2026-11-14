@@ -1,6 +1,7 @@
 import UIKit
 
-/// One frame as a chat bubble: sent on the right in blue, received on the left in gray, failed in red.
+/// One frame as a chat bubble: sent on the right in the accent, received on the left as a card, failed in
+/// the failure colour. `DashboardTheme` decides each one.
 final class SocketFrameCell: UITableViewCell {
     static let reuseIdentifier = "SocketFrameCell"
 
@@ -62,8 +63,10 @@ final class SocketFrameCell: UITableViewCell {
         detail.text = row.detail
         sentConstraint.isActive = row.isSent
         receivedConstraint.isActive = !row.isSent
-        bubble.backgroundColor = row.didFail ? .systemRed : row.isSent ? .systemBlue : .systemGray5
-        message.textColor = row.isSent ? .white : .label
-        detail.textColor = row.isSent ? UIColor.white.withAlphaComponent(0.8) : .secondaryLabel
+        bubble.backgroundColor =
+            row.didFail
+            ? DashboardTheme.failure : row.isSent ? DashboardTheme.accentFill : DashboardTheme.card
+        message.textColor = row.isSent ? DashboardTheme.onFill : DashboardTheme.primaryText
+        detail.textColor = row.isSent ? DashboardTheme.onFill.withAlphaComponent(0.8) : DashboardTheme.secondaryText
     }
 }

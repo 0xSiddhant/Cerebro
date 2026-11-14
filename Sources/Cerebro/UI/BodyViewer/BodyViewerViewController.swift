@@ -48,12 +48,15 @@ final class BodyViewerViewController: UIViewController {
 
     override func loadView() {
         textView.isEditable = false
+        textView.backgroundColor = DashboardTheme.background
         textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         treeView.register(UITableViewCell.self, forCellReuseIdentifier: Self.treeCellIdentifier)
+        DashboardTheme.style(treeView)
         treeView.dataSource = self
         treeView.delegate = self
         let container = UIView()
+        container.backgroundColor = DashboardTheme.background
         for content in [textView, treeView] {
             content.frame = container.bounds
             content.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -123,6 +126,8 @@ extension BodyViewerViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: Self.treeCellIdentifier, for: indexPath)
+        // The tree reads as text on the page, like the other modes, not as a list of cards.
+        cell.backgroundColor = .clear
         guard let row = tree?.rows[indexPath.row] else { return cell }
         var content = UIListContentConfiguration.cell()
         content.text = row.key.map { "\($0): \(row.value)" } ?? row.value
@@ -142,7 +147,7 @@ extension BodyViewerViewController: UITableViewDataSource, UITableViewDelegate {
 
     private func chevron(isExpanded: Bool) -> UIImageView {
         let view = UIImageView(image: UIImage(systemName: isExpanded ? "chevron.down" : "chevron.right"))
-        view.tintColor = .tertiaryLabel
+        view.tintColor = DashboardTheme.tertiaryText
         return view
     }
 }

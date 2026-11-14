@@ -35,7 +35,7 @@ final class FolderViewController: UITableViewController {
 
     init(viewModel: FolderViewModel) {
         self.viewModel = viewModel
-        super.init(style: .plain)
+        super.init(style: .insetGrouped)
         title = viewModel.title
     }
 
@@ -46,12 +46,13 @@ final class FolderViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
         tableView.dataSource = dataSource
         tableView.allowsMultipleSelectionDuringEditing = true
         tableView.tableFooterView = footer
         footer.font = .preferredFont(forTextStyle: .footnote)
-        footer.textColor = .secondaryLabel
+        footer.textColor = DashboardTheme.secondaryText
         footer.textAlignment = .center
         footer.numberOfLines = 0
         navigationItem.searchController = makeSearchController()
@@ -98,7 +99,7 @@ final class FolderViewController: UITableViewController {
         content.image = UIImage(systemName: row.symbol)
         content.text = row.name
         content.secondaryText = row.detail
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = DashboardTheme.secondaryText
         content.secondaryTextProperties.numberOfLines = 1
         cell.contentConfiguration = content
         cell.accessoryType = row.isFolder ? .disclosureIndicator : .none
@@ -287,6 +288,14 @@ extension FolderViewController {
         let flexible = UIBarButtonItem.flexibleSpace()
         let buttons = [FileAction.share, .copyTo, .moveTo, .delete].compactMap { selectionButtons[$0] }
         toolbarItems = isSelecting ? Array(buttons.map { [$0, flexible] }.joined().dropLast()) : nil
+        // On iOS 26 the tab bar floats over the toolbar, so it steps aside while items are selected.
+        // Earlier designs place the toolbar above the tab bar. The floating bar needs an app built with
+        // the iOS 26 SDK, which comes with Swift 6.2, and older compilers don't know `setTabBarHidden`.
+        #if compiler(>=6.2)
+        if #available(iOS 26, *) {
+            tabBarController?.setTabBarHidden(isSelecting, animated: true)
+        }
+        #endif
         navigationController?.setToolbarHidden(!isSelecting, animated: true)
         updateSelectionButtons()
     }

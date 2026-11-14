@@ -33,7 +33,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 
 **Dashboard**
 
-- **Floating trigger:** sits above your app, drags anywhere and snaps to the nearest side, and counts the requests since you last looked.
+- **Floating trigger:** Cerebro's globe, which sits above your app, drags anywhere and snaps to the nearest side, and counts the requests since you last looked.
 - **HTTP list:** newest first and live, with each method in its own colour (`GET` blue, `POST` green, `PUT` orange, `PATCH` purple, `DELETE` red) and an `SSE` tag on event streams, plus search by URL, method or status, and filters for 2xx, 4xx, 5xx and failed requests. The trash button clears every request and resets the session totals, after asking. Sockets are kept.
 - **Log Inspector:** Response, Request and Metrics pages for each request. Tap a row to expand it, or long-press to copy it. An event stream's events are listed live at the end of the Response page.
 - **Body Viewer:** pretty JSON or raw text, plus a collapsible tree for decoded protobuf, with copy and share buttons.
@@ -51,6 +51,7 @@ Installing and starting Cerebro is in the [README](../README.md). This guide cov
 - Redacts only what you select, before anything is stored: common credential headers, your own headers, body fields and query parameters. With no rules, `Authorization` and cookies are stored and shown as sent. See [Redaction](#redaction). Cerebro warns you before anything is shared. Files are never redacted: the Files tab shows them exactly as they are on disk.
 - Keeps the live session in memory, capped by count and size, and sends nothing off the device. A redacted copy goes to the app's Caches folder, so the previous session survives a relaunch. See [Previous sessions](#previous-sessions).
 - Lives in its own window, so it never touches your navigation stack or takes touches outside its own views.
+- Ships a privacy manifest, `PrivacyInfo.xcprivacy`, with every install option, so Xcode adds it to your app's privacy report. It declares no tracking and no collected data, and one required reason API: file timestamps, which the Files tab reads in your app's own containers and shows on the device (`C617.1` and `DDA9.1`). The opt-in [public IP lookup](#system-info) isn't collected data: like any request, it carries the device's address, and Cerebro keeps the answer on the device.
 
 ## Configuration
 

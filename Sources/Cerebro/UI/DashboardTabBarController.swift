@@ -52,6 +52,7 @@ final class DashboardTabBarController: UITabBarController {
             isFileBrowserEnabled: sources.fileRoots != nil
         )
         viewControllers = tabs.map { makeTab($0, sources: sources) }
+        DashboardTheme.style(tabBar)
     }
 
     @available(*, unavailable)
@@ -99,7 +100,7 @@ final class DashboardTabBarController: UITabBarController {
             systemItem: .close,
             primaryAction: UIAction { [weak self] _ in self?.close() }
         )
-        let tab = UINavigationController(rootViewController: root)
+        let tab = DashboardNavigationController(rootViewController: root)
         tab.tabBarItem = UITabBarItem(title: title, image: UIImage(systemName: image), tag: 0)
         return tab
     }

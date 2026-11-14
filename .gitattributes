@@ -1,0 +1,13 @@
+# Left out of GitHub's "Source code" downloads and `git archive`, but kept in the repository.
+# SPM and CocoaPods fetch with git, which ignores this, and never build or install these anyway.
+# CI's SwiftLint container downloads the repository as an archive, so the lint configs and everything
+# they lint, Example included, stay in. So does docs/GUIDE.md, which the README links to.
+/.agents export-ignore
+/.claude export-ignore
+/.githooks export-ignore
+/.github export-ignore
+/.gitattributes export-ignore
+/AGENTS.md export-ignore
+/CLAUDE.md export-ignore
+/docs/brand export-ignore
+/docs/screenshots export-ignore

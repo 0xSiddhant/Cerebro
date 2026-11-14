@@ -1,11 +1,12 @@
 import UIKit
 
-/// The floating circle that opens the dashboard. It drags, snaps to the nearest edge and shows how many
-/// requests arrived since the dashboard was last opened.
+/// The floating circle that opens the dashboard, showing Cerebro's icon. It drags, snaps to the nearest
+/// edge and shows how many requests arrived since the dashboard was last opened.
 final class FloatingTriggerView: UIView {
     private static let size: CGFloat = 44
     private static let margin: CGFloat = 12
-    private static let iconInset: CGFloat = 12
+    private static let glyphInset: CGFloat = 0.22
+    private static let rimWidth: CGFloat = 1.5
     private static let badgeHeight: CGFloat = 16
 
     var onTap: (() -> Void)?
@@ -15,29 +16,26 @@ final class FloatingTriggerView: UIView {
         didSet { updateBadge() }
     }
 
-    private let icon = UIImageView(image: UIImage(systemName: "antenna.radiowaves.left.and.right"))
+    private let background = CAGradientLayer()
+    private let rim = CAShapeLayer()
+    private let glyph = CAShapeLayer()
     private let badge = UILabel()
     private var hasPosition = false
 
     init() {
         super.init(frame: CGRect(x: 0, y: 0, width: Self.size, height: Self.size))
-        backgroundColor = .systemIndigo
-        layer.cornerRadius = Self.size / 2
-        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowColor = DashboardTheme.shadow.cgColor
         layer.shadowOpacity = 0.3
         layer.shadowRadius = 6
         layer.shadowOffset = CGSize(width: 0, height: 3)
+        layer.shadowPath = UIBezierPath(ovalIn: bounds).cgPath
         isAccessibilityElement = true
         accessibilityLabel = "Cerebro"
         accessibilityTraits = .button
+        drawIcon()
 
-        icon.tintColor = .white
-        icon.contentMode = .scaleAspectFit
-        icon.frame = bounds.insetBy(dx: Self.iconInset, dy: Self.iconInset)
-        addSubview(icon)
-
-        badge.backgroundColor = .systemRed
-        badge.textColor = .white
+        badge.backgroundColor = DashboardTheme.badge
+        badge.textColor = DashboardTheme.onFill
         badge.textAlignment = .center
         badge.font = .boldSystemFont(ofSize: 10)
         badge.layer.cornerRadius = Self.badgeHeight / 2
@@ -52,6 +50,36 @@ final class FloatingTriggerView: UIView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("FloatingTriggerView is built in code")
+    }
+
+    /// Layers rather than an image, because the dashboard loads nothing from bundles.
+    private func drawIcon() {
+        background.frame = bounds
+        background.cornerRadius = Self.size / 2
+        background.colors = DashboardTheme.triggerBackground.map(\.cgColor)
+        background.startPoint = .zero
+        background.endPoint = CGPoint(x: 1, y: 1)
+        layer.addSublayer(background)
+
+        // A layer of its own rather than a border, which would be drawn over the badge.
+        rim.path = UIBezierPath(ovalIn: bounds.insetBy(dx: Self.rimWidth / 2, dy: Self.rimWidth / 2)).cgPath
+        rim.lineWidth = Self.rimWidth
+        rim.strokeColor = DashboardTheme.triggerRim.cgColor
+        rim.fillColor = nil
+        layer.addSublayer(rim)
+
+        let area = bounds.insetBy(dx: Self.size * Self.glyphInset, dy: Self.size * Self.glyphInset)
+        var scale = CGAffineTransform(translationX: area.minX, y: area.minY)
+            .scaledBy(x: area.width / 100, y: area.height / 100)
+        let path = CerebroIcon.glyph().copy(using: &scale)
+        glyph.path = path
+        glyph.fillColor = DashboardTheme.triggerGlyph.cgColor
+        glyph.shadowPath = path
+        glyph.shadowColor = DashboardTheme.triggerGlyph.cgColor
+        glyph.shadowOpacity = 0.85
+        glyph.shadowRadius = Self.size * CerebroIcon.glowRadius
+        glyph.shadowOffset = .zero
+        layer.addSublayer(glyph)
     }
 
     /// Keeps the trigger inside `area`, starting at the lower right.

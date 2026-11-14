@@ -8,7 +8,7 @@ final class ProtoConfigViewController: UITableViewController {
 
     init(viewModel: ProtoConfigViewModel) {
         self.viewModel = viewModel
-        super.init(style: .plain)
+        super.init(style: .insetGrouped)
         title = "Proto Config"
     }
 
@@ -19,6 +19,7 @@ final class ProtoConfigViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
         tableView.allowsSelection = false
         viewModel.onChange = { [weak self] in self?.tableView.reloadData() }
@@ -41,7 +42,7 @@ final class ProtoConfigViewController: UITableViewController {
         content.text = row.title
         content.textProperties.font = .preferredFont(forTextStyle: .headline)
         content.secondaryText = "\(row.mapping)\n\(row.detail)"
-        content.secondaryTextProperties.color = .secondaryLabel
+        content.secondaryTextProperties.color = DashboardTheme.secondaryText
         content.secondaryTextProperties.numberOfLines = 0
         content.textToSecondaryTextVerticalPadding = 4
         cell.contentConfiguration = content

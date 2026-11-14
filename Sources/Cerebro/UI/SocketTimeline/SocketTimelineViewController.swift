@@ -21,6 +21,7 @@ final class SocketTimelineViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.separatorStyle = .none
         tableView.allowsSelection = true
         tableView.register(SocketFrameCell.self, forCellReuseIdentifier: SocketFrameCell.reuseIdentifier)

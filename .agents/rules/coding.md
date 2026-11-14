@@ -120,6 +120,7 @@ CI fails on any finding from either tool, and each check has one owner.
 ## UI
 
 - Programmatic UIKit only: no storyboards, no SwiftUI, nothing loaded from bundles.
+- Every colour comes from `DashboardTheme`, and its brand colours from `CerebroIcon`, so the whole dashboard changes together.
 - Show response bodies in `UITextView`, which displayed a 1 MB body in under half a second.
 - MVVM, so view logic can be tested without the UI.
 

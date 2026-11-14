@@ -12,7 +12,7 @@ final class SocketEventCell: UITableViewCell {
         backgroundColor = .clear
         label.font = .preferredFont(forTextStyle: .caption1)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .secondaryLabel
+        label.textColor = DashboardTheme.secondaryText
         label.textAlignment = .center
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false

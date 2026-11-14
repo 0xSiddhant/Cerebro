@@ -21,8 +21,10 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-protobuf.git", "1.27.0"..<"2.0.0"),
     ],
     targets: [
+        // The privacy manifest is shipped, never read. `.process` is the form Apple's documentation uses.
         .target(
             name: "CerebroCore",
+            resources: [.process("PrivacyInfo.xcprivacy")],
             swiftSettings: swiftSettings
         ),
         .target(

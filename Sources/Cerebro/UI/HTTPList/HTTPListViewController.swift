@@ -39,7 +39,7 @@ final class HTTPListViewController: UITableViewController {
         self.viewModel = viewModel
         self.archive = archive
         self.previousSessionTitle = previousSessionTitle
-        super.init(style: .plain)
+        super.init(style: .insetGrouped)
         title = previousSessionTitle ?? "HTTP"
         // The tabs belong to the live session, so they'd be misleading over a saved one.
         hidesBottomBarWhenPushed = previousSessionTitle != nil
@@ -52,6 +52,7 @@ final class HTTPListViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(TrafficRowCell.self, forCellReuseIdentifier: TrafficRowCell.reuseIdentifier)
         tableView.dataSource = dataSource
         navigationItem.searchController = makeSearchController()
@@ -95,7 +96,7 @@ final class HTTPListViewController: UITableViewController {
             self?.copyCurl(of: request)
             finished(true)
         }
-        copy.backgroundColor = .systemBlue
+        copy.backgroundColor = DashboardTheme.accentFill
         copy.image = UIImage(systemName: "doc.on.doc")
         return UISwipeActionsConfiguration(actions: [copy])
     }
@@ -152,7 +153,7 @@ final class HTTPListViewController: UITableViewController {
         if let row = viewModel.rows.first(where: { $0.id == id }) {
             (cell as? TrafficRowCell)?.show(
                 tag: row.method,
-                tagTint: TrafficTagLabel.tint(forMethod: row.method),
+                tagTint: DashboardTheme.method(row.method),
                 marker: row.marker,
                 title: row.path,
                 detail: row.detail,

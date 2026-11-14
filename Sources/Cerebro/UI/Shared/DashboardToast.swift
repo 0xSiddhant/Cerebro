@@ -21,6 +21,7 @@ enum DashboardToast {
         pill.layer.cornerRadius = 14
         pill.clipsToBounds = true
         pill.isUserInteractionEnabled = false
+        pill.contentView.backgroundColor = DashboardTheme.raised.withAlphaComponent(0.7)
         pill.translatesAutoresizingMaskIntoConstraints = false
         pill.contentView.addSubview(label)
         host.addSubview(pill)

@@ -39,18 +39,6 @@ final class TrafficTagLabel: UILabel {
         backgroundColor = tint.withAlphaComponent(0.16)
     }
 
-    /// The colour a method is known by, so a list can be scanned for one. Anything else is grey.
-    static func tint(forMethod method: String) -> UIColor {
-        switch method.uppercased() {
-        case "GET": return .systemBlue
-        case "POST": return .systemGreen
-        case "PUT": return .systemOrange
-        case "PATCH": return .systemPurple
-        case "DELETE": return .systemRed
-        default: return .systemGray
-        }
-    }
-
     /// System tints such as green and orange are too pale to read as text on a light background, so
     /// they're darkened there. In the dark they're bright enough as they are.
     private static func readable(_ tint: UIColor) -> UIColor {

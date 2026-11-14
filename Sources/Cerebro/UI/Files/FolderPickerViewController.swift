@@ -46,6 +46,7 @@ final class FolderPickerViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        DashboardTheme.style(tableView)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             systemItem: .cancel,

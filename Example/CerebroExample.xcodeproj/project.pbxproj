@@ -10,10 +10,12 @@
 		7C1A00000000000000000011 /* Cerebro in Frameworks */ = {isa = PBXBuildFile; productRef = 7C1A00000000000000000021 /* Cerebro */; };
 		7C1A00000000000000000012 /* CerebroProto in Frameworks */ = {isa = PBXBuildFile; productRef = 7C1A00000000000000000022 /* CerebroProto */; };
 		7C1A00000000000000000013 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = 7C1A00000000000000000023 /* SwiftProtobuf */; };
+		9C87B89230A1B24000384E95 /* traffic_map.json in Resources */ = {isa = PBXBuildFile; fileRef = 9C87B89130A1B23F00384E95 /* traffic_map.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		7C1A00000000000000000031 /* CerebroExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CerebroExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C87B89130A1B23F00384E95 /* traffic_map.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = traffic_map.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -41,6 +43,7 @@
 		7C1A00000000000000000061 = {
 			isa = PBXGroup;
 			children = (
+				9C87B89130A1B23F00384E95 /* traffic_map.json */,
 				7C1A00000000000000000041 /* CerebroExample */,
 				7C1A00000000000000000062 /* Products */,
 			);
@@ -125,6 +128,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9C87B89230A1B24000384E95 /* traffic_map.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -187,8 +191,10 @@
 		7C1A00000000000000000093 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2A7GLY3DP4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -209,8 +215,10 @@
 		7C1A00000000000000000094 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2A7GLY3DP4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
