@@ -4,7 +4,7 @@ What the code, the spec and the rules can't tell you. Keep this short: edit it i
 
 ## Status
 
-`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-08 is on `develop`, so PLAN-05's release step is all that's left before `v1.0.0`. PLAN-06 and PLAN-08 were planned after that release, and the owner chose to ship them in it.
+`v0.1.0` is released and has only placeholders for capture. Everything through PLAN-08 is on `develop` with a `Release-As: 1.0.0` footer, so merging `develop` into `main` releases `v1.0.0`. PLAN-06 and PLAN-08 were planned after that release, and the owner chose to ship them in it.
 
 Not yet proven: a full `release.yml` run on GitHub, the Release gate on a real device, a burst of large responses on a real device, and the Files tab on a real device: Quick Look, a file with complete data protection, App Group containers, AirDrop and import from the Files app. If the gate doesn't hold on a device, fall back to `#if DEBUG` for SPM and CocoaPods with an explicit opt-in for XCFramework users, and tell the owner.
 
