@@ -25,7 +25,7 @@ Users choose one of three install options, and all three are first-class: SPM, C
 
 ## Current plan
 
-Plans 0 to 8 are done, and `v1.0.0` shipped them. PLAN-09, the Logs tab, is drafted and waits on the owner's two checkpoints in its gate. PLAN-99 is reference only until it's scheduled. See `.agents/plans/README.md` for the order and gates.
+Plans 0 to 8 are done, and `v1.0.0` shipped them. PLAN-09, the Logs tab, is drafted and waits on the spike in its gate. PLAN-99 is reference only until it's scheduled. See `.agents/plans/README.md` for the order and gates.
 
 ## Commands
 

@@ -2,23 +2,22 @@
 
 ## Goal
 
-Add a Logs tab that shows what the app itself wrote while it ran: `print`, `debugPrint`, `dump`, anything else on standard output or standard error, `NSLog`, and the app's `os_log` and `Logger` entries. A failing request rarely explains itself, and the line the app logged beside it usually does. Away from Xcode that line is lost today, because iOS sends an app's standard output to `/dev/null` when it's launched from the Home screen. The tab needs no code change, like the rest of Cerebro.
+Add a Logs tab that shows what the app itself wrote while it ran: `print`, `debugPrint`, `dump`, anything else on standard output or standard error, `NSLog`, and the app's `os_log` and `Logger` entries. A failing request rarely explains itself, and the line the app logged beside it usually does. Away from Xcode that line is lost today, because iOS sends an app's standard output to `/dev/null` when it's launched from the Home screen. The tab and its system log view need no code change. Capturing standard output and error is opt-in, one argument to `Cerebro.start`, because it redirects state the whole process shares.
 
 ## Gate
 
 PLAN-08 merged and `v1.0.1` released. Single PR on `plan/9-logs`.
 
-Two owner checkpoints come before the main work:
+One owner checkpoint comes before the main work: the spike. This plan was drafted where no simulator could run, so nothing in "What a spike must settle first" is measured yet. The spike is the first task, and the owner sees its answers before the core tasks start, because some of them can change the scope.
 
-1. **The tab bar.** A sixth tab doesn't fit an iPhone's bar. "Logs takes Proto Config's place" below is a recommendation, and no dashboard task starts until the owner picks.
-2. **The spike.** This plan was drafted where no simulator could run, so nothing in "What a spike must settle first" is measured yet. The spike is the first task. The owner sees its answers before the core tasks start, because three of them can change the scope or a default.
+The owner has already decided two things, on 2026-11-14: Proto Config moves into the Sockets tab to make room in the bar, and capture of standard output and error is off by default.
 
 ## Scope
 
 **In:** capture of standard output and standard error, with everything still reaching Xcode's console; a read of the system log for this process, on demand; a Logs tab with a Console view and an OSLog view, search, a filter, copy, share and clear; console lines in the saved session and in a previous session's view; one setting; Cerebro's own console lines kept out; documentation; all three install options.
 
 **Out:**
-- One merged timeline of both views. The second open question says why.
+- One merged timeline of both views. The first open question says why.
 - A logging API of Cerebro's own, such as `Cerebro.log`. It would break zero code change, and every app already has a logger.
 - Hooking `os_log` itself. That means rebinding C symbols, which needs a C target and private behaviour.
 - Reading a level out of printed text, such as `[ERROR]`.
@@ -35,7 +34,7 @@ The owner's question was whether a lightweight log tab is worth it. It is, for f
 
 - It fills the gap a network inspector leaves. A 500 shows what failed, and the app's own log line shows why.
 - It shows `print` output on a device away from Xcode, which nothing in iOS does. That is the tester's and the QA build's case, which is the case Cerebro exists for.
-- Standard output, standard error and the system log can all be reached with public API, so it costs the app no code.
+- Standard output, standard error and the system log can all be reached with public API. The system log costs the app no code, and the other two cost one argument.
 - Most of the machinery exists: the ring buffer, batched observers, the session file, the list screens, search, the Body Viewer and sharing.
 
 It also has real costs, and each one has a decision below: redirecting standard output is the most intrusive thing Cerebro does after swizzling, the system log is slow to read and hides private values, and the tab bar is full.
@@ -55,6 +54,8 @@ It also has real costs, and each one has a decision below: redirecting standard 
 | Anything written before `Cerebro.start()` | | OSLog only | | Console starts at `start`. The system log has the whole launch |
 | A widget's or an extension's logs | Another process | Neither | | Out of reach |
 
+Console rows need `isLogCaptureEnabled`. OSLog rows need nothing.
+
 The NSLog row comes from the open-source CoreFoundation, where [`also_do_stderr`](https://github.com/apple/swift-corelibs-foundation/blob/main/Sources/CoreFoundation/CFUtilities.c) defers to the system log under a debugger and otherwise writes to a standard error that is a pipe. The `Logger` row comes from [Apple's answer](https://developer.apple.com/forums/thread/739047) that `Logger` never writes to standard output or error unless Xcode's `OS_ACTIVITY_DT_MODE` is set. The spike confirms both on a device, because the CoreFoundation that ships isn't the open-source one.
 
 ### What a spike must settle first
@@ -63,10 +64,10 @@ It runs in the Example app, on a simulator and on a real device, launched from X
 
 | Question | Expected | If it goes the other way |
 |---|---|---|
-| After `dup2` onto descriptor 1 and `setvbuf(stdout, nil, _IOLBF, 0)`, does each `print` arrive at once, however the app was launched? | Yes | Try unbuffered. If lines still arrive late, capture can't be on by default, and the owner is told |
-| Does Xcode's console still show every line, in order within each stream? | Yes, through the copy to the original descriptor | Capture is off by default, and the guide says what Xcode loses |
+| After `dup2` onto descriptor 1 and `setvbuf(stdout, nil, _IOLBF, 0)`, does each `print` arrive at once, however the app was launched? | Yes | Try unbuffered. If lines still arrive late, the owner is told before capture is built |
+| Does Xcode's console still show every line, in order within each stream? | Yes, through the copy to the original descriptor | The owner is told, and the guide says what Xcode loses while capture is on |
 | Does referencing `stdout` compile under strict concurrency with warnings as errors, in all three builds? | Unknown. It's an imported global variable | Look the stream up with `dlsym`, at that one C boundary |
-| What does a captured `print` cost? 100,000 calls in a Release build, from Xcode and from the Home screen, with and without capture | No slower than the same build under Xcode, where standard output is already line-buffered | If it's slower than that, `isLogCaptureEnabled` defaults to `false` and the owner is told |
+| What does a captured `print` cost? 100,000 calls in a Release build, from Xcode and from the Home screen, with and without capture | No slower than the same build under Xcode, where standard output is already line-buffered | The guide gives the measured cost beside the setting. Capture is opt-in either way |
 | Does a burst bigger than the pipe's buffer stall the app? 1 MB printed in a loop | No. The reader only reads, copies and queues | Raise the reader's priority, and record the stall |
 | Does `NSLog` reach the pipe on standard error without a debugger, and not with one? | Yes, then no | Only the table above and the guide change |
 | Does `OSLogStore(scope: .currentProcessIdentifier)` work on a device with no entitlement, and return this launch from its start? | Yes | With no OSLog view, the tab is Console only, and the owner is told |
@@ -78,7 +79,7 @@ It runs in the Example app, on a simulator and on a real device, launched from X
 
 Standard output and error are captured: they pass through the pipeline into a store, like traffic. The system log is not captured. iOS already stores it, so Cerebro reads it when the view is on screen and keeps no copy, the way the Files tab reads a folder.
 
-A segmented control in the title switches between Console and OSLog, as System Info switches pages. The two aren't merged into one timeline. Their timestamps come from different clocks, `NSLog` would appear twice, and the system log is too slow to read continuously, so a merged list would have gaps that look like silence. Each view shows one system honestly.
+A segmented control in the title switches between Console and OSLog, as System Info switches pages. The tab opens on Console while capture is on, and on OSLog while it's off. The two aren't merged into one timeline. Their timestamps come from different clocks, `NSLog` would appear twice, and the system log is too slow to read continuously, so a merged list would have gaps that look like silence. Each view shows one system honestly.
 
 ### Standard output and error: a pipe, and a copy to where it was going
 
@@ -91,7 +92,7 @@ Host app safety rules, because this touches process-wide state:
 - `stop()` restores the descriptors before it closes the pipes, and the write ends are set to never raise `SIGPIPE`.
 - A descriptor is restored only if it still points at Cerebro's pipe. Another tool may have redirected it since.
 - Standard output is set to line buffering. Under Xcode it already is, because it's a terminal. Without that, a pipe makes it fully buffered and lines arrive in blocks, late.
-- While Cerebro is off, in a distribution build or with the setting off, nothing is redirected.
+- Nothing is redirected unless `isLogCaptureEnabled` is set, or while Cerebro is off in a distribution build.
 
 `StandardStreamCapture` takes the descriptor it redirects as an argument. Tests hand it a pipe of their own, because redirecting the test runner's real output would catch every other test's lines.
 
@@ -137,9 +138,11 @@ Entries aren't written to the session file. They'd only be the ones read while t
 
 The bar holds five tabs before an iPhone adds More, and all five are taken when an app has proto rules. More is not acceptable: it wraps the sixth tab in its own navigation controller and adds an Edit button.
 
-The recommendation is that Proto Config stops being a tab. It's the only conditional one and the least visited, a reference list of rules. System Info's Traffic page gets a "Proto rules" row with the rule count, shown when there are rules, which pushes the same `ProtoConfigViewController` unchanged. The bar becomes HTTP, Sockets, Logs, Files, System Info, never more than five.
+The owner's decision is that Proto Config stops being a tab and opens from the Sockets tab only. The Sockets list gets a bar button with the `curlybraces` symbol, shown when there are rules, which pushes the same `ProtoConfigViewController` unchanged. A previous session's socket list doesn't have it, because the rules belong to the running app. The bar becomes HTTP, Sockets, Logs, Files, System Info, always five or fewer.
 
-Rejected: merging HTTP and Sockets into one tab, which redesigns the two most used screens for a tab that isn't one of them, and a custom scrolling bar, which replaces a system control with one to maintain.
+The screen still lists every rule, including ones that only match HTTP bodies, because it's now the only way in. The guide says where it went.
+
+Rejected: a row on System Info, which this plan first recommended and the owner passed over for Sockets; merging HTTP and Sockets into one tab, which redesigns the two most used screens; and a custom scrolling bar, which replaces a system control with one to maintain.
 
 The tab is called Logs and uses the `terminal` symbol. The spec's name for the request detail screen is Log Inspector, so every new type starts with `LogLine`, `LogList`, `LogStore`, `StandardStream` or `SystemLog`, and none with `LogInspector`.
 
@@ -153,19 +156,23 @@ The tab is called Logs and uses the `terminal` symbol. The spec's name for the r
 - The previous sessions button opens a saved session's Console lines, read-only, like the HTTP and Sockets tabs.
 - The trigger's badge still counts requests only.
 
-### One setting, on by default
+### One setting, off by default
 
-`isLogCaptureEnabled` turns capture and the tab off together. It defaults to `true`, so `Cerebro.start()` still needs no arguments. It exists because an app, or another tool in it, may already redirect standard output, and that developer needs a way out. The spike can change the default, as its table says.
+`isLogCaptureEnabled` turns on the capture of standard output and error. It defaults to `false`, which is the owner's decision: redirecting two descriptors the whole process shares is the most intrusive thing Cerebro does, so a developer asks for it. `Cerebro.start()` still needs no arguments.
 
-The caps are fixed. The third open question asks whether the line count should be a setting.
+The setting covers capture only. The Logs tab is always there, because the OSLog view redirects nothing and reads only while it's on screen. While capture is off, the Console view is an empty state that names the setting, so the feature can be found from inside the app.
+
+This is the one place the tab needs code, so it joins the table of those places in `architecture.md`.
+
+The caps are fixed. The second open question asks whether the line count should be a setting.
 
 ## Public API
 
 | API | Purpose | Notes |
 |---|---|---|
-| `CerebroConfiguration.isLogCaptureEnabled` | Captures standard output and error and shows the Logs tab | Defaults to `true`. No app has to set it |
+| `CerebroConfiguration.isLogCaptureEnabled` | Captures standard output and error for the Console view | Defaults to `false`. Set it to see `print` output |
 
-Nothing else changes for the host app, and no code is needed to use the tab.
+Nothing else changes for the host app, and no code is needed for the tab or its OSLog view.
 
 ## Task checklist
 
@@ -181,21 +188,21 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 - [ ] Add `LogStore`: 5,000 lines and 2 MB, a dropped-bytes count, batched updates, clear, and the journal
 - [ ] Add `SystemLogReader` and `SystemLogEntry`: the newest 2,000 entries, entries after a date, the `com.apple.` filter, and the same withheld check
 - [ ] Add `ConsoleOutput`, and route `ConsoleLogger` and `FileRoot` through it
-- [ ] Wire capture into `CaptureRuntime` behind a 1 MB `CaptureBacklog`, started in `start()` and restored in `stop()`
+- [ ] Wire capture into `CaptureRuntime` behind a 1 MB `CaptureBacklog`, started in `start()` only when `isLogCaptureEnabled` is set, and restored in `stop()`
 - [ ] Add the log and cleared records to `SessionRecord`, written one per chunk, and a `LogStore` to `StoredSession`
-- [ ] Add `isLogCaptureEnabled` to `CerebroConfiguration`
+- [ ] Add `isLogCaptureEnabled` to `CerebroConfiguration`, defaulting to `false`
 - [ ] Keep every new type and file name unique across `Sources/CerebroCore` and `Sources/Cerebro`
 
-**Dashboard (`Sources/Cerebro/UI/Logs/`, `DashboardTabBarController.swift`, `UI/SystemInfo/`, `Facade/Cerebro.swift`)**
-- [ ] Add the Logs tab after Sockets, only while `isLogCaptureEnabled` is set, and pass the store through `DashboardSources`
-- [ ] Take Proto Config out of the bar and add the "Proto rules" row to System Info's Traffic page, if the owner confirms the first open question
+**Dashboard (`Sources/Cerebro/UI/Logs/`, `DashboardTabBarController.swift`, `UI/SocketList/`, `Facade/Cerebro.swift`)**
+- [ ] Add the Logs tab after Sockets, and pass the store through `DashboardSources`, or `nil` while capture is off
+- [ ] Take Proto Config out of the bar, and add its button to the live Sockets list when there are rules
 - [ ] `LogListViewController`, `LogListViewModel` and `LogLineCell`: the Console and OSLog switch, the rows, tinting, and following the newest line
 - [ ] Search and the scope bar for each view, and the system frameworks filter for OSLog
 - [ ] Tap to open a line in the Body Viewer, and Copy in the context menu
 - [ ] Share through `CapturedContentSharing`, and Clear with a confirmation, for Console only
 - [ ] Read the system log only while the OSLog view is on screen, with a loading state and pull to refresh
 - [ ] The previous sessions button, and a read-only list for a saved session
-- [ ] Empty states that say what each view shows, and that Console starts at `Cerebro.start()`
+- [ ] Empty states that say what each view shows, that Console starts at `Cerebro.start()`, and while capture is off, that `isLogCaptureEnabled` turns it on
 
 **Tests, documentation, and distribution**
 - [ ] Unit and view-model tests from the test checklist
@@ -203,26 +210,26 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 - [ ] Add `OSLog` to the podspec's `Core` frameworks
 - [ ] Add a Logs section to `docs/GUIDE.md`: the support table, both views, the limits, redaction, the setting, and where lines from just before a crash are
 - [ ] Add to the guide's "What changes while Cerebro captures": standard output and error are pipes, `isatty` is false, and standard output is line-buffered
-- [ ] Add the tab to the `README.md` features and a screenshot, and move Proto Config in the guide if it moved
-- [ ] Update `AGENTS.md`'s opening description, `architecture.md` (the diagram, the capture sources, the tab list, the `OSLog` dependency), `project-structure.md`, `tech-stack.md` and `notes.md` (the scope, the tab bar, and what the spike measured)
+- [ ] Add the tab to the `README.md` features and a screenshot, and say in the guide and its troubleshooting table that Proto Config opens from the Sockets tab
+- [ ] Update `AGENTS.md`'s opening description, `architecture.md` (the diagram, the capture sources, the tab list, the `OSLog` dependency, and the setting in "Where an app still writes code"), `project-structure.md`, `tech-stack.md` and `notes.md` (the scope, the tab bar, and what the spike measured)
 - [ ] Confirm `PrivacyInfo.xcprivacy` needs no new reason, since neither the descriptors nor `OSLogStore` are on Apple's required-reason list
 - [ ] Verify SPM, CocoaPods and XCFramework builds
 
 ## Acceptance criteria
 
-1. With no code change, the dashboard has a Logs tab, and it's absent when `isLogCaptureEnabled` is `false`.
-2. A line the app prints after `Cerebro.start()` with `print`, `debugPrint`, `dump` or a write to standard error shows in Console within a second, launched from Xcode or from the Home screen.
-3. Everything the app writes still reaches Xcode's console, in order within each stream.
+1. With no code change, the dashboard has a Logs tab that shows the OSLog view, and its Console view says how to turn capture on.
+2. With `isLogCaptureEnabled` set, a line the app prints after `Cerebro.start()` with `print`, `debugPrint`, `dump` or a write to standard error shows in Console within a second, launched from Xcode or from the Home screen.
+3. With capture on, everything the app writes still reaches Xcode's console, in order within each stream.
 4. OSLog shows the newest 2,000 `NSLog`, `os_log` and `Logger` entries the system log holds for this launch, with their level, subsystem and category, and system framework entries are hidden until the filter shows them.
-5. The bar never shows more than five tabs or More, and the proto rules still open from System Info.
+5. The bar never shows more than five tabs or More, and the proto rules open from the Sockets tab when there are any.
 6. With redaction rules configured, a line that names a redacted field is withheld in the dashboard, the session file and a share.
 7. Cerebro's own console lines still reach Xcode and never show in the tab.
 8. The store never holds more than 5,000 lines or 2 MB. Output that arrives faster than it can be kept is dropped from the tab, never from Xcode, and the tab says so.
-9. A captured `print` is no slower than the same `print` in the same build run from Xcode, and a 1 MB burst doesn't stall the app.
+9. A 1 MB burst of output doesn't stall the app, and the guide gives what a captured `print` costs, as the spike measured it.
 10. Search, the scope bar, copy, share and clear work, and share always warns first.
 11. After a relaunch, the previous session shows its Console lines, without the ones cleared before it ended.
 12. After `Cerebro.stop()`, both descriptors are what they were before `start`, and a second `start` captures again.
-13. While Cerebro is off, nothing is redirected, the system log is never opened, and no tab exists.
+13. Without `isLogCaptureEnabled`, nothing is redirected. While Cerebro is off, the system log is never opened either, and no tab exists.
 14. `docs/GUIDE.md` and `README.md` describe the tab, what each logging API can show, and the limits.
 15. The feature works the same through SPM, CocoaPods and XCFrameworks, and the `build-and-test` skill passes.
 
@@ -236,7 +243,7 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 - [ ] `LogStore`: the line cap, the byte cap, the dropped-bytes count, clear, batched updates, and no publishing with no reader
 - [ ] The session file: lines round-trip, a clear marker removes the lines before it, a 1.0 file loads with no lines, and a chunk is one record
 - [ ] `ConsoleLogger`'s output goes to the original descriptor and never to the store
-- [ ] With `isLogCaptureEnabled` off, or the release gate closed, nothing is redirected
+- [ ] By default, and with the release gate closed, nothing is redirected
 
 **Integration, on the simulator**
 - [ ] `SystemLogReader` reads back a unique message logged with `Logger`, with its level, subsystem and category, and hides a `com.apple.` entry by default
@@ -245,7 +252,9 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 - [ ] Rows for both views, each scope, and search
 - [ ] Following stops when scrolled up and resumes at the bottom
 - [ ] The shared text is what the view and its filter show
-- [ ] Which tabs show, in order, with and without proto rules, files and logs
+- [ ] Which tabs show, in order, with and without files, and that proto rules never add one
+- [ ] The Sockets list offers Proto Config only with rules, and never on a previous session
+- [ ] The tab opens on Console with capture on, and on OSLog with it off
 
 **Manual**
 - [ ] On a real device from the Home screen: each API in the support table lands where the table says
@@ -257,7 +266,6 @@ Nothing else changes for the host app, and no code is needed to use the tab.
 
 ## Open questions
 
-1. **Where does the sixth tab go?** Recommendation: Proto Config leaves the bar and opens from System Info, as above. The alternative that keeps every current tab is Logs behind a button on the HTTP tab, which hides the new feature.
-2. **Should the two views become one timeline later?** Recommendation: not in this plan. It needs the system log read continuously, and the spike's read time decides whether that's affordable.
-3. **Should the 5,000-line cap be a setting, like `requestLimit`?** Recommendation: no, until someone asks. A fixed cap keeps `Cerebro.start()` simple, and the byte cap is what protects memory.
-4. **Should system log entries be saved with the session?** Recommendation: no. A single read as the app goes to the background would catch most of a session, but not a crash, which is when a saved log matters most.
+1. **Should the two views become one timeline later?** Recommendation: not in this plan. It needs the system log read continuously, and the spike's read time decides whether that's affordable.
+2. **Should the 5,000-line cap be a setting, like `requestLimit`?** Recommendation: no, until someone asks. A fixed cap keeps `Cerebro.start()` simple, and the byte cap is what protects memory.
+3. **Should system log entries be saved with the session?** Recommendation: no. A single read as the app goes to the background would catch most of a session, but not a crash, which is when a saved log matters most.
