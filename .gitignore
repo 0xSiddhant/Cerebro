@@ -22,3 +22,7 @@ Pods/
 
 # Claude Code: skills are committed, local settings are not
 .claude/settings.local.json
+/bin
+
+# Isolated copies of the repository that coding agents work in
+/.claude/worktrees/

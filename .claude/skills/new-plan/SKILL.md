@@ -7,7 +7,7 @@ description: Draft a new numbered plan file for Cerebro (PLAN-XX) in the format 
 
 ## 1. Read before drafting
 
-Read `.agents/context/architecture.md`, `.agents/rules/coding.md`, `.agents/rules/git.md`, the top of `.agents/memory/progress.md`, and `.agents/memory/decisions.md` for the area involved. Then read two recent plan files as live templates.
+Read `.agents/context/architecture.md`, `.agents/rules/coding.md`, `.agents/rules/git.md` and `.agents/context/notes.md`. Then read two existing plan files as live templates.
 
 The plan number is one more than the highest row in `.agents/plans/README.md`. Plan 99 stays reserved for the backlog.
 
@@ -39,6 +39,8 @@ Read the whole draft and check each of these:
 - **Three builds:** does it work as several modules and as one? Check imports, access levels and name clashes.
 - **Host app safety:** what happens while Cerebro is off in Release? Is every new store capped?
 - **Privacy:** does any path store or export a value before redaction?
+- **Performance:** does new work stay off the request path and the main thread, stop at the cap, and format on open? Do live updates batch?
+- **Design principles:** is anything speculative, a second path where one exists, or an abstraction with one user? Check against `.agents/rules/coding.md`.
 - **Contradictions:** read each decision against the others and against the task list.
 - **Shown code:** does every signature match the places that use it?
 - **Overstated guarantees:** does "every request" really mean every request?
@@ -48,10 +50,9 @@ Read the whole draft and check each of these:
 ## 5. Update standing docs as part of authoring
 
 - Add a row to `.agents/plans/README.md`.
-- Log the design calls in `.agents/memory/decisions.md`, with the date and the reasoning.
-- Add a note to `.agents/memory/progress.md`, ending with "Nothing implemented: plan only" when that's true.
+- Add a design call to `.agents/context/notes.md` only if it changes the spec.
 
-The file lives at `.agents/plans/PLAN-XX-<slug>.md`. It moves to `completed/` in its own implementation PR.
+The file lives at `.agents/plans/PLAN-XX-<slug>.md`. Its own implementation PR deletes it.
 
 ## Boundaries
 

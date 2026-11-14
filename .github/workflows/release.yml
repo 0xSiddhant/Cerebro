@@ -1,34 +1,96 @@
 name: Release
 
+# Runs when develop is merged into main. It works out the version from the
+# commits since the last tag, runs every test, and only then updates the
+# version and CHANGELOG.md, tags, publishes and merges main back into develop.
+
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  xcframeworks:
-    name: Attach XCFrameworks
-    runs-on: macos-26
+  version:
+    name: Work out the next version
+    runs-on: ubuntu-latest
+    # A RELEASE_TOKEN push triggers workflows, so ignore our own release commit.
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
+    outputs:
+      version: ${{ steps.next.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      # SPM and CocoaPods read this tag's source directly, so a stale podspec
-      # would ship a version that doesn't match its own install line.
-      - name: Check the tag matches the podspec
+        with:
+          fetch-depth: 0
+      - name: Read the commits since the last tag
+        id: next
         run: |
-          version="$(sed -n "s/^ *s\.version = '\(.*\)'/\1/p" Cerebro.podspec)"
-          test "v$version" = "$GITHUB_REF_NAME"
+          version="$(Scripts/next-version.sh)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Next version: ${version:-none, nothing releasable}"
+
+  test:
+    name: All tests
+    needs: version
+    if: needs.version.outputs.version != ''
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Update version, tag and release
+    needs: [version, test]
+    runs-on: macos-26
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # GITHUB_TOKEN can't push past branch protection, so a protected repo needs this PAT.
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+      - name: Update the version
+        run: Scripts/set-version.sh "$VERSION"
+      # GitHub writes the section from the pull requests since the last tag, and the release page reuses it.
+      - name: Update the changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: Scripts/update-changelog.sh "v$VERSION"
+      # Built before anything is pushed, so a failed build can't leave a tag with no release.
       - name: Build XCFrameworks
         run: Scripts/build-xcframework.sh
+      - name: Build the generator
+        run: |
+          Scripts/build-generator.sh build/generator
+          (cd build/generator && zip -q cerebro-proto-gen.zip cerebro-proto-gen)
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md Cerebro.podspec Cerebro.xcodeproj/project.pbxproj Example/CerebroExample.xcodeproj/project.pbxproj
+          git commit -m "chore(release): v$VERSION"
+          git tag "v$VERSION"
+          git push --atomic origin main "v$VERSION"
       - name: Publish the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          Scripts/release-notes.sh "$GITHUB_REF_NAME" > build/release-notes.md
-          gh release create "$GITHUB_REF_NAME" \
+          Scripts/release-notes.sh "v$VERSION" > build/release-notes.md
+          gh release create "v$VERSION" \
             build/xcframeworks/*.xcframework.zip \
-            --title "$GITHUB_REF_NAME" \
+            build/generator/cerebro-proto-gen.zip \
+            --title "v$VERSION" \
             --notes-file build/release-notes.md \
-            --generate-notes
+            --verify-tag
+      - name: Merge main back into develop
+        run: |
+          git fetch origin develop
+          git checkout develop
+          # A fast-forward unless develop moved during the release.
+          git merge --no-edit main
+          git push origin develop

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+#
+# Formats staged Swift files, then lints what is being committed. CI remains the gate.
+# Enable once per clone: git config core.hooksPath .githooks
+#
+set -euo pipefail
+
+# The same scope as CI. Read the list first, so nothing in the loop below can eat it.
+files=()
+while IFS= read -r -d '' path; do
+    files+=("$path")
+done < <(git diff --cached --name-only --diff-filter=ACMR -z -- \
+    'Sources/*.swift' 'Tests/*.swift' 'Example/*.swift')
+
+if [ "${#files[@]}" -eq 0 ]; then
+    exit 0
+fi
+
+if ! xcrun --find swift-format >/dev/null 2>&1; then
+    echo "pre-commit: xcrun swift-format not found, so nothing was checked. CI still checks it." >&2
+    exit 0
+fi
+
+failed=0
+for path in "${files[@]}"; do
+    # Re-adding a partially staged file would stage unstaged work, so those are only linted.
+    if git diff --quiet -- "$path"; then
+        xcrun swift-format format --in-place "$path" || failed=1
+        git add -- "$path"
+    fi
+
+    # Lint the index, not the working tree, so the result matches the commit.
+    git show ":$path" | xcrun swift-format lint --strict --assume-filename "$path" - || failed=1
+done
+
+if [ "$failed" -ne 0 ]; then
+    echo "pre-commit: commit blocked. Fix the swift-format findings above, stage the fixes and commit again." >&2
+    exit 1
+fi

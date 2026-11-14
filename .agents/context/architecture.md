@@ -1,6 +1,6 @@
 # Cerebro Architecture
 
-This is the target design from the specification. `.agents/memory/progress.md` says what exists so far.
+This is the design as built. `.agents/plans/README.md` says what's planned next.
 
 Cerebro is a layered, one-way pipeline: traffic is captured, decoded, stored, then shown. Zero code change is the first priority, so the host app touches one small facade and, in most apps, only one line of it.
 
@@ -11,13 +11,14 @@ Host app            URLSession, WebSocket and NWConnection traffic
 Capture layer       URLProtocol, config injection, socket hooks, wrappers     (CerebroCore)
    │
    ▼
-Pipeline            decompress → decode proto → pretty-print → redact         ◀── Decoder plugins: CerebroProto, custom
+Pipeline            decompress → decode proto → redact, in the background     ◀── Decoder plugins: CerebroProto, custom
    │
    ▼
 Transaction store   actor-backed ring buffer with size caps                   ◀── Network info: path monitor, interfaces, public IP
    │
    ▼
-Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (Cerebro)  ◀── Triggers: floating trigger, shake, notification
+Dashboard           UIKit tabs: HTTP, sockets, proto, files, system info      (Cerebro)  ◀── Triggers: floating trigger, shake
+                                                                                          ◀── Files: the app's sandbox, read when a folder opens
 ```
 
 ## Patterns
@@ -31,7 +32,7 @@ Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (C
 | Chain of responsibility | The body pipeline | Order matters and every step is optional |
 | Plugin | Decoders registered at start | The core stays free of dependencies |
 | Actor-backed repository | Ring buffer store | Capture callbacks arrive on arbitrary threads |
-| Observer | Store → dashboard | Live updates while the dashboard is open |
+| Observer | Store → dashboard | Batched live updates while the dashboard is open |
 | MVVM | Dashboard view controllers | View logic can be tested without the UI |
 
 ## Capture sources
@@ -39,13 +40,51 @@ Dashboard           UIKit tabs: HTTP, sockets, proto, system info             (C
 | Source | Captured by | Change needed in the app |
 |---|---|---|
 | Foreground `URLSession` | `CustomURLProtocol` injected into session configurations | None |
+| Server-Sent Events | The same `CustomURLProtocol`, for a 200 `text/event-stream` response | None |
 | `URLSession.shared` | `CustomURLProtocol` registered with `URLProtocol.registerClass`, because the swizzled getters don't reach it | None |
 | Background `URLSession` | Delegate-proxy engine | None |
-| `URLSessionWebSocketTask` | Hooks on its public `send`, `receive`, `resume`, `sendPing(pongReceiveHandler:)` and `cancel(with:reason:)` methods | None |
+| `URLSessionWebSocketTask` | Hooks on its public `send`, `receive`, `resume`, `sendPing(pongReceiveHandler:)`, `cancel(with:reason:)` and `cancel` methods | None |
 | `NWConnection` | `MonitoredNWConnection` wrapper | Create the wrapper instead of `NWConnection` |
 | Starscream, Socket.IO, others | `ExternalNetworkBridge` | One call per frame or event |
 
-WKWebView, AVPlayer streams and gRPC over SwiftNIO are out of reach, and the README says so.
+WKWebView, AVPlayer streams and gRPC over SwiftNIO are out of reach, and `docs/GUIDE.md` says so.
+
+### Event streams
+
+Every other request reaches the store once, when it finishes. An event stream is the exception, because it may never finish:
+
+1. `CustomURLProtocol` reports the response as it arrives, then each chunk after the app has it, then the end. All three go through one unbounded queue of `RawStreamActivity`, never the request pipeline's `AsyncStream`, which drops its oldest entries and could lose a stream's end.
+2. Each stream has its own `CaptureBacklog` of `bodyLimit` bytes. A chunk that doesn't fit is dropped and the stream is marked incomplete, except that one chunk of any size may wait when nothing else is. Only payload is limited, so the end always gets through.
+3. One background task runs `EventStreamProcessor`, which parses with `SSEParser`, redacts each event in `EventStreamAssembler`, and updates the same transaction by ID with `TransactionStore.update`. A busy stream reaches the store at most once per 250 ms.
+4. The store saves a stream to disk only when it ends, and never puts back one it has evicted. One that was cleared while open is different: `update` reports when the clear was, and the processor adds the stream again with only the events since. When capture stops, the processor closes every stream still open.
+5. `TransactionStore.requestUpdates()` only fires when a request is added or removed. The trigger badge reads that, so an open stream causes no main-thread work while the dashboard is closed.
+
+## Previous sessions
+
+`SessionArchive` also keeps each session as one JSON Lines file in the app's Caches directory. Each finished request, socket frame and event is appended on the archive's own background queue, already redacted. Appends stay one line at a time rather than batched, so a crash loses at most what was still in flight, and there's no schema to migrate. A previous session is read only when it's opened, into stores of its own that nothing writes to, so the same screens show it read-only.
+
+## Files
+
+The Files tab browses the app's own sandbox. Files aren't traffic, so they never pass through capture, the pipeline or a store: they plug into the dashboard from the side, as network info does, and nothing is read until a folder opens.
+
+- `CerebroCore/Files/` has the logic, in Foundation only: the roots, listing, sizes, search, operations, classification for previews, and the folder watcher. `Cerebro/UI/Files/` has the screens, Quick Look and sharing.
+- There's no store and no cache of the tree. Each folder is read when its screen appears, sorted and searched off the main thread, and watched while it's on screen.
+- `FileRoot` is the boundary. The roots are the data container, the app bundle and each App Group named in `appGroupIdentifiers`, resolved once at start. Every operation resolves its paths, symlinks included, and refuses one that ends outside its root, because a simulator doesn't stop an app reaching the Mac's files. A link's own name isn't followed, so it can be renamed or deleted without touching its target.
+- The app bundle refuses every change, on a device and a simulator alike.
+- Files aren't redacted. Cerebro's own Share warns first, and Quick Look's share button can't be removed.
+
+The tab bar holds at most five tabs: HTTP, Sockets, Proto Config when there are rules, Files unless `isFileBrowserEnabled` is off, and System Info. That's what an iPhone shows before it adds More, so a sixth tab needs the bar rethought.
+
+## Performance
+
+Speed comes from design, not language. The engine stays in Swift, because decompression and JSON already run in Apple's native libraries.
+
+1. The pipeline runs on a background queue and never delays a request or a frame.
+2. Processing stops at the stored-body cap.
+3. Bodies are pretty-printed when opened, not when captured.
+4. Dashboard updates are batched.
+
+Redaction still comes first. With JSON keys configured, a JSON body is parsed at capture, and one that can't be parsed stores no text and shows as withheld. Proto decoding stays at capture for the same reason.
 
 ## Where an app still writes code
 
@@ -55,7 +94,7 @@ WKWebView, AVPlayer streams and gRPC over SwiftNIO are out of reach, and the REA
 | `NWConnection` | Create `MonitoredNWConnection` instead | Network.framework has no Objective-C methods to hook |
 | Starscream, Socket.IO, others | One `ExternalNetworkBridge` call per frame or event | Their engines bypass URLSession |
 | Proto rules | One argument to `Cerebro.start`, for apps that decode protobuf | Those rules live in the app's target |
-| Notification redirect trigger | One forwarded call, optional | The host app owns the notification delegate |
+| App Group containers in the Files tab | `appGroupIdentifiers`, for apps that share files with a widget or an extension | Entitlements can't be read at runtime, so iOS has no way to list an app's groups |
 
 ### Why `Cerebro.start()` stays
 
@@ -69,11 +108,12 @@ Every install option uses the same runtime check, because `#if DEBUG` inside a p
 
 | Module | Contains | Depends on |
 |---|---|---|
-| `CerebroCore` | Capture, pipeline, store, metrics, models, configuration | Foundation, Network |
-| `Cerebro` | Public facade, triggers, dashboard UI | `CerebroCore`, UIKit |
+| `CerebroCore` | Capture, pipeline, store, metrics, models, configuration | Foundation, Network, Compression, Security, CFNetwork, CoreTelephony |
+| `Cerebro` | Public facade, triggers, dashboard UI | `CerebroCore`, UIKit, QuickLook, UniformTypeIdentifiers |
 | `CerebroProto` | Proto rules and decoder | `CerebroCore`, SwiftProtobuf |
 | `CerebroProtoPlugin` | Build-tool plugin that runs the generator on the app's target | SPM only |
-| `CerebroProtoGenerator` | Reads `traffic_map.json` and `.pb.swift` files, writes `ProtoRule.generated`; shipped as `cerebro-proto-gen` for Run Script phases | Foundation |
+| `CerebroProtoGeneratorCore` | Reads `traffic_map.json` and `.pb.swift` files, writes `ProtoRule.generated`. A library so tests can link it on iOS | Foundation |
+| `CerebroProtoGenerator` | Thin executable over that library, run by the plugin and shipped as `cerebro-proto-gen` for Run Script phases | `CerebroProtoGeneratorCore` |
 
 The split keeps SwiftProtobuf out of apps that don't use protobuf, and lets the core be tested without UIKit.
 
@@ -90,4 +130,5 @@ The split keeps SwiftProtobuf out of apps that don't use protobuf, and lets the 
 - `SwiftProtobuf.framework` is compiled from `.build/checkouts/swift-protobuf`, so `swift package resolve` must run first. `Package.resolved` pins the version, and `Scripts/build-xcframework.sh` runs the resolve.
 - `CerebroProto.framework` links `SwiftProtobuf.framework` dynamically, because the app's generated `.pb.swift` types must conform to the same module.
 - `.gitkeep` files are excluded through `EXCLUDED_SOURCE_FILE_NAMES`, or the synchronized folders would copy them into the framework as resources.
+- That copying is how `PrivacyInfo.xcprivacy` reaches the root of `Cerebro.framework`, and how SwiftProtobuf's own manifest reaches `SwiftProtobuf.framework`. Don't exclude either.
 - The script ends by compiling a client against all three XCFrameworks, because a broken `.swiftinterface` otherwise fails only in a consumer's build.

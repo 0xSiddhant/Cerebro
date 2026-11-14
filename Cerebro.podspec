@@ -3,14 +3,15 @@
 Pod::Spec.new do |s|
   s.name = 'Cerebro'
   s.version = '0.1.0'
-  s.summary = 'A debug-only network inspector for iOS apps.'
+  s.summary = 'A debug-only network inspector and file browser for iOS apps.'
   s.description = <<~DESC
-    Cerebro captures an iOS app's HTTP, WebSocket and NWConnection traffic and
-    shows it in an in-app dashboard, including compressed and protobuf payloads.
+    Cerebro captures an iOS app's HTTP, Server-Sent Events, WebSocket and
+    NWConnection traffic, including compressed and protobuf payloads, and shows
+    it in an in-app dashboard that also browses the app's sandbox.
   DESC
   s.homepage = 'https://github.com/0xSiddhant/Cerebro'
   s.license = { :type => 'MIT', :file => 'LICENSE' }
-  s.author = 'Siddhant Kumar'
+  s.author = '0xSiddhant'
   s.source = { :git => 'https://github.com/0xSiddhant/Cerebro.git', :tag => "v#{s.version}" }
 
   s.ios.deployment_target = '16.0'
@@ -19,15 +20,21 @@ Pod::Spec.new do |s|
 
   s.default_subspecs = 'Core', 'UI'
 
+  # Run Script phases call this binary, because CocoaPods has no build-tool plugins.
+  s.prepare_command = 'Scripts/build-generator.sh bin'
+  s.preserve_paths = 'bin/cerebro-proto-gen'
+
   s.subspec 'Core' do |core|
     core.source_files = 'Sources/CerebroCore/**/*.swift'
-    core.frameworks = 'Foundation', 'Network'
+    core.resource_bundles = { 'Cerebro_Privacy' => ['Sources/CerebroCore/PrivacyInfo.xcprivacy'] }
+    core.frameworks = 'Foundation', 'Network', 'Security', 'CFNetwork', 'CoreTelephony'
+    core.libraries = 'compression'
   end
 
   s.subspec 'UI' do |ui|
     ui.dependency 'Cerebro/Core'
     ui.source_files = 'Sources/Cerebro/**/*.swift'
-    ui.frameworks = 'UIKit'
+    ui.frameworks = 'UIKit', 'QuickLook', 'UniformTypeIdentifiers'
   end
 
   s.subspec 'Proto' do |proto|

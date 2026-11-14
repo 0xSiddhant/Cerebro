@@ -1,0 +1,83 @@
+import UIKit
+
+/// Fires every kind of test traffic on launch, so the dashboard has something to show.
+/// Tap a row to send that traffic again.
+final class TrafficViewController: UITableViewController {
+    private static let cellIdentifier = "TrafficCell"
+
+    private var results: [TrafficSample: String] = [:]
+
+    init() {
+        super.init(style: .insetGrouped)
+        title = "Cerebro Example"
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("TrafficViewController is built in code")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: Self.cellIdentifier)
+        TrafficSample.allCases.filter { $0.hint == nil }.forEach(run)
+        writeSampleFiles()
+        // Also fires for a download an earlier launch started, if it's still running.
+        BackgroundTransfers.onProgress = { [weak self] progress in
+            self?.show(progress, for: .backgroundLargeDownload)
+        }
+    }
+
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        TrafficSample.allCases.count
+    }
+
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let sample = TrafficSample.allCases[indexPath.row]
+        let cell = tableView.dequeueReusableCell(withIdentifier: Self.cellIdentifier, for: indexPath)
+
+        var content = UIListContentConfiguration.subtitleCell()
+        content.text = sample.title
+        content.secondaryText = results[sample] ?? sample.hint
+        cell.contentConfiguration = content
+        return cell
+    }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        run(TrafficSample.allCases[indexPath.row])
+    }
+
+    private func run(_ sample: TrafficSample) {
+        show("Running…", for: sample)
+
+        Task {
+            do {
+                show(try await sample.run(), for: sample)
+            } catch {
+                show(error.localizedDescription, for: sample)
+            }
+        }
+    }
+
+    /// Gives the dashboard's Files tab something to open.
+    private func writeSampleFiles() {
+        Task {
+            do {
+                print(try await SampleFiles.write())
+            } catch {
+                print("Couldn't write the sample files:", error.localizedDescription)
+            }
+        }
+    }
+
+    /// Updates one row in place. Reloading the whole table for every result made scrolling stutter while
+    /// samples were running.
+    private func show(_ result: String, for sample: TrafficSample) {
+        guard results[sample] != result else { return }
+        results[sample] = result
+        // Before the table is on screen it has no rows to update, and it reads `results` when it loads.
+        guard tableView.window != nil, let row = TrafficSample.allCases.firstIndex(of: sample) else { return }
+        tableView.reconfigureRows(at: [IndexPath(row: row, section: 0)])
+    }
+}
