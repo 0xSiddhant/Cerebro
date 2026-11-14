@@ -14,7 +14,7 @@ The owner has already decided two things, on 2026-11-14: Proto Config moves into
 
 ## Scope
 
-**In:** capture of standard output and standard error, with everything still reaching Xcode's console; a read of the system log for this process, on demand; a Logs tab with a Console view and an OSLog view, search, a filter, copy, share and clear; console lines in the saved session and in a previous session's view; one setting; Cerebro's own console lines kept out; documentation; all three install options.
+**In:** capture of standard output and standard error, with everything still reaching Xcode's console; a read of the system log for this process, on demand; a Logs tab with a Console view and an OSLog view, search, a filter, copy, share and clear; a way from a request to the lines logged around it; markers a tester can drop; console lines in the saved session and in a previous session's view; one setting; Cerebro's own console lines kept out; documentation; all three install options.
 
 **Out:**
 - One merged timeline of both views. The first open question says why.
@@ -23,7 +23,7 @@ The owner has already decided two things, on 2026-11-14: Proto Config moves into
 - Reading a level out of printed text, such as `[ERROR]`.
 - Logs of other processes, such as widgets and extensions, and system log entries of earlier launches. iOS gives an app neither.
 - Crash reports and MetricKit.
-- Linking a log line to the request it was printed beside.
+- Matching a log line to a request by its content, such as a URL in the text. The link from a request is by time only.
 - Streaming logs to a Mac, which the spec rules out with the companion app.
 
 ## Decisions & reasoning
@@ -39,7 +39,7 @@ The owner's question was whether a lightweight log tab is worth it. It is, for f
 
 It also has real costs, and each one has a decision below: redirecting standard output is the most intrusive thing Cerebro does after swizzling, the system log is slow to read and hides private values, and the tab bar is full.
 
-"Light" means a console, not a log analysis tool: lines in order, search, one filter, copy and share. Nothing in "Out" is needed for that.
+"Light" means a console, not a log analysis tool: lines in order, search, one filter, copy and share. Two small additions earn their place because they join the tab to what Cerebro already does: a request opens the lines logged around it, and a tester can drop a marker before reproducing a bug.
 
 ### What each logging API can support
 
@@ -102,13 +102,13 @@ Two things change for the app while capture is on, and the guide says so: `isatt
 
 A pipe carries bytes, so nothing marks where one `print` ended. Guessing from how the bytes arrive would group lines differently on a busy device. One row per line is what Xcode's console and a terminal show, and the list is styled as a console, so a multi-line dump reads as it would there.
 
-`LogLineAssembler` splits chunks at newlines and holds an unfinished line until the rest arrives or 250 ms pass. A line over 8 KB is cut and marked. A line that isn't UTF-8 is replaced by a note with its byte count. A line's time is when Cerebro read it, which is normally within a millisecond of the call, and lines read together share a time.
+`LogLineAssembler` splits chunks at newlines and holds an unfinished line until the rest arrives or 250 ms pass. Each stream has its own unfinished line. A blank line is a row, and a carriage return before the newline is dropped. A character split across two chunks is put back together. A line over 8 KB is cut at a character boundary and marked, and the rest of it is discarded as it arrives, so a stream with no newlines can't grow memory. A line that isn't UTF-8 is replaced by a note with its byte count. A line's time is when Cerebro read it, which is normally within a millisecond of the call, and lines read together share a time.
 
 ### Redaction: a line that names a redacted field is withheld
 
 Free text can't be redacted field by field. Bodies already have a rule for that: text that names a configured key is withheld. Lines get the same rule, widened to every name in `RedactionRules`: headers, JSON keys and query parameters. An app that prints its request headers would otherwise put the `Authorization` value on disk after the developer asked for it to be redacted.
 
-A withheld line keeps its time and stream, and says it was withheld. The cost is false positives: with `Authorization` configured, "Authorization failed" is withheld too. Privacy wins that trade, as it does for bodies, and with no rules configured nothing is withheld. The check runs in the pipeline before the store, and on system log entries before they reach the view, so the dashboard, the session file and a share never hold the raw line.
+A withheld line keeps its time and stream, and says it was withheld. The cost is false positives: with `Authorization` configured, "Authorization failed" is withheld too. Privacy wins that trade, as it does for bodies, and with no rules configured nothing is withheld. The check reads the line as it's kept, without regard to case. What an 8 KB cut discarded is never stored, so it needs no check. It runs in the pipeline before the store, and on system log entries before they reach the view, so the dashboard, the session file and a share never hold the raw line.
 
 The copy that goes to Xcode's console isn't changed. That is the app's own output on its own descriptor, not something Cerebro stored.
 
@@ -124,7 +124,7 @@ Output written just before a crash can be lost, because it's still in the pipe w
 
 ### The OSLog view: read on demand, never stored
 
-`SystemLogReader` opens `OSLogStore(scope: .currentProcessIdentifier)`, which iOS 15 added, and maps each `OSLogEntryLog` to a `Sendable` value inside the task that read it. It reads the newest 2,000 entries when the view appears, then every 2 seconds from the newest one it has, one read at a time, and stops when the view goes away. Nothing reads the system log while the dashboard is closed.
+`SystemLogReader` opens `OSLogStore(scope: .currentProcessIdentifier)`, which iOS 15 added, and maps each `OSLogEntryLog` to a `Sendable` value inside the task that read it. It reads the newest 2,000 entries when the view appears, then every 2 seconds from the newest one it has, one read at a time, and stops when the view goes away. Several entries can share a time, so a read skips the ones already shown. If the store can't be opened, the view says so and Console still works. Nothing reads the system log while the dashboard is closed.
 
 The app runs inside system frameworks that log heavily, so entries whose subsystem starts with `com.apple.` are hidden unless the filter turns them on. `NSLog`, which has no subsystem, always shows.
 
@@ -150,11 +150,23 @@ The tab is called Logs and uses the `terminal` symbol. The spec's name for the r
 
 - One list for both views, in a monospaced font, oldest at the top and newest at the bottom, with the time beside each line. Standard error and the error and fault levels are tinted, with colours from `DashboardTheme`.
 - It follows new lines while it's scrolled to the bottom. Scrolling up stops that, and a button jumps back to the newest line.
-- Search matches text, without regard to case. The scope bar is All, Output and Errors for Console, and All and Errors for OSLog. OSLog rows also show the level, and the subsystem and category when there are any.
+- Search matches text, without regard to case, and for OSLog the subsystem and category too, so typing a category narrows to it. The scope bar is All, Output and Errors for Console, and All and Errors for OSLog. OSLog rows also show the level, and the subsystem and category when there are any.
 - A row shows up to four lines of a long line. Tapping one opens the whole line in the Body Viewer, which pretty-prints it when it's JSON. The context menu copies it.
 - Share sends what the view and its filter show as a text file, after the same warning as other captured data. Clear empties Console after asking. The system log can't be cleared, so OSLog has no Clear.
 - The previous sessions button opens a saved session's Console lines, read-only, like the HTTP and Sockets tabs.
 - The trigger's badge still counts requests only.
+
+### From a request to its logs
+
+The Log Inspector gets a "Logs Around This Request" action. It opens the same list, limited to Console lines from one second before the request started to one second after it ended, or to now for a stream that's still open. This is the tab's reason to exist, in one tap: what the app said while that request ran.
+
+The link is by time only, and the screen's title says so. It doesn't claim a line belongs to the request. If the store has already dropped lines from that window, a note says older lines are gone. The action is hidden while capture is off, and it works on a previous session with that session's lines.
+
+### Markers
+
+A Mark button on the Console view adds a marker row with the time. A tester taps it, reproduces the bug, and shares "Since Last Marker", which the share menu offers when there is one. Without it, the developer receiving the file has to find where the reproduction starts.
+
+A marker is a `LogLine` on a third stream, so it's stored, saved, evicted and cleared like any line, and needs no new record.
 
 ### One setting, off by default
 
@@ -181,11 +193,11 @@ Nothing else changes for the host app, and no code is needed for the tab or its 
 - [ ] Record the numbers in `notes.md` under "What was measured", and show the owner before going on
 
 **Core (`Sources/CerebroCore/Log/`, in `Capture/`, `Pipeline/`, `Store/`, `Models/` and `System/`)**
-- [ ] Add `LogLine` with an ID, date, stream, text, and whether it was cut or withheld, `public`, `Codable` and `Sendable`
+- [ ] Add `LogLine` with an ID, date, stream (output, error or marker), text, and whether it was cut or withheld, `public`, `Codable` and `Sendable`
 - [ ] Add `StandardStreamCapture` for one descriptor: duplicate, pipe, `dup2`, line buffering for standard output, a reader that copies to the original and then queues, and a restore that only undoes its own redirect
 - [ ] Add `LogLineAssembler`: split at newlines, hold a partial line for 250 ms, cut at 8 KB, and note a line that isn't UTF-8
 - [ ] Add one check to `Redactor` for text that names any configured header, JSON key or query parameter, and withhold those lines in the pipeline
-- [ ] Add `LogStore`: 5,000 lines and 2 MB, a dropped-bytes count, batched updates, clear, and the journal
+- [ ] Add `LogStore`: 5,000 lines and 2 MB, a dropped-bytes count, batched updates, clear, markers, the lines in a time window, and the journal
 - [ ] Add `SystemLogReader` and `SystemLogEntry`: the newest 2,000 entries, entries after a date, the `com.apple.` filter, and the same withheld check
 - [ ] Add `ConsoleOutput`, and route `ConsoleLogger` and `FileRoot` through it
 - [ ] Wire capture into `CaptureRuntime` behind a 1 MB `CaptureBacklog`, started in `start()` only when `isLogCaptureEnabled` is set, and restored in `stop()`
@@ -200,6 +212,8 @@ Nothing else changes for the host app, and no code is needed for the tab or its 
 - [ ] Search and the scope bar for each view, and the system frameworks filter for OSLog
 - [ ] Tap to open a line in the Body Viewer, and Copy in the context menu
 - [ ] Share through `CapturedContentSharing`, and Clear with a confirmation, for Console only
+- [ ] The Mark button, and "Since Last Marker" in the share menu
+- [ ] "Logs Around This Request" in the Log Inspector, opening the list limited to that window
 - [ ] Read the system log only while the OSLog view is on screen, with a loading state and pull to refresh
 - [ ] The previous sessions button, and a read-only list for a saved session
 - [ ] Empty states that say what each view shows, that Console starts at `Cerebro.start()`, and while capture is off, that `isLogCaptureEnabled` turns it on
@@ -230,37 +244,85 @@ Nothing else changes for the host app, and no code is needed for the tab or its 
 11. After a relaunch, the previous session shows its Console lines, without the ones cleared before it ended.
 12. After `Cerebro.stop()`, both descriptors are what they were before `start`, and a second `start` captures again.
 13. Without `isLogCaptureEnabled`, nothing is redirected. While Cerebro is off, the system log is never opened either, and no tab exists.
-14. `docs/GUIDE.md` and `README.md` describe the tab, what each logging API can show, and the limits.
-15. The feature works the same through SPM, CocoaPods and XCFrameworks, and the `build-and-test` skill passes.
+14. From a request, one action shows the Console lines captured from a second before it started to a second after it ended.
+15. A marker shows in order with the lines, survives a relaunch, and share can start from the last one.
+16. `docs/GUIDE.md` and `README.md` describe the tab, what each logging API can show, and the limits.
+17. The feature works the same through SPM, CocoaPods and XCFrameworks, and the `build-and-test` skill passes.
 
 ## Test checklist
 
-**Unit, with pipes the test owns in place of the real descriptors**
-- [ ] `StandardStreamCapture`: bytes written to the redirected descriptor reach the handler and the original, in order
+**Unit: `StandardStreamCapture`, with pipes the test owns in place of the real descriptors**
+- [ ] Bytes written to the redirected descriptor reach the handler and the original, in order
+- [ ] One write larger than the pipe's buffer, 1 MB, arrives whole and in order
+- [ ] Writes from several threads at once lose no bytes
+- [ ] What was written just before `stop()` is still delivered
+- [ ] A second `start()` does nothing, and `stop()` before `start()` does nothing
+- [ ] `start()` on a closed descriptor fails and changes nothing
 - [ ] Restore puts the original back, leaves a descriptor someone else redirected alone, and a write after it can't raise `SIGPIPE`
-- [ ] `LogLineAssembler`: several lines in one chunk, a line across two chunks, a partial line flushed after the delay, the 8 KB cut, and bytes that aren't UTF-8
-- [ ] A line that names a configured header, JSON key or query parameter is withheld, and nothing is withheld with no rules
-- [ ] `LogStore`: the line cap, the byte cap, the dropped-bytes count, clear, batched updates, and no publishing with no reader
-- [ ] The session file: lines round-trip, a clear marker removes the lines before it, a 1.0 file loads with no lines, and a chunk is one record
-- [ ] `ConsoleLogger`'s output goes to the original descriptor and never to the store
+- [ ] After `stop()`, a write reaches the original and not the handler, and a second `start()` captures again
+- [ ] A chunk the backlog refuses is still copied to the original, and its bytes are counted as dropped
+- [ ] An original that can't be written to doesn't stop capture
+
+**Unit: `LogLineAssembler`**
+- [ ] Several lines in one chunk, a line across two chunks, and a chunk that ends exactly at a newline
+- [ ] A blank line is a row, and `\r\n` leaves no carriage return
+- [ ] A character of two, three and four bytes split across chunks comes out whole
+- [ ] A partial line is flushed after the delay, and what follows it becomes the next row
+- [ ] A line of exactly 8 KB is whole, one byte more is cut, and a cut never splits a character
+- [ ] A line with no newline across many chunks is held only up to the cut
+- [ ] Bytes that aren't UTF-8 become the note, and the next line is unaffected
+- [ ] Output and error arriving in turns keep separate partial lines
+- [ ] Empty input, and a zero byte inside a line
+
+**Unit: redaction**
+- [ ] A line that names a configured header, JSON key or query parameter is withheld, whatever its case
+- [ ] A name that only appears after the 8 KB cut doesn't withhold the line, and nothing after the cut is stored
+- [ ] With no rules nothing is withheld, and a name inside a longer word is withheld, as the plan accepts
+- [ ] A system log entry is withheld by the same check
+
+**Unit: `LogStore` and the session file**
+- [ ] The line cap and the byte cap each evict the oldest first, at exactly the cap and one past it
+- [ ] The dropped-bytes count, and that clear resets it
+- [ ] Clear with no lines, and a line that arrives just after a clear is kept
+- [ ] Batched updates, a reader that joins mid-burst gets the current lines, and nothing publishes with no reader
+- [ ] The lines in a time window: none, all, a window partly evicted, and one that ends in the future
+- [ ] A marker keeps its place in order, and is evicted and cleared like a line
+- [ ] Lines and markers round-trip through the file, and a chunk is one record
+- [ ] A clear marker removes the lines before it and keeps the ones after
+- [ ] A record cut short, and a record of a kind this version doesn't know, are skipped
+- [ ] A 1.0 file loads with no lines, and a file with more than 5,000 loads the newest 5,000
+- [ ] Compacting the file keeps the newest lines
+- [ ] With persistence off, no line reaches the disk
+
+**Unit: wiring**
+- [ ] `ConsoleOutput` uses `print` while capture is off, the original descriptor while it's on, and `print` again after `stop()`
+- [ ] `ConsoleLogger`'s output never reaches the store, at `.summary` and at `.full`
 - [ ] By default, and with the release gate closed, nothing is redirected
 
 **Integration, on the simulator**
 - [ ] `SystemLogReader` reads back a unique message logged with `Logger`, with its level, subsystem and category, and hides a `com.apple.` entry by default
+- [ ] A second read returns nothing already shown, including entries that share the newest time
+- [ ] An entry with no subsystem shows, and more than 2,000 entries give the newest 2,000
 
 **View models**
-- [ ] Rows for both views, each scope, and search
-- [ ] Following stops when scrolled up and resumes at the bottom
-- [ ] The shared text is what the view and its filter show
+- [ ] Rows for both views, each scope, search with no match, and search by category
+- [ ] Following stops when scrolled up, resumes at the bottom, and each view keeps its own position
+- [ ] The shared text is what the view and its filter show, share is off with nothing to share, and "Since Last Marker" starts after the newest marker
+- [ ] The tab opens on Console with capture on, and on OSLog with it off
+- [ ] A previous session with no lines shows the empty state
+- [ ] "Logs Around This Request": a finished request, one still open, one whose lines were evicted, and hidden with capture off
+- [ ] A system log that can't be opened shows the message and leaves Console working
 - [ ] Which tabs show, in order, with and without files, and that proto rules never add one
 - [ ] The Sockets list offers Proto Config only with rules, and never on a previous session
-- [ ] The tab opens on Console with capture on, and on OSLog with it off
 
 **Manual**
 - [ ] On a real device from the Home screen: each API in the support table lands where the table says
 - [ ] Under Xcode: the console shows the same lines with capture on and off
 - [ ] Print 100,000 lines with the tab open and scroll it
+- [ ] Print from ten threads at once while a request runs
 - [ ] Crash the app after printing, relaunch, and see which lines the previous session has
+- [ ] Turn capture on in an app that already redirects standard output, and stop Cerebro
+- [ ] Mark, reproduce, share since the marker, and read the file on a Mac
 - [ ] An app with swift-log or CocoaLumberjack shows its lines
 - [ ] Exercise the tab through SPM, CocoaPods and XCFramework client builds
 
