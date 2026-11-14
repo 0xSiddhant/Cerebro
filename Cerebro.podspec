@@ -22,7 +22,6 @@ Pod::Spec.new do |s|
 
   # Run Script phases call this binary, because CocoaPods has no build-tool plugins.
   s.prepare_command = 'Scripts/build-generator.sh bin'
-  s.preserve_paths = 'bin/cerebro-proto-gen'
 
   s.subspec 'Core' do |core|
     core.source_files = 'Sources/CerebroCore/**/*.swift'
@@ -41,5 +40,7 @@ Pod::Spec.new do |s|
     proto.dependency 'Cerebro/Core'
     proto.dependency 'SwiftProtobuf', '>= 1.27.0', '< 2.0.0'
     proto.source_files = 'Sources/CerebroProto/**/*.swift'
+    # CocoaPods keeps only the files of the subspecs an app installs, so on the root spec this was deleted.
+    proto.preserve_paths = 'bin/cerebro-proto-gen'
   end
 end
