@@ -5,6 +5,8 @@ Cerebro/
 ├── AGENTS.md                  # instructions for any coding agent
 ├── CLAUDE.md                  # Claude-specific notes; imports AGENTS.md
 ├── README.md                  # overview, screenshots, install and first steps
+├── CHANGELOG.md               # every release's changes, written by release.yml
+├── CONTRIBUTING.md            # how to report, set up, check a change and get it merged
 ├── LICENSE                    # MIT
 ├── Package.swift              # SPM targets and products
 ├── Package.resolved           # pins the SwiftProtobuf version the XCFramework ships
@@ -12,6 +14,7 @@ Cerebro/
 ├── Cerebro.xcodeproj          # framework targets; builds the XCFrameworks
 ├── .swift-format              # formatting, crash paths and public docs
 ├── .swiftlint.yml             # code quality; a contributor tool, never a dependency
+├── .gitattributes             # keeps agent, CI and image folders out of source downloads
 ├── .swiftpm/xcode/            # package workspace, so xcodebuild can reach the package
 ├── .agents/
 │   ├── context/               # architecture, tech stack, this file, notes
@@ -22,10 +25,11 @@ Cerebro/
 │                              # release, new-plan, context-sync
 ├── .githooks/                 # pre-commit hook; a contributor tool, enabled once per clone
 ├── .github/workflows/         # ci.yml on PRs and develop; release.yml when develop merges into main
-├── Scripts/                   # build-xcframework.sh, next-version.sh, set-version.sh, release-notes.sh;
-│                              # build-generator.sh; render-icon.sh and IconRenderer.swift, which render
-│                              # the icon from CerebroIcon.swift
-├── docs/                      # GUIDE.md for everything past setup, and the README's screenshots
+├── Scripts/                   # build-xcframework.sh, next-version.sh, set-version.sh, update-changelog.sh,
+│                              # release-notes.sh; build-generator.sh; render-icon.sh and IconRenderer.swift,
+│                              # which render the icon from CerebroIcon.swift
+├── docs/                      # GUIDE.md for everything past setup
+│   ├── screenshots/           # the README's screenshots and demo GIF
 │   └── brand/                 # the icon, rendered: icon.svg and glyph.svg for any size, rounded/ PNGs up to
 │                              # 256, app-icon/ at each iOS size up to 180, and social-preview.jpg for GitHub.
 │                              # Kept small, because SPM downloads the whole history

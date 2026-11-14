@@ -1,6 +1,6 @@
 # Cerebro Architecture
 
-This is the target design from the specification. `.agents/plans/README.md` says what exists so far.
+This is the design as built. `.agents/plans/README.md` says what's planned next.
 
 Cerebro is a layered, one-way pipeline: traffic is captured, decoded, stored, then shown. Zero code change is the first priority, so the host app touches one small facade and, in most apps, only one line of it.
 
@@ -58,6 +58,10 @@ Every other request reaches the store once, when it finishes. An event stream is
 3. One background task runs `EventStreamProcessor`, which parses with `SSEParser`, redacts each event in `EventStreamAssembler`, and updates the same transaction by ID with `TransactionStore.update`. A busy stream reaches the store at most once per 250 ms.
 4. The store saves a stream to disk only when it ends, and never puts back one it has evicted. One that was cleared while open is different: `update` reports when the clear was, and the processor adds the stream again with only the events since. When capture stops, the processor closes every stream still open.
 5. `TransactionStore.requestUpdates()` only fires when a request is added or removed. The trigger badge reads that, so an open stream causes no main-thread work while the dashboard is closed.
+
+## Previous sessions
+
+`SessionArchive` also keeps each session as one JSON Lines file in the app's Caches directory. Each finished request, socket frame and event is appended on the archive's own background queue, already redacted. Appends stay one line at a time rather than batched, so a crash loses at most what was still in flight, and there's no schema to migrate. A previous session is read only when it's opened, into stores of its own that nothing writes to, so the same screens show it read-only.
 
 ## Files
 

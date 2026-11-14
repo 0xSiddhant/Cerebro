@@ -12,7 +12,7 @@ description: Audit and update Cerebro's .agents knowledge files against the actu
    - modules and dependencies against `Package.swift`, `Cerebro.podspec` and `Cerebro.xcodeproj`
    - the SwiftProtobuf range against `Package.swift` and the podspec, and its pin against `Package.resolved`
    - folders against `project-structure.md`
-   - commands against what actually runs
+   - commands in `AGENTS.md` and `CONTRIBUTING.md` against what actually runs
    - public API against `docs/GUIDE.md`
 3. Update the files to match. The code wins, unless the difference breaks something in `.agents/context/notes.md`. Report that as a regression instead of documenting it.
 4. Update `.agents/context/notes.md`: fix its status, add any new change from the spec, and delete what stopped mattering. Keep it short.

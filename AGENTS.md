@@ -2,7 +2,7 @@
 
 Instructions for every coding agent in this repository. `CLAUDE.md` imports this file and adds Claude-specific notes, so the instructions live in one place.
 
-Cerebro is a debug-only Swift package that captures an iOS app's HTTP, WebSocket and NWConnection traffic and shows it in an in-app dashboard. It targets iOS 16+ and ships through Swift Package Manager, a Git-sourced CocoaPod and XCFrameworks.
+Cerebro is a debug-only Swift package that captures an iOS app's HTTP, Server-Sent Events, WebSocket and NWConnection traffic and shows it in an in-app dashboard, which also browses the app's sandbox. It targets iOS 16+ and ships through Swift Package Manager, a Git-sourced CocoaPod and XCFrameworks.
 
 The full specification is the [Cerebro spec](https://claude.ai/artifact/Vao3XbYhftkMkmScDSkoVg). What an agent needs day to day lives in `.agents/`. Where the spec and `.agents/context/notes.md` differ, the notes win, because they are newer.
 
@@ -25,7 +25,7 @@ Users choose one of three install options, and all three are first-class: SPM, C
 
 ## Current plan
 
-PLAN-05, persistence and 1.0, is next. See `.agents/plans/README.md` for the order and gates.
+Every numbered plan is done, and `v1.0.0` ships them. PLAN-99 is reference only until it's scheduled. See `.agents/plans/README.md` for the order and gates.
 
 ## Commands
 

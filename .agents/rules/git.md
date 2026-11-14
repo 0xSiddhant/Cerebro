@@ -46,11 +46,11 @@ Large bodies, not request count, cause out-of-memory crashes.
 
 ## Releases
 
-A release happens when `develop` is merged into `main`. Never edit versions or create release tags by hand.
+A release happens when `develop` is merged into `main`. Never edit versions or `CHANGELOG.md`, or create release tags, by hand.
 
 1. Open a PR from `develop` into `main`. The owner merges it with a merge commit, never a squash, because the release reads the commits since the last tag.
 2. `.github/workflows/release.yml` works out the version: `feat` is a minor bump, `fix` is a patch, and `!` or `BREAKING CHANGE` is a major, or a minor while the major version is 0. A `Release-As: X.Y.Z` footer forces that version.
-3. Every CI job must pass. Only then does it update the version, build the XCFrameworks, commit `chore(release): vX.Y.Z`, tag `vX.Y.Z`, publish the GitHub Release, and merge `main` back into `develop`.
+3. Every CI job must pass. Only then does it update the version, add the release's section to `CHANGELOG.md`, build the XCFrameworks, commit `chore(release): vX.Y.Z`, tag `vX.Y.Z`, publish the GitHub Release with the same section, and merge `main` back into `develop`.
 
 A merge with no `feat`, `fix` or breaking commit makes no release.
 
