@@ -16,7 +16,7 @@ The workflow:
 5. Publishes the GitHub Release with the XCFrameworks, that version's install lines and its `CHANGELOG.md` section.
 6. Merges `main` back into `develop`.
 
-Hard rules: never edit versions or `CHANGELOG.md`, or create release tags, by hand. Never force-push. Never push to CocoaPods trunk: only the owner does, by hand, until it goes read-only on December 2, 2026. The owner merges every PR.
+Hard rules: never edit versions or `CHANGELOG.md`, or create release tags, by hand. Never force-push. Never push to CocoaPods trunk. The owner merges every PR.
 
 ## Procedure
 
