@@ -11,6 +11,8 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/0xSiddhant/Cerebro" alt="License: MIT"></a>
   <a href="#requirements"><img src="https://img.shields.io/badge/iOS-16%2B-000000?logo=apple&logoColor=white" alt="iOS 16+"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white" alt="Swift 5.9+"></a>
+  <a href="https://swiftpackageindex.com/0xSiddhant/Cerebro"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F0xSiddhant%2FCerebro%2Fbadge%3Ftype%3Dswift-versions" alt="Swift versions, from the Swift Package Index"></a>
+  <a href="https://swiftpackageindex.com/0xSiddhant/Cerebro"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2F0xSiddhant%2FCerebro%2Fbadge%3Ftype%3Dplatforms" alt="Platforms, from the Swift Package Index"></a>
   <a href="#swift-package-manager"><img src="https://img.shields.io/badge/SPM-compatible-brightgreen" alt="SPM compatible"></a>
   <a href="#cocoapods"><img src="https://img.shields.io/badge/CocoaPods-via%20Git-EE3322" alt="CocoaPods via Git"></a>
 </p>
